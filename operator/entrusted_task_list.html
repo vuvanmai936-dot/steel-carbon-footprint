@@ -91,9 +91,7 @@
                                 <el-table-column prop="status" label="状态" width="100" show-overflow-tooltip />
                                 <el-table-column label="报告状态" width="120" align="center">
                                     <template #default="scope">
-                                        <span v-if="scope.row.stageIndex === 4">已下发</span>
-                                        <span v-else-if="scope.row.stageIndex === 5">流转中</span>
-                                        <span v-else-if="scope.row.stageIndex === 6">已归档</span>
+                                        <span v-if="scope.row.stageIndex === 4">{{ getReportSubStatusText(scope.row) }}</span>
                                         <span v-else>-</span>
                                         <span v-if="scope.row.hasAppeal" class="report-status-tag">申诉中</span>
                                     </template>
@@ -120,28 +118,35 @@
         setup() {
             const query = Vue.reactive({ entrustedParty: '' });
             // Mock：与 MOCK_TASK_MAP、订单号规则 ORD-YYYYMMDD-XXX 一致，便于跳转任务详情时内容一致
-            // 阶段 0-6：配置/采集/计算/核查/下发/待归档/已归档，与自营任务一致
+            // 阶段 0-4（配置/采集/计算/核查/报告）；阶段 4 用 reportSubStatus：released/to_archive/archived
             const taskList = Vue.ref([
                 { taskId: 'TSK-2026-892', orderNo: 'ORD-20260205-002', entrustedParty: '擎工互联', productName: 'HRB400E 螺纹钢', status: '待配置', stageIndex: 0 },
-                { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', entrustedParty: '易碳数科', productName: '普通功率石墨电极', status: '数据采集', stageIndex: 1 },
+                { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', entrustedParty: '易碳数科', productName: '普通功率石墨电极', status: '报告', stageIndex: 4, reportSubStatus: 'released', hasAppeal: true },
                 { taskId: 'TSK-2026-870', orderNo: 'ORD-20260110-008', entrustedParty: '擎工互联', productName: '中厚板', status: 'LCA计算', stageIndex: 2 },
-                { taskId: 'TSK-2025-999', orderNo: 'ORD-20251212-015', entrustedParty: '擎工互联', productName: '汽车结构钢', status: '已下发', stageIndex: 4 },
-                { taskId: 'TSK-2025-101', orderNo: 'ORD-20250315-099', entrustedParty: '擎工互联', productName: '热轧卷板', status: '待归档', stageIndex: 5 },
-                { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', entrustedParty: '易碳数科', productName: '超高功率石墨电极', status: '已归档', stageIndex: 6, hasAppeal: false }
+                { taskId: 'TSK-2025-999', orderNo: 'ORD-20251212-015', entrustedParty: '擎工互联', productName: '汽车结构钢', status: '报告', stageIndex: 4, reportSubStatus: 'released' },
+                { taskId: 'TSK-2025-101', orderNo: 'ORD-20250315-099', entrustedParty: '擎工互联', productName: '热轧卷板', status: '报告', stageIndex: 4, reportSubStatus: 'to_archive' },
+                { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', entrustedParty: '易碳数科', productName: '超高功率石墨电极', status: '报告', stageIndex: 4, reportSubStatus: 'archived', hasAppeal: false }
             ]);
             const handleSearch = () => {};
             const handleReset = () => { query.entrustedParty = ''; };
+            const getReportSubStatusText = (row) => {
+                if (row.stageIndex !== 4) return '';
+                const s = row.reportSubStatus;
+                if (s === 'released') return '已下发';
+                if (s === 'to_archive') return '待归档';
+                if (s === 'archived') return '已归档';
+                if (s === 'revoked') return '已作废';
+                return '待处理';
+            };
             const getActionButtonText = (row) => {
                 const stage = row.stageIndex != null ? row.stageIndex : 0;
-                if (stage === 4) return '查看报告';
-                if (stage === 5) return '归档';
-                if (stage === 6) return (row.hasAppeal ? '处理申诉' : '查看档案');
+                if (stage === 4) return (row.hasAppeal ? '处理申诉' : '查看报告');
                 return '处理';
             };
-            // 跳转至对应阶段任务详情页；阶段 4/5/6 跳报告详情，与自营任务一致
+            // 阶段 4「报告」统一跳转报告管理
             const goToTask = (row) => {
                 const stageIndex = row.stageIndex != null ? row.stageIndex : 0;
-                if (stageIndex === 4 || stageIndex === 5 || stageIndex === 6) {
+                if (stageIndex === 4) {
                     window.location.href = 'report_detail.html?taskNo=' + encodeURIComponent(row.taskId);
                     return;
                 }
@@ -151,7 +156,7 @@
             };
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
-                query, taskList, handleSearch, handleReset, getActionButtonText, goToTask
+                query, taskList, handleSearch, handleReset, getReportSubStatusText, getActionButtonText, goToTask
             };
         }
     });

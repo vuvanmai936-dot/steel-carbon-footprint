@@ -73,7 +73,7 @@
                     <span v-if="record" :class="['status-badge', record.status === 'process' ? 'status-process' : record.status === 'archived' ? 'status-archived' : 'status-revoked']">
                         {{ record.status === 'process' ? '流转中' : record.status === 'archived' ? '已归档' : '已作废' }}
                     </span>
-                    <span v-if="record?.appeal" class="status-badge status-appeal">申诉中</span>
+                    <span v-if="record?.appeal && record?.status === 'process' && record?.releasedToSupplier" class="status-badge status-appeal">申诉中</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <el-button v-if="record?.taskNo" link type="primary" @click="goToTask">前往任务</el-button>
@@ -88,7 +88,7 @@
                 <div v-else class="detail-flex-wrapper">
                     <div class="detail-content">
                         <div class="detail-left">
-                            <div v-if="record.appeal && record.status !== 'process' && record.status !== 'archived'" class="appeal-block">
+                            <div v-if="record.appeal && record.status === 'process' && record.releasedToSupplier" class="appeal-block">
                                 <div style="font-weight: bold; margin-bottom: 8px; color: #E6A23C;">待处理申诉</div>
                                 <div style="font-size: 13px; color: #606266; margin-bottom: 8px;">{{ record.appeal.reason }}</div>
                                 <div v-if="record.appeal.submitTime" style="font-size: 12px; color: #909399; margin-bottom: 12px;">提交时间：{{ record.appeal.submitTime }}</div>
@@ -100,7 +100,13 @@
                             <div style="font-weight: bold; margin-bottom: 15px; font-size: 15px;">交付物三件套 (Standard Set)</div>
                             <div class="doc-section-card">
                                 <div v-if="record.status === 'archived'" class="stamp-archived">已上链</div>
-                                <div class="doc-card-header"><span>1. 产品碳足迹核算报告</span><el-tag size="small" type="info">系统生成</el-tag></div>
+                                <div class="doc-card-header">
+                                    <span>1. 产品碳足迹核算报告</span>
+                                    <span>
+                                        <el-tag v-if="(record.reportVersion || (record.status === 'process' ? 'draft' : 'sealed')) === 'sealed'" size="small" type="success">用印版 V1</el-tag>
+                                        <el-tag v-else size="small" type="info">系统生成</el-tag>
+                                    </span>
+                                </div>
                                 <div class="doc-card-body">
                                     <template v-if="record.docs.calc">
                                         <el-icon class="doc-file-icon active"><component :is="'Document'"></component></el-icon>
@@ -138,6 +144,24 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- 上传用印版：须先收到核查报告与核查声明证书 -->
+                            <div v-if="record.status === 'process' && (record.reportVersion || 'draft') === 'draft'" class="doc-section-card" style="border-color: #E6A23C;">
+                                <div class="doc-card-header" style="background: #fdf6ec;"><span>上传用印版核算报告</span></div>
+                                <div class="doc-card-body" style="flex-direction: column; align-items: stretch;">
+                                    <el-alert v-if="!record.docs.verify || !record.docs.cert" type="warning" :closable="false" show-icon>
+                                        <template #title>须先接收核查机构提交的核查报告与核查声明证书</template>
+                                        请先在上方「核查报告」「核查声明证书」处确认机构已推送或使用「手动拉取」获取，后方可上传用印版核算报告（用于替换草稿并作为下发前置条件）。
+                                    </el-alert>
+                                    <template v-else>
+                                        <p style="color: #606266; font-size: 13px; margin-bottom: 12px;">用于替换此前流转给核查机构的草稿，系统将记录版本（草稿 → 用印版 V1），作为下发的前置条件。</p>
+                                        <el-upload drag :auto-upload="false" :limit="1" accept=".pdf" :on-change="onSealedFileChange">
+                                            <el-icon class="el-icon--upload"><component :is="'Upload'"></component></el-icon>
+                                            <div class="el-upload__text">将用印版 PDF 拖到此处，或<em>点击上传</em></div>
+                                        </el-upload>
+                                        <el-button type="primary" style="margin-top: 12px;" @click="submitUploadSealed">确认上传用印版</el-button>
+                                    </template>
+                                </div>
+                            </div>
                             <div v-if="record.status === 'archived'" style="margin-top: 20px; padding-top: 20px; border-top: 1px dashed #eee;">
                                 <div style="font-weight: bold; margin-bottom: 5px;">区块链存证信息 (Immutable)</div>
                                 <div class="chain-hash">TxID: 0x8a9f...b3c2 ({{ record.archiveTime }})</div>
@@ -152,10 +176,13 @@
                             </el-timeline>
                         </div>
                     </div>
-                    <div style="flex-shrink: 0; padding: 16px 20px; background: #fff; border-top: 1px solid #ebeef5; display: flex; justify-content: flex-end; gap: 12px;">
-                        <el-button @click="goBack">返回列表</el-button>
-                        <el-button v-if="record.status === 'process'" type="primary" :loading="archiving" :disabled="!isAllReady(record)" @click="executeArchive">{{ archiving ? '正在上链...' : '确认归档 & 上链' }}</el-button>
-                        <el-button v-if="record.status === 'archived'" type="danger" plain @click="revokeArchive">撤销归档</el-button>
+                    <div style="flex-shrink: 0; padding: 16px 20px; background: #fff; border-top: 1px solid #ebeef5; display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
+                        <div v-if="record.status === 'process' && record.appeal && record.releasedToSupplier" style="width: 100%; font-size: 13px; color: #E6A23C; margin-bottom: 4px;">需先处理申诉或等待供应商确认接收后再归档</div>
+                        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                            <el-button @click="goBack">返回列表</el-button>
+                            <el-button v-if="record.status === 'process'" type="primary" :loading="archiving" :disabled="!canArchive(record)" @click="executeArchive">{{ archiving ? '正在上链...' : '确认归档 & 上链' }}</el-button>
+                            <el-button v-if="record.status === 'archived'" type="danger" plain @click="revokeArchive">撤销归档</el-button>
+                        </div>
                     </div>
                 </div>
             </el-main>
@@ -218,7 +245,11 @@
                 taskNoFromUrl.value = params.get('taskNo') || '';
             } catch (e) {}
 
-            const listRef = Vue.ref(JSON.parse(JSON.stringify(MOCK_REPORTS)));
+            const rawReports = JSON.parse(JSON.stringify(MOCK_REPORTS));
+            rawReports.forEach(r => {
+                if (r.reportVersion === undefined) r.reportVersion = r.status === 'process' ? 'draft' : 'sealed';
+            });
+            const listRef = Vue.ref(rawReports);
 
             const record = Vue.computed(() => {
                 if (!taskNoFromUrl.value) return listRef.value[0] || null;
@@ -232,11 +263,22 @@
             const archiving = Vue.ref(false);
 
             const isAllReady = (row) => row && row.docs && row.docs.calc && row.docs.verify && row.docs.cert;
+            // 申诉中不可归档：须先处理申诉或等待供应商确认接收
+            const canArchive = (row) => isAllReady(row) && !(row && row.appeal && row.releasedToSupplier);
 
             const goBack = () => { window.location.href = 'report_mgt.html'; };
             const goToTask = () => { if (record.value?.taskNo) window.location.href = `task_detail_verify.html?taskId=${record.value.taskNo}`; };
 
             const openPreview = (doc, type) => { previewDoc.value = doc; previewType.value = type; previewVisible.value = true; };
+
+            const onSealedFileChange = () => {};
+            const submitUploadSealed = () => {
+                if (!record.value) return;
+                record.value.reportVersion = 'sealed';
+                if (!record.value.history) record.value.history = [];
+                record.value.history.unshift({ title: '用印版已上传', desc: '草稿 → 用印版 V1', timestamp: new Date().toLocaleString('zh-CN'), type: 'success' });
+                ElementPlus.ElMessage.success('用印版已上传，版本已记录为「用印版 V1」，可返回列表执行下发。');
+            };
 
             const manualSync = (type) => {
                 const loading = ElementPlus.ElLoading.service({ text: '正在调用机构接口拉取文件...' });
@@ -254,6 +296,10 @@
             };
 
             const executeArchive = () => {
+                if (!canArchive(record.value)) {
+                    if (record.value?.appeal && record.value?.releasedToSupplier) ElementPlus.ElMessage.warning('申诉中不可归档，需先处理申诉或等待供应商确认接收。');
+                    return;
+                }
                 ElementPlus.ElMessageBox.confirm('归档操作将对文件进行哈希计算并上链存证，不可撤销。是否继续？', '归档确认', { confirmButtonText: '确认归档', type: 'success' }).then(() => {
                     archiving.value = true;
                     setTimeout(() => {
@@ -284,7 +330,7 @@
                 ElementPlus.ElMessage.success('已接受申诉，待重新核查');
             };
 
-            return { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, taskNoFromUrl, record, previewVisible, previewDoc, previewType, archiving, isAllReady, goBack, goToTask, openPreview, manualSync, executeArchive, revokeArchive, rejectAppeal, acceptAppeal };
+            return { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, taskNoFromUrl, record, previewVisible, previewDoc, previewType, archiving, isAllReady, canArchive, goBack, goToTask, openPreview, onSealedFileChange, submitUploadSealed, manualSync, executeArchive, revokeArchive, rejectAppeal, acceptAppeal };
         }
     });
 </script>

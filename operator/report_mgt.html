@@ -99,9 +99,7 @@
                     <div class="search-card">
                         <el-form :inline="true" :model="query" style="margin-bottom: -18px;">
                             <el-form-item label="任务/订单">
-                                <el-input v-model="query.taskNo" placeholder="编号或产品名称" clearable prefix-icon="Search" style="width: 200px;">
-                                    <template #prefix><el-icon><component :is="'Search'"></component></el-icon></template>
-                                </el-input>
+                                <el-input v-model="query.taskNo" placeholder="编号或产品名称" clearable style="width: 200px;"></el-input>
                             </el-form-item>
                             <el-form-item label="供应商">
                                 <el-select v-model="query.supplier" placeholder="全部" filterable clearable style="width: 160px;">
@@ -127,8 +125,8 @@
                                     <el-option label="已作废" value="revoked"></el-option>
                                 </el-select>
                             </el-form-item>
-                            <el-form-item label="仅待处理申诉">
-                                <el-checkbox v-model="query.appealOnly">只看申诉中</el-checkbox>
+                            <el-form-item>
+                                <el-checkbox v-model="query.appealOnly">仅申诉中</el-checkbox>
                             </el-form-item>
                             <el-form-item>
                                 <el-button type="primary" icon="Search" @click="handleSearch">查询</el-button>
@@ -187,24 +185,20 @@
                                         <span v-if="scope.row.status === 'process'" class="status-badge status-process">流转中</span>
                                         <span v-else-if="scope.row.status === 'archived'" class="status-badge status-archived">已归档</span>
                                         <span v-else class="status-badge status-revoked">已作废</span>
-                                        <span v-if="scope.row.appeal" class="status-badge status-appeal">申诉中</span>
+                                        <span v-if="scope.row.appeal && scope.row.status === 'process' && scope.row.releasedToSupplier" class="status-badge status-appeal">申诉中</span>
                                     </template>
                                 </el-table-column>
 
                                 <el-table-column label="操作" width="300" fixed="right" align="center">
                                     <template #default="scope">
-                                        <template v-if="scope.row.appeal && scope.row.status !== 'process' && scope.row.status !== 'archived'">
+                                        <template v-if="scope.row.appeal && scope.row.status === 'process' && scope.row.releasedToSupplier">
                                             <el-button link type="primary" @click="viewDetail(scope.row)">查看档案</el-button>
                                             <el-divider direction="vertical"></el-divider>
                                             <el-button link type="danger" @click="rejectAppeal(scope.row)">驳回申诉</el-button>
                                             <el-button link type="primary" @click="acceptAppeal(scope.row)">接受申诉</el-button>
                                         </template>
                                         <template v-else-if="scope.row.status === 'process'">
-                                            <template v-if="scope.row.reportVersion === 'draft'">
-                                                <el-button link type="warning" @click="openUploadSealed(scope.row)">上传用印版</el-button>
-                                                <el-divider direction="vertical"></el-divider>
-                                            </template>
-                                            <template v-else-if="!scope.row.releasedToSupplier">
+                                            <template v-if="scope.row.reportVersion === 'sealed' && !scope.row.releasedToSupplier">
                                                 <el-button link type="primary" @click="openReleaseDialog(scope.row)">下发</el-button>
                                                 <el-divider direction="vertical"></el-divider>
                                             </template>
@@ -222,25 +216,6 @@
                             </el-table>
                             <el-empty v-if="!filteredReportList.length" description="暂无报告" class="list-empty-wrap"></el-empty>
                         </div>
-
-                        <!-- 上传用印版核算报告 -->
-                        <el-dialog v-model="uploadSealedVisible" title="上传用印版核算报告" width="480px" destroy-on-close>
-                            <p style="color: #606266; margin-bottom: 12px;">用于替换此前流转给核查机构的草稿，系统将记录版本（草稿 → 用印版 V1），作为下发的前置条件。</p>
-                            <el-upload
-                                drag
-                                :auto-upload="false"
-                                :limit="1"
-                                accept=".pdf"
-                                :on-change="onSealedFileChange"
-                            >
-                                <el-icon class="el-icon--upload"><component :is="'Upload'"></component></el-icon>
-                                <div class="el-upload__text">将用印版 PDF 拖到此处，或<em>点击上传</em></div>
-                            </el-upload>
-                            <template #footer>
-                                <el-button @click="uploadSealedVisible = false">取消</el-button>
-                                <el-button type="primary" @click="submitUploadSealed">确认上传</el-button>
-                            </template>
-                        </el-dialog>
 
                         <!-- 勾选报告/证书并下发至供应商 -->
                         <el-dialog v-model="releaseDialogVisible" title="下发报告/证书至供应商" width="440px" destroy-on-close>
@@ -280,10 +255,8 @@
             });
             const reportList = Vue.ref(rawList);
 
-            const uploadSealedVisible = Vue.ref(false);
             const releaseDialogVisible = Vue.ref(false);
             const releaseChecked = Vue.ref([]);
-            const currentUploadRow = Vue.ref(null);
             const currentReleaseRow = Vue.ref(null);
 
             const filteredReportList = Vue.computed(() => {
@@ -306,15 +279,6 @@
             const viewDetail = (row) => { window.location.href = 'report_detail.html?taskNo=' + encodeURIComponent(row.taskNo); };
             const downloadPackage = (row) => ElementPlus.ElMessage.success('开始打包下载交付物...');
 
-            const onSealedFileChange = () => {};
-            const openUploadSealed = (row) => { currentUploadRow.value = row; uploadSealedVisible.value = true; };
-            const submitUploadSealed = () => {
-                const row = currentUploadRow.value;
-                if (row) { row.reportVersion = 'sealed'; if (!row.history) row.history = []; row.history.unshift({ title: '用印版已上传', desc: '草稿 → 用印版 V1', timestamp: new Date().toLocaleString('zh-CN'), type: 'success' }); }
-                uploadSealedVisible.value = false; currentUploadRow.value = null;
-                ElementPlus.ElMessage.success('用印版已上传，版本已记录为「用印版 V1」');
-            };
-
             const openReleaseDialog = (row) => { currentReleaseRow.value = row; releaseChecked.value = []; releaseDialogVisible.value = true; };
             const submitRelease = () => {
                 const row = currentReleaseRow.value;
@@ -335,9 +299,9 @@
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
                 query, reportList, filteredReportList,
-                uploadSealedVisible, releaseDialogVisible, releaseChecked,
+                releaseDialogVisible, releaseChecked,
                 handleSearch, handleReset, viewDetail, downloadPackage, getDocStatusText,
-                onSealedFileChange, openUploadSealed, submitUploadSealed, openReleaseDialog, submitRelease,
+                openReleaseDialog, submitRelease,
                 rejectAppeal, acceptAppeal
             };
         }

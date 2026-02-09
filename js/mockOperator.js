@@ -15,7 +15,6 @@
             reportVersion: 'sealed',
             releasedToSupplier: true,
             archiveTime: '2026-02-06 14:05:22',
-            appeal: { reason: '核算边界与合同约定不一致，申请重新核查。', submitTime: '2026-02-08 10:00' },
             docs: {
                 calc: { name: '核算报告_V2.pdf', ver: 'V2', date: '2026-02-05' },
                 verify: { name: '核查报告_Final.pdf', ver: 'V1', date: '2026-02-06' },
@@ -62,6 +61,26 @@
             },
             history: [
                 { title: '已作废', desc: '发现数据造假，人工撤销', timestamp: '2025-12-13 09:00', type: 'danger' }
+            ]
+        },
+        {
+            taskNo: 'TSK-2026-889',
+            orderNo: 'ORD-20260203-001',
+            productName: '普通功率石墨电极',
+            supplierName: '南通碳素有限公司',
+            verifier: 'DNV',
+            status: 'process',
+            reportVersion: 'sealed',
+            releasedToSupplier: true,
+            appeal: { reason: '核算边界与产品规格说明不一致，申请重新核查。', submitTime: '2026-02-09 14:30' },
+            docs: {
+                calc: { name: '普通功率石墨电极核算报告_用印版.pdf', ver: 'V1', date: '2026-02-08' },
+                verify: { name: '核查报告_DNV.pdf', ver: 'V1', date: '2026-02-08' },
+                cert: { name: '声明证书.jpg', ver: 'V1', expire: '2027-02-08' }
+            },
+            history: [
+                { title: '供应商提交申诉', desc: '我有异议', timestamp: '2026-02-09 14:30', type: 'warning' },
+                { title: '已下发至供应商', desc: '供应商可确认接收或申诉', timestamp: '2026-02-09 10:00', type: 'primary' }
             ]
         }
     ];
