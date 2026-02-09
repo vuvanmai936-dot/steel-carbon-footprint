@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>产品碳足迹认证服务 - 鑫智链双碳运营平台</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="css/common.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        html, body, #app { height: auto !important; min-height: 100%; overflow: visible !important; overflow-y: auto !important; }
+        body { margin: 0; background: #f8f9fa; color: #303133; display: flex; flex-direction: column; align-items: center; }
+        .landing { width: 100%; max-width: 1200px; margin: 0 auto; padding: 24px 24px 60px; box-sizing: border-box; }
+
+        .breadcrumb { margin-bottom: 24px; font-size: 14px; color: #909399; }
+        .breadcrumb a { color: #0052D9; text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb span { margin: 0 8px; color: #c0c4cc; }
+
+        .section { margin-bottom: 48px; }
+        .section-title { font-size: 24px; font-weight: 700; color: #303133; text-align: center; margin-bottom: 16px; }
+        .section-desc { font-size: 15px; color: #606266; text-align: center; max-width: 720px; margin: 0 auto 24px; line-height: 1.6; }
+
+        .challenge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .challenge-card { background: #fff; border-radius: 8px; padding: 24px; text-align: center; border: 1px solid #ebeef5; }
+        .challenge-card .num { font-size: 36px; font-weight: 800; color: #F56C6C; margin-bottom: 8px; }
+        .challenge-card .tit { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 8px; }
+        .challenge-card .txt { font-size: 13px; color: #909399; line-height: 1.5; }
+
+        /* 2. 方案：按原 PDRD 1+4 生态 + 工作台入口 */
+        .solution-card { background: #fff; border-radius: 8px; padding: 32px; border: 1px solid #ebeef5; margin-bottom: 24px; }
+        .solution-card h3 { font-size: 20px; font-weight: 700; text-align: center; margin: 0 0 24px 0; color: #303133; }
+        .l3-center { background: #ecf5ff; border: 1px solid #b3d8ff; border-radius: 8px; padding: 20px; text-align: center; max-width: 640px; margin: 0 auto 20px; }
+        .l3-center h4 { font-size: 18px; font-weight: 700; color: #0052D9; margin: 0 0 8px 0; }
+        .l3-center p { font-size: 13px; color: #606266; margin: 0; }
+        .l3-roles-features { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 24px; margin: 12px 0 16px; }
+        .l3-col { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; flex: 1; max-width: 200px; }
+        .l3-role { font-size: 13px; color: #606266; }
+        .l3-feature { font-size: 13px; color: #0052D9; font-weight: 500; text-align: center; }
+        .l3-with-entry { cursor: pointer; transition: all 0.3s; }
+        .l3-with-entry:hover { box-shadow: 0 8px 24px rgba(0,82,217,0.15); }
+        .l3-with-entry .entry-btn-l3 { display: inline-block; margin-top: 0; background: #f5f7fa; color: #606266; }
+        .l3-with-entry:hover .entry-btn-l3 { background: #0052D9; color: #fff; }
+        .tds-arrow { text-align: center; font-size: 28px; color: #F56C6C; margin: 16px 0; }
+        .tds-caption { text-align: center; font-size: 14px; color: #606266; margin-bottom: 20px; }
+        .tds-caption strong { color: #F56C6C; }
+        .l4-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .l4-card { background: #fafafa; border-radius: 8px; padding: 20px; text-align: center; border-top: 4px solid #409EFF; }
+        .l4-card.l4-1 { border-top-color: #67C23A; }
+        .l4-card.l4-2 { border-top-color: #E6A23C; }
+        .l4-card.l4-3 { border-top-color: #409EFF; }
+        .l4-card.l4-4 { border-top-color: #909399; }
+        .l4-card h5 { font-size: 15px; font-weight: 600; color: #303133; margin: 0 0 4px 0; }
+        .l4-card .l4-example { font-size: 12px; color: #909399; margin-bottom: 6px; }
+        .l4-card .l4-role { font-size: 12px; font-weight: 500; color: #606266; margin: 0; }
+        .role-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .role-grid-four { grid-template-columns: repeat(4, 1fr); }
+        .role-grid-merged { margin-top: 20px; }
+        .role-card { background: #fff; border-radius: 12px; padding: 28px 24px; text-align: center; cursor: pointer; transition: all 0.3s; border: 1px solid #ebeef5; display: flex; flex-direction: column; align-items: center; min-height: 280px; }
+        .role-card .l4-title { font-size: 15px; font-weight: 600; color: #303133; margin: 0 0 4px 0; }
+        .role-card .l4-example { font-size: 12px; color: #909399; margin: 0 0 6px 0; }
+        .role-card .l4-role { font-size: 12px; font-weight: 500; color: #606266; margin: 0 0 16px 0; }
+        .role-card:hover { transform: translateY(-6px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
+        .color-bar { width: 100%; height: 5px; border-radius: 12px 12px 0 0; margin: -28px -24px 20px -24px; }
+        .role-icon-box { width: 68px; height: 68px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 14px; }
+        .role-name { font-size: 17px; font-weight: 700; color: #303133; margin-bottom: 4px; }
+        .role-en { font-size: 12px; color: #909399; margin-bottom: 14px; }
+        .feature-list { list-style: none; padding: 0; margin: 0 0 16px 0; text-align: left; width: 100%; padding-left: 20px; }
+        .feature-item { font-size: 13px; color: #606266; margin-bottom: 6px; display: flex; align-items: center; }
+        .feature-dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+        .entry-btn { margin-top: auto; padding: 10px 22px; border-radius: 20px; font-size: 14px; font-weight: 600; background: #f5f7fa; color: #606266; transition: all 0.3s; }
+        .role-card:hover .entry-btn { color: #fff; }
+        .theme-supplier .color-bar { background: #67C23A; }
+        .theme-supplier .role-icon-box { background: #f0f9eb; color: #67C23A; }
+        .theme-supplier .feature-dot { background: #67C23A; }
+        .theme-supplier:hover .role-icon-box { background: #67C23A; color: #fff; }
+        .theme-supplier:hover .entry-btn { background: #67C23A; }
+        .theme-certifier .color-bar { background: #409EFF; }
+        .theme-certifier .role-icon-box { background: #ecf5ff; color: #409EFF; }
+        .theme-certifier .feature-dot { background: #409EFF; }
+        .theme-certifier:hover .role-icon-box { background: #409EFF; color: #fff; }
+        .theme-operator .color-bar { background: #0052D9; }
+        .theme-operator .role-icon-box { background: #e6f7ff; color: #0052D9; }
+        .theme-operator .feature-dot { background: #0052D9; }
+        .theme-operator:hover .role-icon-box { background: #0052D9; color: #fff; }
+        .theme-operator:hover .entry-btn { background: #0052D9; }
+        .theme-owner .color-bar { background: #409EFF; }
+        .theme-client .color-bar { background: #909399; }
+        .placeholder-card { cursor: default; }
+        .placeholder-card:hover { transform: none; box-shadow: none; }
+        .workspace-placeholder { font-size: 12px; color: #909399; margin: 0 0 16px 0; }
+        .entry-btn-placeholder { cursor: default; background: #e4e7ed; color: #909399; }
+        .placeholder-card:hover .entry-btn-placeholder { background: #e4e7ed; color: #909399; }
+        @media (max-width: 900px) { .l4-grid { grid-template-columns: repeat(2, 1fr); } .role-grid { grid-template-columns: 1fr; } .role-grid-four { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .role-grid-four { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .challenge-grid { grid-template-columns: 1fr; } }
+
+        .flow-wrap { display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; gap: 0; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; }
+        .flow-card { flex: 1; min-width: 130px; max-width: 190px; background: #fff; border-radius: 8px; padding: 14px; border: 1px solid #ebeef5; border-left: 4px solid #F77F00; }
+        .flow-card h4 { font-size: 13px; font-weight: 600; color: #303133; margin: 0 0 8px 0; }
+        .flow-card ul { margin: 0; padding-left: 14px; font-size: 12px; color: #606266; line-height: 1.6; }
+        .flow-arrow { display: flex; align-items: center; justify-content: center; color: #F56C6C; font-size: 16px; flex-shrink: 0; width: 20px; }
+        @media (max-width: 900px) { .flow-wrap { flex-wrap: wrap; justify-content: center; gap: 8px; } .flow-card { max-width: none; flex: 1 1 160px; } }
+
+        .insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .insight-card { background: #fff; border-radius: 8px; padding: 24px; border: 1px solid #ebeef5; }
+        .insight-card h3 { font-size: 15px; font-weight: 600; color: #303133; text-align: center; margin: 0 0 12px 0; }
+        .insight-card .chart-wrap { height: 260px; }
+        @media (max-width: 768px) { .insight-grid { grid-template-columns: 1fr; } }
+
+        .pillars-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .pillar-card { background: #fff; border-radius: 8px; padding: 20px; border: 1px solid #ebeef5; }
+        .pillar-card h3 { font-size: 15px; font-weight: 600; color: #303133; margin: 0 0 8px 0; }
+        .pillar-card p { font-size: 13px; color: #606266; line-height: 1.5; margin: 0; }
+        @media (max-width: 900px) { .pillars-grid { grid-template-columns: repeat(2, 1fr); } }
+
+        .value-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .value-card { background: #fff; border-radius: 8px; padding: 24px; border: 1px solid #ebeef5; }
+        .value-card h3 { font-size: 15px; font-weight: 600; color: #303133; margin: 0 0 12px 0; }
+        .value-card .chart-wrap { height: 220px; }
+        @media (max-width: 768px) { .value-grid { grid-template-columns: 1fr; } }
+
+        .footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid #ebeef5; font-size: 12px; color: #909399; text-align: center; }
+    </style>
+</head>
+<body>
+    <div id="app" class="landing">
+        <div class="breadcrumb">
+            <a href="index.html">鑫智链双碳运营平台</a>
+            <span>›</span>
+            <span>产品碳足迹认证服务</span>
+        </div>
+
+        <!-- 1. 挑战 -->
+        <section class="section" id="challenge">
+            <h2 class="section-title">1. 挑战：钢铁供应链的「碳数据困境」</h2>
+            <p class="section-desc">在全球「双碳」目标下，钢铁行业面临供应链（范围3）减排压力。获取上游供应商的碳排放数据极其困难，数据往往被困在「孤岛」中，且缺乏统一标准和信任基础。</p>
+            <div class="challenge-grid">
+                <div class="challenge-card">
+                    <div class="num">90%</div>
+                    <div class="tit">能源数据未自动化</div>
+                    <div class="txt">供应商需从 MES、ERP 或纸质单据中汇总数据，效率低且易出错。</div>
+                </div>
+                <div class="challenge-card">
+                    <div class="num">75%</div>
+                    <div class="tit">数据获取成本高</div>
+                    <div class="txt">缺少统一标准和验证机制，数据逻辑矛盾、证明缺失等问题频发。</div>
+                </div>
+                <div class="challenge-card">
+                    <div class="num">100%</div>
+                    <div class="tit">协同效率低</div>
+                    <div class="txt">供应商视生产数据为核心机密，不愿共享，导致供应链碳足迹核算中断。</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 方案：鑫智链「1+4」可信生态（原 PDRD 写法）+ 工作台入口 -->
+        <section class="section" id="solution">
+            <h2 class="section-title">2. 方案：鑫智链「1+4」可信生态</h2>
+            <p class="section-desc">我们基于国家数据基础设施标准，构建了「行业功能节点」（可信基座）与「业务节点」（生态市场）。在此之上，打造「1+4」角色的可信双碳生态系统，实现数据「主权可控、过程可溯、结果可信」。</p>
+            <div class="solution-card">
+                <h3>生态系统角色图（1+4 角色）与工作台入口</h3>
+                <div class="l3-center l3-with-entry" @click="enterSystem('operator')">
+                    <h4>［L3］产品碳足迹数据服务系统</h4>
+                    <div class="l3-roles-features">
+                        <div class="l3-col"><div class="l3-role">生态运营者</div><div class="l3-feature">生态伙伴与应用管理</div></div>
+                        <div class="l3-col"><div class="l3-role">生命周期评价计算联合中心</div><div class="l3-feature">碳足迹核算任务调度</div></div>
+                        <div class="l3-col"><div class="l3-role">信任规则定义者</div><div class="l3-feature">模板与标准中心</div></div>
+                    </div>
+                    <div class="entry-btn entry-btn-l3">进入系统 →</div>
+                </div>
+                <div class="tds-arrow">↓</div>
+                <p class="tds-caption">通过 <strong>可信数据空间</strong> 赋能 ［L4］ 生态伙伴 · 选择角色进入对应工作台</p>
+                <div class="role-grid role-grid-merged role-grid-four">
+                    <div class="role-card theme-supplier" @click="enterSystem('supplier')">
+                        <div class="color-bar"></div>
+                        <h5 class="l4-title">［L4］ 供应商</h5>
+                        <p class="l4-example">（如 南通碳素）</p>
+                        <p class="l4-role">角色：可信数据生产者</p>
+                        <ul class="feature-list">
+                            <li class="feature-item"><div class="feature-dot"></div>数据采集与上链</li>
+                            <li class="feature-item"><div class="feature-dot"></div>产品碳足迹报告管理</li>
+                            <li class="feature-item"><div class="feature-dot"></div>绿色金融服务申请</li>
+                        </ul>
+                        <div class="entry-btn">进入系统 →</div>
+                    </div>
+                    <div class="role-card theme-certifier" @click="enterSystem('certifier')">
+                        <div class="color-bar"></div>
+                        <h5 class="l4-title">［L4］ 第三方认证机构</h5>
+                        <p class="l4-example">（如 SGS, DNV 等）</p>
+                        <p class="l4-role">角色：可信价值公证者</p>
+                        <ul class="feature-list">
+                            <li class="feature-item"><div class="feature-dot"></div>核查任务管理</li>
+                            <li class="feature-item"><div class="feature-dot"></div>模型因子库维护</li>
+                            <li class="feature-item"><div class="feature-dot"></div>证书签发与存证</li>
+                        </ul>
+                        <div class="entry-btn">进入系统 →</div>
+                    </div>
+                    <div class="role-card theme-owner placeholder-card">
+                        <div class="color-bar"></div>
+                        <h5 class="l4-title">［L4］ 链主企业</h5>
+                        <p class="l4-example">（如 南钢、鑫采商城）</p>
+                        <p class="l4-role">角色：可信价值应用者</p>
+                        <p class="workspace-placeholder">工作台入口后续迭代开放</p>
+                        <div class="entry-btn entry-btn-placeholder">敬请期待</div>
+                    </div>
+                    <div class="role-card theme-client placeholder-card">
+                        <div class="color-bar"></div>
+                        <h5 class="l4-title">［L4］ 钢铁客户</h5>
+                        <p class="l4-example">（如 中国船舶）</p>
+                        <p class="l4-role">角色：可信价值验证者</p>
+                        <p class="workspace-placeholder">工作台入口后续迭代开放</p>
+                        <div class="entry-btn entry-btn-placeholder">敬请期待</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 核心流程 -->
+        <section class="section" id="process">
+            <h2 class="section-title">3. 核心流程：从数据到可信资产（端到端）</h2>
+            <p class="section-desc">标准化的 5 阶段线上流程，将繁琐的线下核算转变为可信、高效、可追溯的数字化闭环。</p>
+            <div class="flow-wrap">
+                <div class="flow-card">
+                    <h4>阶段 1：服务开通</h4>
+                    <ul>
+                        <li>鑫采商城下单（P0 集成）</li>
+                        <li>可信数据空间数字合约签署</li>
+                        <li>L4 供应商填报数据</li>
+                    </ul>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-card">
+                    <h4>阶段 2：联合计算</h4>
+                    <ul>
+                        <li>L3 平台协同复验数据</li>
+                        <li>在线反馈 / 打回 / 修正</li>
+                        <li>生命周期评价建模与计算</li>
+                    </ul>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-card">
+                    <h4>阶段 3：可信认证</h4>
+                    <ul>
+                        <li>报告流入 L4 认证机构</li>
+                        <li>支持线下调研挂起</li>
+                        <li>签发<strong>可验证凭证</strong></li>
+                    </ul>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-card">
+                    <h4>阶段 4：成果验收</h4>
+                    <ul>
+                        <li>L4 供应商在线验收 VC</li>
+                        <li>支持异议工单</li>
+                        <li>支持基于原单创建 V2 任务</li>
+                    </ul>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-card">
+                    <h4>阶段 5：数据应用</h4>
+                    <ul>
+                        <li>鑫采商城「碳标签」</li>
+                        <li>链主「绿色供应商库」</li>
+                        <li>「绿色招标」加分项</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 数据洞察 -->
+        <section class="section" id="insight">
+            <h2 class="section-title">4. 数据洞察：数据质量与协同复验</h2>
+            <p class="section-desc">原始数据是可信产品碳足迹的基础；协同复验是保障数据质量、支撑可信结果的核心环节。下图展示数据来源与类型对碳足迹结果的影响。</p>
+            <div class="insight-grid">
+                <div class="insight-card">
+                    <h3>典型任务中数据来源类型占比（示例）</h3>
+                    <div class="chart-wrap"><canvas id="chartPie"></canvas></div>
+                </div>
+                <div class="insight-card">
+                    <h3>平台：认证数据对「碳足迹结果」的影响</h3>
+                    <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. TDS 四大支柱（按 PDRD） -->
+        <section class="section" id="tds">
+            <h2 class="section-title">5. TDS技术：构建「信任」的四大支柱</h2>
+            <p class="section-desc">鑫智链平台不是传统 SaaS，它基于可信数据空间（TDS）的国家标准。通过四大技术支柱，我们解决了「数据不出域」和「数据可信」的核心矛盾。</p>
+            <div class="pillars-grid">
+                <div class="pillar-card">
+                    <h3>① 身份可信（DID）</h3>
+                    <p>每个参与方（企业、机构）都拥有一个唯一的、可验证的去中心化数字身份，确保所有操作均可归责。</p>
+                </div>
+                <div class="pillar-card">
+                    <h3>② 流程可信（数字合约）</h3>
+                    <p>业务流程（如数据使用、签约）由代码化的「数字合约」驱动，自动执行、不可篡改，确保流程合规。</p>
+                </div>
+                <div class="pillar-card">
+                    <h3>③ 使用可信（使用控制）</h3>
+                    <p>实现「数据可用不可见」。例如，SGS 可在「沙箱」内核验供应商原始数据，但无法下载或复制，保护了数据主权。</p>
+                </div>
+                <div class="pillar-card">
+                    <h3>④ 结果可信（VC）</h3>
+                    <p>最终的认证报告被封装为「可验证凭证」（VC），这是一个防伪、可溯源、可信的「数据资产」，是所有下游应用的基础。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. 价值实现 -->
+        <section class="section" id="value">
+            <h2 class="section-title">6. 价值实现：从「认证」到「资产应用」</h2>
+            <p class="section-desc">产品碳足迹认证的终点不是报告，而是应用。将「可验证凭证」无缝对接到核心业务，为绿色供应链创造真实价值。</p>
+            <div class="value-grid">
+                <div class="value-card">
+                    <h3>钢铁供应链联合碳排放分析</h3>
+                    <div class="chart-wrap"><canvas id="chartStacked"></canvas></div>
+                </div>
+                <div class="value-card">
+                    <h3>「碳足迹凭证」价值应用</h3>
+                    <p style="font-size: 14px; color: #606266; line-height: 1.7;">认证结果可应用于：<br/>· 鑫采商城「碳标签」<br/>· 绿色招标 / 绿色采购加分<br/>· 绿色金融服务与供应链金融</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="footer">
+            运营方：鑫智链（南京鑫智链科技信息有限公司）| 钢铁行业产业链可信数据空间 · 碳足迹数据服务应用 | V 2.1.0 Build 20260203
+        </div>
+    </div>
+
+    <script>
+        const { createApp, onMounted } = Vue;
+        createApp({
+            setup() {
+                const enterSystem = (role) => {
+                    const routes = { operator: 'operator/dashboard.html', supplier: 'supplier/dashboard.html', certifier: 'certifier/task_list.html' };
+                    const url = routes[role];
+                    if (url) window.location.href = url;
+                    else ElementPlus.ElMessage.info('未知角色入口');
+                };
+                onMounted(() => {
+                    const colors = ['#F56C6C', '#E6A23C', '#409EFF', '#67C23A'];
+                    Chart.defaults.font.family = "'PingFang SC', 'Microsoft YaHei', sans-serif";
+                    Chart.defaults.color = '#606266';
+                    const pieCtx = document.getElementById('chartPie');
+                    if (pieCtx) new Chart(pieCtx, { type: 'doughnut', data: { labels: ['认证/已复验', '自声明数据', '估算数据'], datasets: [{ data: [45, 35, 20], backgroundColor: [colors[2], colors[1], colors[0]], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { position: 'bottom' } }, tooltip: { callbacks: { label: (ctx) => ctx.label + ' ' + ctx.parsed + '%' } } } });
+                    const barCtx = document.getElementById('chartBar');
+                    if (barCtx) new Chart(barCtx, { type: 'bar', data: { labels: ['认证数据', '自声明数据', '估算数据', '其他'], datasets: [{ label: '对碳足迹结果影响', data: [95, 60, 35, 20], backgroundColor: colors[1], borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } } });
+                    const stackedCtx = document.getElementById('chartStacked');
+                    if (stackedCtx) new Chart(stackedCtx, { type: 'bar', data: { labels: ['基线订单', '目标订单'], datasets: [{ label: '原材料', data: [45, 38], backgroundColor: colors[0] }, { label: '生产', data: [30, 28], backgroundColor: colors[1] }, { label: '运输', data: [15, 14], backgroundColor: colors[2] }, { label: '使用阶段', data: [10, 8], backgroundColor: colors[3] }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { legend: { position: 'bottom' } } } });
+                });
+                return { enterSystem };
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>
