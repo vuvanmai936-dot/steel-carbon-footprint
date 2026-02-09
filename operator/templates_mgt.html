@@ -15,8 +15,6 @@
     
     <style>
         /* === 🛡️ 关键样式内联 (防止外部CSS未加载导致布局塌陷) === */
-        html, body, #app { height: 100%; margin: 0; padding: 0; overflow: hidden; }
-        [v-cloak] { display: none; }
 
         /* 标准 Flex 固底布局 */
         .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
@@ -51,16 +49,32 @@
 <body>
 <div id="app" v-cloak>
     <el-container style="height: 100vh;">
-        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
             <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
                 碳足迹数据服务
             </div>
-            <el-menu :default-active="'7'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
-                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
-                    <el-icon><component :is="item.icon"></component></el-icon>
-                    <span>{{ item.title }}</span>
-                </el-menu-item>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-sub-menu v-if="item.children" :index="item.id">
+                        <template #title>
+                            <el-icon><component :is="item.icon" /></el-icon>
+                            <span>{{ item.title }}</span>
+                        </template>
+                        <el-menu-item v-for="child in item.children" :key="child.id" :index="child.id" @click="openPage(child.path)">
+                            {{ child.title }}
+                        </el-menu-item>
+                    </el-sub-menu>
+                    <el-menu-item v-else :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
             </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
         </el-aside>
 
         <el-container style="display: flex; flex-direction: column; overflow: hidden;">
@@ -251,9 +265,9 @@
 
 <script>
     // 依赖外部 layout.js (复原项目结构)
-    const { menuConfig, currentUser } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
 
-    const app = Vue.createApp({
+    runOperatorApp({
         setup() {
             const query = Vue.reactive({ name: '', product: '', status: '' });
             
@@ -348,7 +362,8 @@
             };
 
             return {
-                menuConfig, currentUser, query, tableData, 
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
+                query, tableData, 
                 createDialogVisible, createForm,
                 handleSearch, handleReset, getStatusType,
                 openCreateDialog, handleFileChange, submitCreate,
@@ -356,10 +371,6 @@
             };
         }
     });
-
-    app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
-    // 依赖 initApp 挂载 (复原项目结构)
-    initApp(app).mount("#app");
 </script>
 </body>
 </html>

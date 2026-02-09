@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>委托任务 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/layout.js"></script>
+    <style>
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
+        .table-wrapper { flex: 1; overflow: hidden; padding: 10px 15px 50px 15px; position: relative; }
+        .search-card { padding: 18px 20px; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; margin-bottom: 15px; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-sub-menu v-if="item.children" :index="item.id">
+                        <template #title>
+                            <el-icon><component :is="item.icon" /></el-icon>
+                            <span>{{ item.title }}</span>
+                        </template>
+                        <el-menu-item v-for="child in item.children" :key="child.id" :index="child.id" @click="openPage(child.path)">
+                            {{ child.title }}
+                        </el-menu-item>
+                    </el-sub-menu>
+                    <el-menu-item v-else :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                    <el-breadcrumb-item>任务管理</el-breadcrumb-item>
+                    <el-breadcrumb-item>委托任务</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: hidden; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    <div class="search-card">
+                        <p style="color: #606266; font-size: 13px; margin: 0 0 12px 0;">委托任务由多委托方（如擎工互联、易碳数科等）承接，订单确认时由运营选择任务类型与委托方。本页可按委托方筛选，列表数据后续对接真实接口。</p>
+                        <el-form :inline="true" :model="query" size="default" style="margin-bottom: -18px;">
+                            <el-form-item label="委托方">
+                                <el-select v-model="query.entrustedParty" placeholder="全部委托方" clearable style="width: 180px;">
+                                    <el-option label="擎工互联" value="qingong"></el-option>
+                                    <el-option label="易碳数科" value="yitan"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" @click="handleSearch">查询</el-button>
+                                <el-button @click="handleReset">重置</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+
+                    <div class="list-card-container">
+                        <div class="table-wrapper">
+                            <el-table :data="taskList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
+                                <el-table-column prop="taskId" label="任务编号" width="160" />
+                                <el-table-column prop="orderNo" label="订单号" width="160" />
+                                <el-table-column prop="entrustedParty" label="委托方" width="120" />
+                                <el-table-column prop="productName" label="产品" min-width="140" />
+                                <el-table-column prop="status" label="状态" width="100" />
+                            </el-table>
+                            <el-empty v-if="!taskList.length" description="暂无委托任务数据，后续对接真实接口" style="padding: 40px 0;" />
+                        </div>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+
+<script>
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
+
+    runOperatorApp({
+        setup() {
+            const query = Vue.reactive({ entrustedParty: '' });
+            const taskList = Vue.ref([
+                { taskId: 'ET-2026-001', orderNo: 'ORD-260208-001', entrustedParty: '擎工互联', productName: '某产品碳足迹', status: '进行中' },
+                { taskId: 'ET-2026-002', orderNo: 'ORD-260208-002', entrustedParty: '易碳数科', productName: '某产品碳足迹', status: '待开始' }
+            ]);
+            const handleSearch = () => {};
+            const handleReset = () => { query.entrustedParty = ''; };
+            return {
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
+                query, taskList, handleSearch, handleReset
+            };
+        }
+    });
+</script>
+</body>
+</html>

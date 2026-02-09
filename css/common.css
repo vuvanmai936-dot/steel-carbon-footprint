@@ -22,6 +22,17 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+/* 多页面布局基础（运营端/认证端等共用） */
+html, body, #app {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+[v-cloak] {
+    display: none;
+}
+
 /* === 通用原子组件 === */
 
 /* 1. 标准白底卡片 */

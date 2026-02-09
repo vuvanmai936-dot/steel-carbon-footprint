@@ -15,9 +15,6 @@
     
     <style>
         /* === 样式内联：确保布局不塌陷 === */
-        html, body, #app { height: 100%; margin: 0; padding: 0; overflow: hidden; }
-        [v-cloak] { display: none; }
-
         .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
         .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
         .table-wrapper { flex: 1; overflow: hidden; padding: 10px 15px 50px 15px; position: relative; }
@@ -59,16 +56,32 @@
 <body>
 <div id="app" v-cloak>
     <el-container style="height: 100vh;">
-        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
             <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
                 碳足迹数据服务
             </div>
-            <el-menu :default-active="'2'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
-                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
-                    <el-icon><component :is="item.icon" /></el-icon>
-                    <span>{{ item.title }}</span>
-                </el-menu-item>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-sub-menu v-if="item.children" :index="item.id">
+                        <template #title>
+                            <el-icon><component :is="item.icon" /></el-icon>
+                            <span>{{ item.title }}</span>
+                        </template>
+                        <el-menu-item v-for="child in item.children" :key="child.id" :index="child.id" @click="openPage(child.path)">
+                            {{ child.title }}
+                        </el-menu-item>
+                    </el-sub-menu>
+                    <el-menu-item v-else :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
             </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
         </el-aside>
 
         <el-container style="display: flex; flex-direction: column; overflow: hidden;">
@@ -94,11 +107,12 @@
                             <el-form-item label="企业名称">
                                 <el-input v-model="query.company" placeholder="购买方企业" clearable prefix-icon="OfficeBuilding" style="width: 200px;"></el-input>
                             </el-form-item>
-                            <el-form-item label="服务状态">
-                                <el-select v-model="query.status" placeholder="全部" clearable style="width: 140px;">
-                                    <el-option label="服务中" value="active"></el-option>
-                                    <el-option label="即将到期" value="expiring"></el-option>
-                                    <el-option label="已结束" value="closed"></el-option>
+                            <el-form-item label="订单状态">
+                                <el-select v-model="query.orderStatus" placeholder="全部" clearable style="width: 140px;">
+                                    <el-option label="待支付" value="UNPAID"></el-option>
+                                    <el-option label="已支付" value="PAID"></el-option>
+                                    <el-option label="已确认" value="CONFIRMED"></el-option>
+                                    <el-option label="已完成" value="COMPLETED"></el-option>
                                 </el-select>
                             </el-form-item>
                             <el-form-item>
@@ -177,9 +191,9 @@
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="商务状态" width="120">
+                                <el-table-column label="订单状态" width="100">
                                     <template #default="scope">
-                                        <el-tag type="success" size="small" effect="dark">已支付</el-tag>
+                                        <el-tag :type="getOrderStatusType(scope.row.orderStatus)" size="small" effect="plain">{{ getOrderStatusLabel(scope.row.orderStatus) }}</el-tag>
                                     </template>
                                 </el-table-column>
 
@@ -314,6 +328,7 @@
                                 <div class="info-grid">
                                     <div class="info-item"><label>支付金额</label><div class="amount-text">¥{{ currentOrder?.payment.amount }}</div></div>
                                     <div class="info-item"><label>付款比例</label><div><el-tag type="success" effect="plain">{{ currentOrder?.payment.ratio }}</el-tag></div></div>
+                                    <div class="info-item"><label>订单状态</label><div><el-tag :type="getOrderStatusType(currentOrder?.orderStatus)" size="small">{{ getOrderStatusLabel(currentOrder?.orderStatus) }}</el-tag></div></div>
                                     <div class="info-item"><label>支付状态</label><div>{{ currentOrder?.payment.status }}</div></div>
                                     <div class="info-item"><label>付款时间</label><div>{{ currentOrder?.payment.payTime }}</div></div>
                                     <div class="info-item"><label>发票文件</label><el-button link type="primary" icon="Download">{{ currentOrder?.invoice.fileName }}</el-button></div>
@@ -353,11 +368,11 @@
 </div>
 
 <script>
-    const { menuConfig, currentUser } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
 
-    const app = Vue.createApp({
+    runOperatorApp({
         setup() {
-            const query = Vue.reactive({ orderNo: '', company: '', status: '' });
+            const query = Vue.reactive({ orderNo: '', company: '', orderStatus: '' });
             const drawerVisible = Vue.ref(false);
             const currentOrder = Vue.ref(null);
 
@@ -385,7 +400,8 @@
                         { name: 'XX公司--保密协议.docx', signDate: '2026-02-03' },
                         { name: 'XX公司--《廉洁合作协议》.docx', signDate: '2026-02-03' },
                         { name: 'XX公司-- 上游两方合作协议.docx', signDate: '2026-02-03' }
-                    ]
+                    ],
+                    orderStatus: 'CONFIRMED'
                 },
                 {
                     orderNo: 'ORD-20250315-099',
@@ -397,7 +413,8 @@
                     bizContact: { name: '赵工', phone: '15912345678', email: 'zhao@nangang.com' },
                     payment: { amount: '30,000.00', status: '已支付', ratio: '100%', payTime: '2025-03-15 14:20:00', payDate: '2025-03-15' },
                     invoice: { fileName: '电子发票_001122.pdf' },
-                    contracts: [ { name: '年度合作框架协议.pdf', signDate: '2025-03-15' } ]
+                    contracts: [ { name: '年度合作框架协议.pdf', signDate: '2025-03-15' } ],
+                    orderStatus: 'COMPLETED'
                 },
                 {
                     orderNo: 'ORD-20260205-002',
@@ -409,7 +426,8 @@
                     bizContact: { name: '钱工', phone: '13900005678', email: 'qian@shagang.com' },
                     payment: { amount: '80,000.00', status: '已支付', ratio: '100%', payTime: '2026-02-05 11:45:00', payDate: '2026-02-05' },
                     invoice: { fileName: '电子发票_003344.pdf' },
-                    contracts: [ { name: '单次服务协议.pdf', signDate: '2026-02-05' } ]
+                    contracts: [ { name: '单次服务协议.pdf', signDate: '2026-02-05' } ],
+                    orderStatus: 'PAID'
                 },
                 {
                     orderNo: 'ORD-20260110-008',
@@ -421,7 +439,8 @@
                     bizContact: { name: '孙工', phone: '13800004321', email: 'sun@baosteel.com' },
                     payment: { amount: '45,000.00', status: '已支付', ratio: '100%', payTime: '2026-01-10 09:30:00', payDate: '2026-01-10' },
                     invoice: { fileName: '电子发票_005566.pdf' },
-                    contracts: [ { name: '年度服务协议.pdf', signDate: '2026-01-10' } ]
+                    contracts: [ { name: '年度服务协议.pdf', signDate: '2026-01-10' } ],
+                    orderStatus: 'CONFIRMED'
                 },
                 {
                     orderNo: 'ORD-20251212-015',
@@ -433,7 +452,8 @@
                     bizContact: { name: '吴工', phone: '13700003344', email: 'wu@magang.com' },
                     payment: { amount: '60,000.00', status: '已支付', ratio: '100%', payTime: '2025-12-12 10:30:00', payDate: '2025-12-12' },
                     invoice: { fileName: '电子发票_007788.pdf' },
-                    contracts: [ { name: '技术服务合同.pdf', signDate: '2025-12-12' } ]
+                    contracts: [ { name: '技术服务合同.pdf', signDate: '2025-12-12' } ],
+                    orderStatus: 'CONFIRMED'
                 },
                 {
                     orderNo: 'ORD-20250601-020',
@@ -445,7 +465,8 @@
                     bizContact: { name: '王工', phone: '13600007788', email: 'wang@xc.com' },
                     payment: { amount: '70,000.00', status: '已支付', ratio: '100%', payTime: '2025-06-01 14:30:00', payDate: '2025-06-01' },
                     invoice: { fileName: '电子发票_009900.pdf' },
-                    contracts: [ { name: '长期合作协议.pdf', signDate: '2025-06-01' } ]
+                    contracts: [ { name: '长期合作协议.pdf', signDate: '2025-06-01' } ],
+                    orderStatus: 'COMPLETED'
                 },
                 {
                     orderNo: 'ORD-20260201-005',
@@ -457,7 +478,8 @@
                     bizContact: { name: '陈工', phone: '13500002233', email: 'chen@citic.com' },
                     payment: { amount: '55,000.00', status: '已支付', ratio: '100%', payTime: '2026-02-01 09:00:00', payDate: '2026-02-01' },
                     invoice: { fileName: '电子发票_001234.pdf' },
-                    contracts: [ { name: '服务采购合同.pdf', signDate: '2026-02-01' } ]
+                    contracts: [ { name: '服务采购合同.pdf', signDate: '2026-02-01' } ],
+                    orderStatus: 'CONFIRMED'
                 },
                 {
                     orderNo: 'ORD-20251111-033',
@@ -469,7 +491,8 @@
                     bizContact: { name: '杨工', phone: '13900006677', email: 'yang@angang.com' },
                     payment: { amount: '90,000.00', status: '已支付', ratio: '100%', payTime: '2025-11-11 10:30:00', payDate: '2025-11-11' },
                     invoice: { fileName: '电子发票_005678.pdf' },
-                    contracts: [ { name: '年度核算协议.pdf', signDate: '2025-11-11' } ]
+                    contracts: [ { name: '年度核算协议.pdf', signDate: '2025-11-11' } ],
+                    orderStatus: 'CONFIRMED'
                 },
                 {
                     orderNo: 'ORD-20250909-077',
@@ -481,7 +504,8 @@
                     bizContact: { name: '韩工', phone: '13800001122', email: 'han@shougang.com' },
                     payment: { amount: '65,000.00', status: '已支付', ratio: '100%', payTime: '2025-09-09 15:30:00', payDate: '2025-09-09' },
                     invoice: { fileName: '电子发票_009012.pdf' },
-                    contracts: [ { name: '项目合作合同.pdf', signDate: '2025-09-09' } ]
+                    contracts: [ { name: '项目合作合同.pdf', signDate: '2025-09-09' } ],
+                    orderStatus: 'CONFIRMED'
                 },
                 {
                     orderNo: 'ORD-20250101-001',
@@ -493,13 +517,14 @@
                     bizContact: { name: '沈工', phone: '13700005566', email: 'shen@wugang.com' },
                     payment: { amount: '100,000.00', status: '已支付', ratio: '100%', payTime: '2025-01-01 09:30:00', payDate: '2025-01-01' },
                     invoice: { fileName: '电子发票_003456.pdf' },
-                    contracts: [ { name: '年度战略协议.pdf', signDate: '2025-01-01' } ]
+                    contracts: [ { name: '年度战略协议.pdf', signDate: '2025-01-01' } ],
+                    orderStatus: 'COMPLETED'
                 }
             ];
 
-            // 核心计算逻辑 (保留)
+            // 核心计算逻辑：加工字段 + 按订单状态筛选
             const processedOrderList = Vue.computed(() => {
-                return rawOrderList.map(order => {
+                let list = rawOrderList.map(order => {
                     const payDate = dayjs(order.payment.payDate);
                     const deadline = payDate.add(1, 'year');
                     const isExpiring = deadline.diff(dayjs(), 'day') < 30;
@@ -510,6 +535,7 @@
 
                     return {
                         ...order,
+                        orderStatus: order.orderStatus || 'CONFIRMED',
                         serviceStart: payDate.format('YYYY-MM-DD'),
                         serviceDeadline: deadline.format('YYYY-MM-DD'),
                         isExpiring,
@@ -517,7 +543,20 @@
                         completedTasks
                     };
                 });
+                if (query.orderStatus) {
+                    list = list.filter(o => o.orderStatus === query.orderStatus);
+                }
+                if (query.orderNo) {
+                    list = list.filter(o => (o.orderNo || '').toLowerCase().includes((query.orderNo || '').toLowerCase()));
+                }
+                if (query.company) {
+                    list = list.filter(o => (o.buyer?.company || '').toLowerCase().includes((query.company || '').toLowerCase()));
+                }
+                return list;
             });
+
+            const getOrderStatusType = (status) => ({ UNPAID: 'info', PAID: 'warning', CONFIRMED: 'primary', COMPLETED: 'success' }[status] || 'info');
+            const getOrderStatusLabel = (status) => ({ UNPAID: '待支付', PAID: '已支付', CONFIRMED: '已确认', COMPLETED: '已完成' }[status] || status);
 
             const getTaskStatusType = (status) => {
                 const map = { 
@@ -541,20 +580,20 @@
                 window.location.href = targetPage + `?taskId=${task.taskId}`;
             };
 
-            const goToTaskList = () => window.location.href = 'task_list.html';
+            const goToTaskList = () => window.location.href = 'self_operated_task_list.html';
             const handleSearch = () => ElementPlus.ElMessage.success('列表已刷新');
-            const handleReset = () => { query.orderNo = ''; query.company = ''; };
+            const handleReset = () => { query.orderNo = ''; query.company = ''; query.orderStatus = ''; };
             const viewDetail = (row) => { currentOrder.value = row; drawerVisible.value = true; };
             const openPage = (path) => window.location.href = path;
 
             return {
-                menuConfig, currentUser, query, processedOrderList, drawerVisible, currentOrder,
-                getTaskStatusType, handleSearch, handleReset, viewDetail, goToTaskWorkspace, goToTaskList, openPage
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
+                query, processedOrderList, drawerVisible, currentOrder,
+                getTaskStatusType, getOrderStatusType, getOrderStatusLabel,
+                handleSearch, handleReset, viewDetail, goToTaskWorkspace, goToTaskList
             };
         }
     });
-
-    initApp(app).mount("#app");
 </script>
 </body>
 </html>

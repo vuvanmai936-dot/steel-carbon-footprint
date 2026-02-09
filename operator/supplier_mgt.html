@@ -55,28 +55,42 @@
         .rating-C { background: #fdf6ec; color: #E6A23C; border: 1px solid #faecd8; }
 
         /* 7. 基础容器修正 */
-        html, body, #app { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
         .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
         .table-wrapper { flex: 1; overflow: hidden; padding: 10px 15px 50px 15px; position: relative; }
         .pagination-footer { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; border-top: 1px solid #ebeef5; background: #fff; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px; z-index: 10; }
         .search-card { padding: 18px 20px; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; margin-bottom: 15px; flex-shrink: 0; }
-        [v-cloak] { display: none; }
     </style>
 </head>
 <body>
 <div id="app" v-cloak>
     <el-container style="height: 100vh;">
-        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
             <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
                 碳足迹数据服务
             </div>
-            <el-menu :default-active="'5'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
-                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
-                    <el-icon><component :is="item.icon" /></el-icon>
-                    <span>{{ item.title }}</span>
-                </el-menu-item>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-sub-menu v-if="item.children" :index="item.id">
+                        <template #title>
+                            <el-icon><component :is="item.icon" /></el-icon>
+                            <span>{{ item.title }}</span>
+                        </template>
+                        <el-menu-item v-for="child in item.children" :key="child.id" :index="child.id" @click="openPage(child.path)">
+                            {{ child.title }}
+                        </el-menu-item>
+                    </el-sub-menu>
+                    <el-menu-item v-else :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
             </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
         </el-aside>
 
         <el-container style="display: flex; flex-direction: column; overflow: hidden;">
@@ -212,9 +226,9 @@
 </div>
 
 <script>
-    const { menuConfig, currentUser } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
 
-    const app = Vue.createApp({
+    runOperatorApp({
         setup() {
             const query = Vue.reactive({ keyword: '', connStatus: '', orderStatus: '' });
             
@@ -299,18 +313,12 @@
             };
 
             return {
-                menuConfig, currentUser, query, tableData,
-                handleSearch, handleReset, viewDetail, viewOrder, notifySupplier,
-                openPage
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
+                query, tableData,
+                handleSearch, handleReset, viewDetail, viewOrder, notifySupplier
             };
         }
     });
-
-    app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
-    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-        app.component(key, component);
-    }
-    initApp(app).mount("#app");
 </script>
 </body>
 </html>

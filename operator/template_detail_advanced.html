@@ -36,16 +36,32 @@
 <body>
 <div id="app">
     <el-container style="height: 100vh;">
-        <el-aside width="220px" style="background-color: #001529;">
-            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
                 碳足迹数据服务
             </div>
-            <el-menu :default-active="'7'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none;">
-                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
-                    <el-icon><component :is="item.icon" /></el-icon>
-                    <span>{{ item.title }}</span>
-                </el-menu-item>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-sub-menu v-if="item.children" :index="item.id">
+                        <template #title>
+                            <el-icon><component :is="item.icon" /></el-icon>
+                            <span>{{ item.title }}</span>
+                        </template>
+                        <el-menu-item v-for="child in item.children" :key="child.id" :index="child.id" @click="openPage(child.path)">
+                            {{ child.title }}
+                        </el-menu-item>
+                    </el-sub-menu>
+                    <el-menu-item v-else :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
             </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
         </el-aside>
 
         <el-container>
@@ -172,9 +188,9 @@
 </div>
 
 <script>
-    const { menuConfig, currentUser } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
 
-    const app = Vue.createApp({
+    runOperatorApp({
         setup() {
             const activeTab = Vue.ref('structure');
             const templateInfo = Vue.reactive({
@@ -233,14 +249,13 @@
             const openPage = (path) => window.location.href = path;
 
             return {
-                menuConfig, currentUser, activeTab, templateInfo, 
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
+                activeTab, templateInfo, 
                 treeData, defaultProps, currentNode, mappings, validations,
-                handleNodeClick, handleSave, handlePreview, goBack, openPage
+                handleNodeClick, handleSave, handlePreview, goBack
             };
         }
     });
-
-    initApp(app).mount("#app");
 </script>
 </body>
 </html>

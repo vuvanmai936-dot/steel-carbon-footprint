@@ -162,15 +162,16 @@
         const app = Vue.createApp({
             setup() {
                 const enterSystem = (role) => {
-                    if (role === 'operator') {
-                        // ✅ 指向我们已经做好的核心页面：任务管理列表
-                        // 这样一点进来就能看到“看板”和“任务”，体验最好
-                        window.location.href = 'operator/task_list.html';
+                    const routes = {
+                        operator: 'operator/self_operated_task_list.html',
+                        supplier: 'supplier/dashboard.html',   // 演示占位，可后续补全填报/凭证流程
+                        certifier: 'certifier/task_list.html'  // 演示占位，可后续补全核查列表与穿透查看
+                    };
+                    const url = routes[role];
+                    if (url) {
+                        window.location.href = url;
                     } else {
-                        // 其他角色暂未开发，先给个提示
-                        ElementPlus.ElMessage.info(`【${role}】子系统暂未接入原型演示，请先查看运营端。`);
-                        // 如果您后续做了 supplier/index.html，可以在这里放开跳转
-                        // window.location.href = `${role}/dashboard.html`;
+                        ElementPlus.ElMessage.info('未知角色入口');
                     }
                 };
 
