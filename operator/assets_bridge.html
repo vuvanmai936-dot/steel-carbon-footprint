@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>碳数据资产桥接 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 布局基础 === */
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        #app { height: 100%; width: 100%; }
+        [v-cloak] { display: none; }
+
+        .main-container { height: 100%; display: flex; flex-direction: column; overflow: hidden; background: #f0f2f5; }
+        .scrolling-content { flex: 1; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+
+        /* === 流程指引条 === */
+        .process-bar { 
+            display: flex; margin-bottom: 20px; background: #fff; padding: 20px 30px; 
+            border-radius: 4px; border: 1px solid #ebeef5; align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .p-step { flex: 1; display: flex; align-items: center; opacity: 0.5; transition: opacity 0.3s; }
+        .p-step.active { opacity: 1; }
+        .p-icon { 
+            width: 40px; height: 40px; border-radius: 50%; background: #f2f3f5; 
+            display: flex; align-items: center; justify-content: center; margin-right: 15px; color: #909399; font-size: 20px;
+        }
+        .active .p-icon { background: #ecf5ff; color: #409EFF; }
+        .p-info div:first-child { font-weight: bold; color: #303133; font-size: 15px; margin-bottom: 4px; }
+        .p-info div:last-child { font-size: 12px; color: #909399; }
+        .p-arrow { margin: 0 30px; color: #dcdfe6; font-size: 20px; }
+
+        /* === 列表状态样式 === */
+        .status-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 12px; font-size: 12px; }
+        .status-raw { background: #f4f4f5; color: #909399; border: 1px solid #e9e9eb; }
+        .status-packaged { background: #ecf5ff; color: #409EFF; border: 1px solid #d9ecff; }
+        .status-pushed { background: #f0f9eb; color: #67C23A; border: 1px solid #e1f3d8; }
+
+        .source-sys-tag {
+            font-size: 12px; color: #E6A23C; background: #fdf6ec; 
+            padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 5px;
+        }
+        
+        /* 类型标签 */
+        .asset-type-tag { font-size: 12px; padding: 2px 8px; border-radius: 4px; margin-right: 6px; font-weight: bold; }
+        .tag-dataset { background: #e8f3ff; color: #409EFF; }
+        .tag-report { background: #fdf6ec; color: #E6A23C; }
+        .tag-api { background: #f0f9eb; color: #67C23A; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'10'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                    <el-breadcrumb-item>碳数据资产</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <div style="margin-right: 20px; font-size: 13px; color: #606266; display: flex; align-items: center;">
+                        <span>接入连接器状态：</span>
+                        <span style="display: inline-block; width: 8px; height: 8px; background: #67C23A; border-radius: 50%; margin: 0 6px;"></span>
+                        <span style="font-weight: bold;">运行中</span>
+                    </div>
+                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <div class="main-container">
+                <div class="scrolling-content">
+                    
+                    <div class="process-bar">
+                        <div class="p-step active">
+                            <div class="p-icon"><el-icon><Coin /></el-icon></div>
+                            <div class="p-info">
+                                <div>1. 资产提取</div>
+                                <div>从治理系统/业务库提取</div>
+                            </div>
+                        </div>
+                        <div class="p-arrow"><el-icon><ArrowRight /></el-icon></div>
+                        <div class="p-step active">
+                            <div class="p-icon"><el-icon><Suitcase /></el-icon></div>
+                            <div class="p-info">
+                                <div>2. 资产封装</div>
+                                <div>元数据/定价/合规配置</div>
+                            </div>
+                        </div>
+                        <div class="p-arrow"><el-icon><ArrowRight /></el-icon></div>
+                        <div class="p-step">
+                            <div class="p-icon"><el-icon><Upload /></el-icon></div>
+                            <div class="p-info">
+                                <div>3. 推送连接器</div>
+                                <div>进入发送队列 (Staging)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff; padding: 18px 20px; border-radius: 4px; border: 1px solid #ebeef5; margin-bottom: 15px;">
+                        <el-form :inline="true" :model="query" style="margin-bottom: -18px;">
+                            <el-form-item label="资产名称">
+                                <el-input v-model="query.keyword" placeholder="输入名称或ID" clearable style="width: 220px;"></el-input>
+                            </el-form-item>
+                            <el-form-item label="当前阶段">
+                                <el-select v-model="query.status" placeholder="全部" clearable style="width: 150px;">
+                                    <el-option label="待封装 (Raw)" value="raw"></el-option>
+                                    <el-option label="已封装 (Ready)" value="packaged"></el-option>
+                                    <el-option label="已推送 (Pushed)" value="pushed"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" icon="Search" @click="handleSearch">查询</el-button>
+                                <el-button type="warning" icon="Refresh" @click="handleSync">同步原始数据源</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+
+                    <div style="background: #fff; border-radius: 4px; border: 1px solid #ebeef5; min-height: 400px;">
+                        <el-table :data="tableData" border stripe style="width: 100%">
+                            <el-table-column label="数据源信息 (Source)" min-width="280">
+                                <template #default="scope">
+                                    <div>
+                                        <span class="source-sys-tag">{{ scope.row.sourceSystem }}</span>
+                                        <div style="font-weight: bold; color: #303133; font-size: 14px; margin-bottom: 4px;">{{ scope.row.rawName }}</div>
+                                        <div style="font-family: monospace; color: #909399; font-size: 12px;">ID: {{ scope.row.rawId }}</div>
+                                    </div>
+                                </template>
+                            </el-table-column>
+
+                            <el-table-column label="提取时间" prop="createTime" width="180" sortable></el-table-column>
+
+                            <el-table-column label="处理状态" width="160">
+                                <template #default="scope">
+                                    <div v-if="scope.row.status === 'raw'" class="status-badge status-raw">
+                                        <el-icon style="margin-right: 4px;"><EditPen /></el-icon> 待封装
+                                    </div>
+                                    <div v-else-if="scope.row.status === 'packaged'" class="status-badge status-packaged">
+                                        <el-icon style="margin-right: 4px;"><Box /></el-icon> 已封装 (就绪)
+                                    </div>
+                                    <div v-else class="status-badge status-pushed">
+                                        <el-icon style="margin-right: 4px;"><Check /></el-icon> 已推连接器
+                                    </div>
+                                </template>
+                            </el-table-column>
+
+                            <el-table-column label="封装后资产名称" min-width="260" show-overflow-tooltip>
+                                <template #default="scope">
+                                    <div v-if="scope.row.status !== 'raw'">
+                                        <span :class="['asset-type-tag', 'tag-'+(scope.row.assetType||'dataset')]">
+                                            {{ getTypeName(scope.row.assetType) }}
+                                        </span>
+                                        <span style="color: #409EFF; font-weight: 500;">{{ scope.row.assetName }}</span>
+                                    </div>
+                                    <div v-else style="color: #ccc; font-style: italic;">-- 需进入详情页配置 --</div>
+                                </template>
+                            </el-table-column>
+
+                            <el-table-column label="操作" width="220" fixed="right" align="center">
+                                <template #default="scope">
+                                    <el-button v-if="scope.row.status === 'raw'" type="primary" size="small" @click="goToDetail(scope.row)">
+                                        去封装
+                                    </el-button>
+                                    
+                                    <template v-if="scope.row.status === 'packaged'">
+                                        <el-button link type="primary" size="small" @click="goToDetail(scope.row)">编辑配置</el-button>
+                                        <el-button link type="success" size="small" @click="pushToConnector(scope.row)">推送</el-button>
+                                    </template>
+
+                                    <template v-if="scope.row.status === 'pushed'">
+                                        <el-button link type="primary" size="small" @click="goToDetail(scope.row)">查看详情</el-button>
+                                        <el-button link type="danger" size="small" @click="recallAsset(scope.row)">撤回</el-button>
+                                    </template>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        
+                        <div style="padding: 15px; display: flex; justify-content: flex-end;">
+                            <el-pagination background layout="total, prev, pager, next" :total="12"></el-pagination>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </el-container>
+    </el-container>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    // 动态注入菜单 (确保 ID=10 存在)
+    let menuList = Array.isArray(menuConfig) ? menuConfig : (menuConfig.value || []);
+    if (!menuList.find(item => item.id === '10')) {
+        const insertIndex = menuList.findIndex(item => item.title.includes('结算'));
+        const newItem = { id: '10', title: '碳数据资产', icon: 'Coin', path: 'assets_bridge.html' };
+        if (insertIndex > -1) menuList.splice(insertIndex, 0, newItem);
+        else menuList.push(newItem);
+    }
+
+    const app = Vue.createApp({
+        setup() {
+            const query = Vue.reactive({ keyword: '', status: '' });
+            
+            const tableData = Vue.ref([
+                { 
+                    rawId: 'RAW-20260205-001', 
+                    rawName: 'Job_Export_LCA_Steel_East_Q1.csv', 
+                    sourceSystem: '碳核算引擎',
+                    createTime: '2026-02-05 14:30',
+                    status: 'raw', 
+                    assetName: null
+                },
+                { 
+                    rawId: 'RAW-20260204-099', 
+                    rawName: 'Report_Graphite_Analysis_Final.pdf', 
+                    sourceSystem: '治理系统(预)',
+                    createTime: '2026-02-04 09:15',
+                    status: 'packaged', 
+                    assetName: '石墨电极全生命周期分析报告',
+                    assetType: 'report'
+                },
+                { 
+                    rawId: 'RAW-20260120-005', 
+                    rawName: 'API_Supplier_Credit_Score', 
+                    sourceSystem: '供应商管理',
+                    createTime: '2026-01-20 11:00',
+                    status: 'pushed', 
+                    assetName: '供应商碳信用查询服务',
+                    assetType: 'api'
+                }
+            ]);
+
+            const handleSearch = () => ElementPlus.ElMessage.success('列表已刷新');
+            
+            const handleSync = () => {
+                const loading = ElementPlus.ElLoading.service({ text: '正在扫描内部数据源...' });
+                setTimeout(() => {
+                    loading.close();
+                    ElementPlus.ElMessage.success('扫描完成，新增 1 条待处理数据');
+                    tableData.value.unshift({
+                        rawId: 'RAW-' + Date.now(), 
+                        rawName: 'New_Factor_Lib_v2.xlsx', 
+                        sourceSystem: '因子库模块',
+                        createTime: new Date().toLocaleString(),
+                        status: 'raw',
+                        assetName: null
+                    });
+                }, 1000);
+            };
+
+            const getTypeName = (type) => {
+                const map = { 'dataset': '数据集', 'report': '报告', 'api': 'API' };
+                return map[type] || '未知';
+            };
+
+            // 核心逻辑升级：跳转到独立详情页
+            const goToDetail = (row) => {
+                const type = row.assetType || 'dataset';
+                const status = row.status;
+                window.location.href = `assets_detail.html?id=${row.rawId}&type=${type}&status=${status}`;
+            };
+
+            const pushToConnector = (row) => {
+                const loading = ElementPlus.ElLoading.service({ text: '正在传输至连接器 Staging 区...' });
+                setTimeout(() => {
+                    loading.close();
+                    row.status = 'pushed';
+                    ElementPlus.ElMessage.success('推送成功，等待连接器调度上链');
+                }, 1500);
+            };
+
+            const recallAsset = (row) => {
+                ElementPlus.ElMessageBox.confirm('确定要从连接器队列中撤回吗？', '撤回确认', { type: 'warning' })
+                .then(() => {
+                    row.status = 'packaged';
+                    ElementPlus.ElMessage.success('已撤回至本地');
+                });
+            };
+
+            // 本地定义的跳转函数
+            const openPage = (path) => {
+                const current = window.location.pathname.split('/').pop();
+                if (current !== path) window.location.href = path;
+            };
+
+            return {
+                menuConfig, currentUser, query, tableData, 
+                handleSearch, handleSync, goToDetail, pushToConnector, recallAsset, openPage, getTypeName
+            };
+        }
+    });
+
+    app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+        app.component(key, component);
+    }
+    app.mount("#app");
+</script>
+</body>
+</html>

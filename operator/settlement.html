@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>财务结算中心 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.16.0.0.css" title="spread-theme" />
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/gc.spread.sheets.all.16.0.0.min.js"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 1. 布局防塌陷标准 === */
+        html, body, #app { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        [v-cloak] { display: none; }
+
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
+        .table-wrapper { flex: 1; overflow: hidden; padding: 10px 15px 50px 15px; position: relative; }
+        .pagination-footer { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; border-top: 1px solid #ebeef5; background: #fff; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px; z-index: 10; }
+        .search-card { padding: 18px 20px; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; margin-bottom: 15px; flex-shrink: 0; }
+
+        /* === 2. 资金 Dashboard === */
+        .fund-card {
+            background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%);
+            border: 1px solid #e4e7ed; border-radius: 8px; padding: 20px;
+            display: flex; flex-direction: column; justify-content: space-between; height: 120px;
+            transition: all 0.3s; position: relative; overflow: hidden; margin-bottom: 15px;
+        }
+        .fund-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.05); border-color: #409EFF; }
+        .fund-title { font-size: 14px; color: #606266; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
+        .fund-amount { font-size: 24px; font-weight: bold; color: #303133; font-family: 'DIN Alternate', sans-serif; }
+        .fund-trend { font-size: 12px; margin-top: 8px; display: flex; align-items: center; }
+        .fund-icon { position: absolute; right: -10px; bottom: -10px; font-size: 80px; opacity: 0.05; transform: rotate(-15deg); }
+
+        /* === 3. 列表内容样式 === */
+        .info-group { display: flex; align-items: flex-start; width: 100%; }
+        .info-text-wrapper { flex: 1; min-width: 0; overflow: hidden; } 
+        .info-icon-box {
+            width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; margin-right: 12px;
+            background: #fdf6ec; color: #E6A23C; border: 1px solid #faecd8;
+        }
+        .info-main-text { font-weight: 600; color: #303133; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .info-sub-text { font-family: monospace; color: #909399; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .status-badge { display: inline-flex; align-items: center; padding: 0 10px; border-radius: 12px; font-size: 12px; height: 24px; box-sizing: border-box; white-space: nowrap; border: 1px solid transparent; }
+        .status-pending { background: #e6f7ff; border: 1px solid #91d5ff; color: #1890ff; } 
+        .status-invoice { background: #fffbe6; border: 1px solid #ffe58f; color: #fa8c16; } 
+        .status-settling { background: #f9f0ff; border: 1px solid #d3adf7; color: #722ed1; } 
+        .status-done { background: #f6ffed; border: 1px solid #b7eb8f; color: #52c41a; }
+
+        .num-font { font-family: 'DIN Alternate', sans-serif; font-weight: bold; }
+
+        /* === 4. 详情与表格 === */
+        .bill-summary { background: #f5f7fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #ebeef5; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+        .fee-breakdown { background: #fff; padding: 10px; border-radius: 4px; border: 1px dashed #dcdfe6; margin-top: 10px; }
+        .fee-item { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #606266; }
+        .fee-item.highlight { color: #F56C6C; font-weight: bold; }
+        .rule-tag { background: #ecf5ff; color: #409EFF; padding: 1px 5px; border-radius: 2px; font-size: 11px; margin-left: 5px; }
+        
+        .spread-container { width: 100%; height: 400px; border: 1px solid #dcdfe6; border-radius: 4px; }
+        .excel-toolbar { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; background: #f8f9fb; padding: 8px; border-radius: 4px; border: 1px solid #eee; }
+        .hash-code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #909399; background: #f4f4f5; padding: 2px 6px; border-radius: 4px; }
+
+        /* 打印样式 */
+        @media print {
+            .el-aside, .el-header, .no-print { display: none !important; }
+            .el-container, .el-main { padding: 0 !important; margin: 0 !important; height: auto !important; background: #fff !important; }
+            .el-drawer__body { padding: 20px !important; }
+            .el-drawer__header { display: none !important; } 
+            .el-overlay { position: static !important; background: none !important; }
+            .el-drawer { position: static !important; width: 100% !important; box-shadow: none !important; }
+            .print-header { display: block !important; text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #000; }
+            .bill-summary { border: 1px solid #000 !important; background: #fff !important; }
+            .el-table { border: 1px solid #000 !important; }
+            .el-table th, .el-table td { border-bottom: 1px solid #000 !important; border-right: 1px solid #000 !important; color: #000 !important; }
+        }
+        .print-header { display: none; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;" class="no-print">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'8'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon"></component></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;" class="no-print">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                    <el-breadcrumb-item>结算管理</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: hidden; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    
+                    <el-row :gutter="15" style="margin-bottom: 0; flex-shrink: 0;" class="no-print">
+                        <el-col :span="6">
+                            <div class="fund-card">
+                                <div><div class="fund-title"><el-icon><component :is="'Money'"></component></el-icon> 本月应付账款 (AP)</div><div class="fund-amount">¥ 189,000.00</div></div>
+                                <div class="fund-trend" style="color: #F56C6C;">3 笔账单待结算</div>
+                                <el-icon class="fund-icon"><component :is="'Wallet'"></component></el-icon>
+                            </div>
+                        </el-col>
+                        <el-col :span="6">
+                            <div class="fund-card">
+                                <div><div class="fund-title"><el-icon><component :is="'Check'"></component></el-icon> 本月已完成结算</div><div class="fund-amount">¥ 428,500.00</div></div>
+                                <div class="fund-trend" style="color: #67C23A;"><el-icon><component :is="'Top'"></component></el-icon> 环比增长 12%</div>
+                                <el-icon class="fund-icon"><component :is="'Stamp'"></component></el-icon>
+                            </div>
+                        </el-col>
+                        <el-col :span="6">
+                            <div class="fund-card">
+                                <div><div class="fund-title"><el-icon><component :is="'Document'"></component></el-icon> 待核销发票金额</div><div class="fund-amount">¥ 56,800.00</div></div>
+                                <div class="fund-trend" style="color: #909399;">需催办发票归档</div>
+                                <el-icon class="fund-icon"><component :is="'Files'"></component></el-icon>
+                            </div>
+                        </el-col>
+                        <el-col :span="6">
+                            <div class="fund-card" style="border-color: #fde2e2; background: #fef0f0;">
+                                <div><div class="fund-title" style="color: #F56C6C;"><el-icon><component :is="'Warning'"></component></el-icon> 争议/挂起账单</div><div class="fund-amount" style="color: #F56C6C;">1 笔</div></div>
+                                <div class="fund-trend" style="color: #F56C6C;">需人工介入处理</div>
+                                <el-icon class="fund-icon" style="color: #F56C6C;"><component :is="'CircleClose'"></component></el-icon>
+                            </div>
+                        </el-col>
+                    </el-row>
+
+                    <div class="list-card-container" style="margin-top: 0;">
+                        <el-tabs v-model="activeTab" type="card" class="no-print" style="margin-left: 20px; margin-top: 10px;">
+                            <el-tab-pane label="结算账单管理" name="bills"></el-tab-pane>
+                            <el-tab-pane label="结算流水记录" name="transactions"></el-tab-pane>
+                        </el-tabs>
+
+                        <div v-show="activeTab === 'bills'" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                            <div style="padding: 15px 20px 0; display: flex; justify-content: space-between;">
+                                <el-form :inline="true" size="small">
+                                    <el-form-item label="账期"><el-date-picker v-model="query.month" type="month" placeholder="选择月份" style="width: 140px;"></el-date-picker></el-form-item>
+                                    <el-form-item label="状态"><el-select v-model="query.status" placeholder="全部状态" style="width: 140px;"><el-option label="全部" value=""></el-option><el-option label="待核对" value="pending_confirm"></el-option><el-option label="待打款" value="pending_payment"></el-option><el-option label="结算处理中" value="settling"></el-option><el-option label="已结算" value="paid"></el-option></el-select></el-form-item>
+                                    <el-form-item><el-button type="primary" icon="Search" @click="handleSearch">查询</el-button></el-form-item>
+                                </el-form>
+                                <div style="display: flex; gap: 10px;">
+                                    <el-button type="warning" plain icon="Refresh" @click="syncAllStatus">批量同步支付状态</el-button>
+                                    <el-dropdown split-button type="primary" @click="handleGenerateBills">
+                                        自动生成本期账单
+                                        <template #dropdown>
+                                            <el-dropdown-menu><el-dropdown-item icon="DocumentAdd" @click="openManualBillDialog">新建/导入手工账单 (Excel)</el-dropdown-item></el-dropdown-menu>
+                                        </template>
+                                    </el-dropdown>
+                                </div>
+                            </div>
+
+                            <div class="table-wrapper">
+                                <el-table :data="billList" border stripe style="width: 100%; height: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
+                                    <el-table-column label="账单信息 (Bill)" min-width="260" fixed show-overflow-tooltip>
+                                        <template #default="s">
+                                            <div class="info-group">
+                                                <div class="info-icon-box"><el-icon><component :is="'Money'"></component></el-icon></div>
+                                                <div class="info-text-wrapper">
+                                                    <div class="info-main-text">{{ s.row.billNo }} <el-tag v-if="s.row.type === 'manual'" size="small" type="info" effect="plain" style="transform: scale(0.8);">手工</el-tag></div>
+                                                    <div class="info-sub-text">{{ s.row.startDate }} ~ {{ s.row.endDate }}</div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </el-table-column>
+                                    
+                                    <el-table-column prop="certifierName" label="结算对象" min-width="180" show-overflow-tooltip></el-table-column>
+                                    
+                                    <el-table-column label="分润规则" width="160" show-overflow-tooltip>
+                                        <template #default="s">
+                                            <div v-if="s.row.type !== 'manual'" style="font-size: 12px; color: #606266;">
+                                                <div>{{ s.row.ruleName || '默认通用规则' }}</div>
+                                                <div style="color: #409EFF; font-size: 11px;">(费率 {{ s.row.commissionRate * 100 }}%)</div>
+                                            </div>
+                                            <div v-else style="font-size: 12px; color: #ccc;">-</div>
+                                        </template>
+                                    </el-table-column>
+
+                                    <el-table-column label="单量" width="80" align="center">
+                                        <template #default="s">{{ s.row.orders.length > 0 ? s.row.orders.length : '-' }}</template>
+                                    </el-table-column>
+                                    
+                                    <el-table-column label="应付金额 (元)" width="160" align="right">
+                                        <template #default="s"><div class="num-font" style="color: #F56C6C; font-size: 16px;">{{ s.row.payableAmount }}</div></template>
+                                    </el-table-column>
+                                    
+                                    <el-table-column label="状态" width="120" align="center">
+                                        <template #default="s"><span :class="['status-badge', getStatusClass(s.row.status)]">{{ getStatusText(s.row.status) }}</span></template>
+                                    </el-table-column>
+                                    
+                                    <el-table-column label="操作" width="220" fixed="right" align="center" class-name="no-print">
+                                        <template #default="s">
+                                            <el-button link type="primary" size="small" @click="viewBillDetail(s.row)">明细</el-button>
+                                            <el-divider direction="vertical"></el-divider>
+                                            
+                                            <el-button v-if="s.row.status === 'pending_confirm'" link type="warning" size="small" @click="confirmBill(s.row)">核对</el-button>
+                                            <el-button v-if="s.row.status === 'pending_payment' && s.row.type !== 'manual'" link type="success" size="small" @click="pushToSettlement(s.row)">推送支付</el-button>
+                                            
+                                            <el-button v-if="s.row.status === 'settling'" link type="primary" size="small" @click="syncOneStatus(s.row)">同步状态</el-button>
+                                            
+                                            <el-button v-if="s.row.status === 'pending_payment' && s.row.type === 'manual'" link type="success" size="small" @click="openPaymentRecordDialog(s.row)">登记打款</el-button>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </div>
+                            
+                            <div class="pagination-footer">
+                                <el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="billList.length" :page-sizes="[10, 20, 50]"></el-pagination>
+                            </div>
+                        </div>
+
+                        <div v-show="activeTab === 'transactions'" style="flex: 1; padding: 20px; overflow: auto;">
+                            <el-table :data="transactionList" border stripe size="small">
+                                <el-table-column prop="txId" label="外部交易流水号" width="220"></el-table-column>
+                                <el-table-column prop="time" label="支付时间" width="160"></el-table-column>
+                                <el-table-column prop="receiver" label="收款方账户"></el-table-column>
+                                <el-table-column prop="amount" label="金额" width="120" align="right"></el-table-column>
+                                <el-table-column prop="channel" label="支付渠道" width="120"></el-table-column>
+                                <el-table-column label="操作/来源" width="120">
+                                    <template #default="s"><el-tag v-if="s.row.source === 'auto'" size="small" type="info">商城回调</el-tag><span v-else>{{ s.row.operator }}</span></template>
+                                </el-table-column>
+                                <el-table-column label="凭证" width="100"><template #default><el-button link type="primary" size="small">电子回单</el-button></template></el-table-column>
+                            </el-table>
+                        </div>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+
+    <el-dialog v-model="manualBillVisible" title="新建线下/手工账单" width="900px" @opened="initSpread">
+        <el-alert title="支持直接从 Excel 复制粘贴数据至下方表格。系统将自动计算总金额。" type="info" show-icon style="margin-bottom: 15px;"></el-alert>
+        <el-form :inline="true" size="small">
+            <el-form-item label="结算对象">
+                <el-select v-model="manualBill.certifier" placeholder="请选择机构" style="width: 200px;">
+                    <el-option label="SGS 通标标准" value="sgs"></el-option>
+                    <el-option label="DNV 挪威船级社" value="dnv"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="摘要备注"><el-input v-model="manualBill.note" placeholder="如：Q1 返点" style="width: 300px;"></el-input></el-form-item>
+        </el-form>
+        <div class="excel-toolbar">
+            <el-button type="primary" size="small" icon="DocumentAdd" @click="loadSampleData">加载模版数据</el-button>
+            <el-button type="danger" size="small" icon="Delete" @click="clearSpread">清空表格</el-button>
+            <div style="flex: 1; text-align: right; font-weight: bold; color: #F56C6C;">预估总额：¥ <span id="calc-total">0.00</span></div>
+        </div>
+        <div id="ss" class="spread-container"></div>
+        <template #footer>
+            <el-button @click="manualBillVisible = false">取消</el-button>
+            <el-button type="primary" @click="createManualBill">生成账单</el-button>
+        </template>
+    </el-dialog>
+
+    <el-dialog v-model="paymentRecordVisible" title="登记线下打款信息" width="500px">
+        <el-form label-position="top">
+            <el-form-item label="外部交易流水号" required><el-input></el-input></el-form-item>
+            <el-form-item label="实际支付时间" required><el-date-picker type="datetime" style="width: 100%;"></el-date-picker></el-form-item>
+            <el-form-item label="上传回单凭证">
+                <el-upload action="#" list-type="picture-card" :limit="1">
+                    <el-icon><component :is="'Plus'"></component></el-icon>
+                </el-upload>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="paymentRecordVisible = false">取消</el-button>
+            <el-button type="primary" @click="confirmPaymentRecord">确认并归档</el-button>
+        </template>
+    </el-dialog>
+
+    <el-drawer v-model="drawerVisible" title="账单详情" size="650px">
+        <div class="print-header">
+            <h1>结算支付确认单</h1>
+            <p>打印时间：{{ new Date().toLocaleString() }}</p>
+        </div>
+
+        <div v-if="currentBill" style="padding: 0 10px;">
+            <div class="bill-summary">
+                <div class="summary-row"><span>账单编号：</span><span>{{ currentBill.billNo }}</span></div>
+                <div class="summary-row"><span>类型：</span><span>{{ currentBill.type === 'manual' ? '线下手工' : '系统自动' }}</span></div>
+                <div class="summary-row"><span>结算机构：</span><b>{{ currentBill.certifierName }}</b></div>
+                <div class="summary-row"><span>数据可见性：</span><el-tag size="small" effect="dark" type="success">核查端已同步</el-tag></div>
+                
+                <div class="fee-breakdown">
+                    <div class="fee-item">
+                        <span>订单总交易额 (GMV)</span>
+                        <span>¥ {{ currentBill.totalAmount }}</span>
+                    </div>
+                    
+                    <div class="fee-item" v-if="currentBill.type !== 'manual'">
+                        <span>
+                            平台技术服务费 (扣除)
+                            <span class="rule-tag">{{ currentBill.ruleName }} ({{ currentBill.commissionRate * 100 }}%)</span>
+                        </span>
+                        <span style="color: #67C23A;">- ¥ {{ (currentBill.totalAmount * currentBill.commissionRate).toFixed(2) }}</span>
+                    </div>
+                    
+                    <div style="border-top: 1px solid #eee; margin: 6px 0;"></div>
+                    
+                    <div class="fee-item highlight">
+                        <span>本期实际应付 (Payable)</span>
+                        <span style="font-size: 16px;">¥ {{ currentBill.payableAmount }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="currentBill.type !== 'manual'">
+                <div style="margin-bottom: 10px; font-weight: bold; margin-top: 20px;">包含订单明细 ({{ currentBill.orders.length }})</div>
+                <el-table :data="currentBill.orders" border size="small" height="300px">
+                    <el-table-column prop="orderNo" label="订单号" width="140"></el-table-column>
+                    <el-table-column prop="product" label="产品/服务"></el-table-column>
+                    <el-table-column label="数据源凭证" width="120" align="center">
+                        <template #default="s">
+                            <el-tooltip content="数据来自 供应商接入连接器 边缘节点签名" placement="top">
+                                <span class="hash-code">手工填报-{{ s.row.orderNo.slice(-4) }}</span>
+                            </el-tooltip>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="price" label="订单金额" width="100" align="right"></el-table-column>
+                </el-table>
+            </div>
+            <div v-else>
+                <div style="background: #fffbe6; padding: 10px; border-radius: 4px; color: #666; font-size: 13px; margin-bottom: 15px;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">备注说明：</div>{{ currentBill.note || '无备注' }}
+                </div>
+                <div style="margin-bottom: 10px; font-weight: bold;">导入明细数据 ({{ currentBill.orders.length }})</div>
+                <el-table :data="currentBill.orders" border size="small" height="300px">
+                    <el-table-column prop="desc" label="费用描述"></el-table-column>
+                    <el-table-column prop="price" label="金额" width="120" align="right"></el-table-column>
+                </el-table>
+            </div>
+        </div>
+        <template #footer>
+            <div style="display: flex; justify-content: flex-end;" class="no-print">
+                <el-button @click="drawerVisible = false">关闭</el-button>
+                <el-button type="primary" plain icon="Printer" @click="printBill">打印确认单</el-button>
+                <el-button v-if="currentBill?.status === 'pending_payment'" type="success" @click="currentBill.type==='manual'?openPaymentRecordDialog(currentBill):pushToSettlement(currentBill)">
+                    {{ currentBill?.type==='manual'?'登记打款':'推送至商城支付' }}
+                </el-button>
+            </div>
+        </template>
+    </el-drawer>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            const activeTab = Vue.ref('bills');
+            const query = Vue.reactive({ month: '', status: '' });
+            const drawerVisible = Vue.ref(false);
+            const manualBillVisible = Vue.ref(false);
+            const paymentRecordVisible = Vue.ref(false);
+            const currentBill = Vue.ref(null);
+            
+            const manualBill = Vue.reactive({ certifier: '', note: '' });
+            let spread = null;
+            let sheet = null;
+
+            // Mock Data (业务升级：增加 ruleName)
+            const billList = Vue.ref([
+                {
+                    id: 1, billNo: 'BILL-202602-SGS', type: 'auto', certifierName: 'SGS 通标标准',
+                    startDate: '2026-02-01', endDate: '2026-02-28', 
+                    totalAmount: '10,000.00', commissionRate: 0.12, payableAmount: '8,800.00',
+                    ruleName: 'SGS 2026年度框架协议', // 关联配置
+                    status: 'pending_payment', 
+                    orders: [
+                        { orderNo: 'ORD-001', product: '石墨电极核查', price: '5,000.00' },
+                        { orderNo: 'ORD-002', product: '高炉煤气核查', price: '5,000.00' }
+                    ]
+                },
+                {
+                    id: 2, billNo: 'BILL-202602-DNV', type: 'auto', certifierName: 'DNV 挪威船级社',
+                    startDate: '2026-02-01', endDate: '2026-02-28', 
+                    totalAmount: '0.00', commissionRate: 0.10, payableAmount: '0.00',
+                    ruleName: 'DNV 标准分润规则 V2', // 关联配置
+                    status: 'settling', orders: [] 
+                },
+                {
+                    id: 3, billNo: 'BILL-MANUAL-001', type: 'manual', certifierName: 'DNV 挪威船级社',
+                    startDate: '2026-02-05', endDate: '2026-02-05', 
+                    totalAmount: '5,000.00', commissionRate: 0, payableAmount: '5,000.00',
+                    status: 'pending_payment', note: '线下协议', 
+                    orders: [{desc: '手工录入项', price: '5,000.00'}]
+                }
+            ]);
+
+            const transactionList = Vue.ref([
+                { txId: 'TX-AUTO-9988', time: '2026-02-05 14:30', receiver: 'SGS China', amount: '171,000.00', channel: '鑫采商城', source: 'auto' }
+            ]);
+
+            const getStatusText = (s) => ({'pending_confirm':'待核对', 'pending_invoice':'待开票', 'pending_payment':'待打款', 'settling':'商城处理中', 'paid':'已结算'}[s] || s);
+            const getStatusClass = (s) => ({'pending_confirm':'status-pending', 'pending_invoice':'status-invoice', 'pending_payment':'status-pending', 'settling':'status-settling', 'paid':'status-done'}[s] || '');
+
+            const handleSearch = () => ElementPlus.ElMessage.success('列表已刷新');
+            
+            const handleGenerateBills = () => {
+                ElementPlus.ElMessage.success('账单已生成');
+            };
+
+            const viewBillDetail = (row) => { currentBill.value = row; drawerVisible.value = true; };
+            const confirmBill = (row) => { ElementPlus.ElMessageBox.confirm('确认账单无误？').then(() => { row.status = 'pending_invoice'; }); };
+            
+            // 业务升级：推送逻辑
+            const pushToSettlement = (row) => {
+                ElementPlus.ElMessageBox.confirm(`即将推送账单 [${row.billNo}] 至鑫采商城财务系统，并通知核查方。是否继续？`, '推送支付', { confirmButtonText: '确认推送' }).then(() => {
+                    row.status = 'settling';
+                    if(drawerVisible.value) drawerVisible.value = false;
+                    ElementPlus.ElMessage.success('推送成功，等待商城财务打款');
+                });
+            };
+
+            // 业务升级：模拟商城回调
+            const syncOneStatus = (row) => {
+                const loading = ElementPlus.ElLoading.service({ text: '正在查询商城支付状态...' });
+                setTimeout(() => {
+                    loading.close();
+                    row.status = 'paid';
+                    transactionList.value.unshift({ txId: 'TX-XC-' + Date.now(), time: new Date().toLocaleString(), receiver: row.certifierName, amount: row.payableAmount, channel: '鑫采商城', source: 'auto' });
+                    ElementPlus.ElMessage.success('状态已同步：支付成功');
+                }, 800);
+            };
+            const syncAllStatus = () => ElementPlus.ElMessage.success('批量同步指令已发送');
+
+            const openManualBillDialog = () => { manualBillVisible.value = true; };
+            
+            const initSpread = () => {
+                if (spread) return;
+                spread = new GC.Spread.Sheets.Workbook(document.getElementById('ss'));
+                spread.options.tabStripVisible = false;
+                spread.options.newTabVisible = false;
+                spread.options.showHorizontalScrollbar = false;
+                
+                sheet = spread.getActiveSheet();
+                sheet.setValue(0, 0, "费用描述 / 订单号");
+                sheet.setValue(0, 1, "产品类型");
+                sheet.setValue(0, 2, "金额 (元)");
+                sheet.setColumnWidth(0, 200); sheet.setColumnWidth(1, 150); sheet.setColumnWidth(2, 100);
+                
+                var style = new GC.Spread.Sheets.Style();
+                style.font = "bold 14px Arial";
+                style.backColor = "#f0f2f5";
+                sheet.setStyle(0, -1, style, GC.Spread.Sheets.SheetArea.viewport);
+                
+                spread.bind(GC.Spread.Sheets.Events.ValueChanged, function (e, args) { calculateTotal(); });
+            };
+
+            const loadSampleData = () => {
+                sheet.setValue(1, 0, "ORD-OFFLINE-001"); sheet.setValue(1, 1, "咨询服务费"); sheet.setValue(1, 2, 5000);
+                calculateTotal();
+            };
+
+            const clearSpread = () => {
+                sheet.clear(1, 0, 100, 3, GC.Spread.Sheets.SheetArea.viewport, GC.Spread.Sheets.StorageType.data);
+                calculateTotal();
+            };
+
+            const calculateTotal = () => {
+                let total = 0;
+                let rowCount = sheet.getRowCount();
+                for (let i = 1; i < rowCount; i++) {
+                    let val = sheet.getValue(i, 2);
+                    if (val && !isNaN(val)) total += Number(val);
+                }
+                document.getElementById('calc-total').innerText = total.toFixed(2);
+                return total;
+            };
+
+            const createManualBill = () => {
+                const total = calculateTotal();
+                if (total <= 0) { ElementPlus.ElMessage.warning('账单总额必须大于 0'); return; }
+                
+                let orders = [];
+                let rowCount = sheet.getRowCount();
+                for (let i = 1; i < rowCount; i++) {
+                    let desc = sheet.getValue(i, 0);
+                    let price = sheet.getValue(i, 2);
+                    if (desc && price) orders.push({ desc, price });
+                }
+
+                manualBillVisible.value = false;
+                billList.value.unshift({
+                    id: Date.now(), billNo: 'BILL-MANUAL-' + Math.floor(Math.random()*1000), type: 'manual',
+                    certifierName: manualBill.certifier === 'sgs' ? 'SGS 通标标准' : 'DNV',
+                    startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0],
+                    totalAmount: total.toFixed(2), commissionRate: 0, payableAmount: total.toFixed(2), 
+                    status: 'pending_confirm', note: manualBill.note, orders: orders
+                });
+                ElementPlus.ElMessage.success('手工账单创建成功');
+            };
+
+            const openPaymentRecordDialog = (row) => { currentBill.value = row; paymentRecordVisible.value = true; };
+            const confirmPaymentRecord = () => { 
+                paymentRecordVisible.value = false; 
+                if(currentBill.value) currentBill.value.status = 'paid';
+                ElementPlus.ElMessage.success('登记成功'); 
+            };
+
+            const printBill = () => { window.print(); };
+            const goBack = () => { window.history.back(); };
+            const openPage = (path) => window.location.href = path;
+
+            return {
+                menuConfig, currentUser, activeTab, query, billList, transactionList, 
+                drawerVisible, manualBillVisible, paymentRecordVisible, currentBill, manualBill,
+                getStatusText, getStatusClass, handleSearch, handleGenerateBills, viewBillDetail, confirmBill, 
+                pushToSettlement, syncOneStatus, syncAllStatus,
+                openManualBillDialog, createManualBill, openPaymentRecordDialog, confirmPaymentRecord, printBill,
+                goBack, openPage, initSpread, loadSampleData, clearSpread
+            };
+        }
+    });
+
+    app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+        app.component(key, component);
+    }
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

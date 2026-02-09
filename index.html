@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统入口 | 钢铁产业链碳足迹平台</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="css/common.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    
+    <style>
+        /* === 门户页专用样式 === */
+        body {
+            margin: 0;
+            background-color: #f0f2f5;
+            background-image: radial-gradient(#e0e2e5 1px, transparent 1px);
+            background-size: 20px 20px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh;
+        }
+
+        .portal-container {
+            max-width: 1200px; width: 100%; padding: 40px 20px;
+            text-align: center;
+        }
+
+        /* 标题区 */
+        .system-header { margin-bottom: 60px; }
+        .system-title { 
+            font-size: 36px; font-weight: 800; color: #303133; margin-bottom: 12px; 
+            letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .system-subtitle { 
+            font-size: 18px; color: #606266; font-weight: 300; letter-spacing: 0.5px; 
+        }
+
+        /* 角色卡片网格 */
+        .role-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+
+        /* 卡片样式 */
+        .role-card {
+            background: #fff; border-radius: 12px; padding: 40px 30px;
+            text-align: center; cursor: pointer; transition: all 0.3s ease;
+            position: relative; overflow: hidden; border: 1px solid #ebeef5;
+            display: flex; flex-direction: column; align-items: center;
+            height: 380px; /* 固定高度 */
+        }
+        
+        .role-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.08); }
+
+        /* 顶部彩色条 */
+        .color-bar { position: absolute; top: 0; left: 0; width: 100%; height: 6px; }
+
+        /* 图标容器 */
+        .role-icon-box {
+            width: 80px; height: 80px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 36px; margin-bottom: 25px; transition: all 0.3s;
+        }
+
+        /* 文字内容 */
+        .role-name { font-size: 22px; font-weight: bold; color: #303133; margin-bottom: 5px; }
+        .role-en { font-size: 14px; color: #909399; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .feature-list { list-style: none; padding: 0; margin: 0 0 30px 0; width: 100%; text-align: left; padding-left: 20px; }
+        .feature-item { 
+            font-size: 14px; color: #606266; margin-bottom: 10px; display: flex; align-items: center; 
+        }
+        .feature-dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
+
+        /* 按钮 */
+        .entry-btn {
+            margin-top: auto; padding: 10px 30px; border-radius: 20px; font-size: 14px; font-weight: 600;
+            background: #f5f7fa; color: #606266; transition: all 0.3s;
+        }
+        .role-card:hover .entry-btn { color: #fff; }
+
+        /* === 供应商主题 (Green) === */
+        .theme-supplier .color-bar { background: #67C23A; }
+        .theme-supplier .role-icon-box { background: #f0f9eb; color: #67C23A; }
+        .theme-supplier .feature-dot { background: #67C23A; }
+        .theme-supplier:hover .role-icon-box { background: #67C23A; color: #fff; }
+        .theme-supplier:hover .entry-btn { background: #67C23A; }
+
+        /* === 认证机构主题 (Blue) === */
+        .theme-certifier .color-bar { background: #409EFF; }
+        .theme-certifier .role-icon-box { background: #ecf5ff; color: #409EFF; }
+        .theme-certifier .feature-dot { background: #409EFF; }
+        .theme-certifier:hover .role-icon-box { background: #409EFF; color: #fff; }
+        .theme-certifier:hover .entry-btn { background: #409EFF; }
+
+        /* === 运营管理主题 (Teal/DarkBlue) === */
+        .theme-operator .color-bar { background: #0052D9; }
+        .theme-operator .role-icon-box { background: #e6f7ff; color: #0052D9; }
+        .theme-operator .feature-dot { background: #0052D9; }
+        .theme-operator:hover .role-icon-box { background: #0052D9; color: #fff; }
+        .theme-operator:hover .entry-btn { background: #0052D9; }
+
+        .footer { margin-top: 60px; font-size: 12px; color: #909399; }
+    </style>
+</head>
+<body>
+    <div id="app" class="portal-container">
+        <div class="system-header">
+            <div class="system-title">钢铁行业产业链碳足迹数据服务系统</div>
+            <div class="system-subtitle">基于区块链与可信隐私计算的数据要素流通平台</div>
+        </div>
+
+        <div class="role-grid">
+            
+            <div class="role-card theme-supplier" @click="enterSystem('supplier')">
+                <div class="color-bar"></div>
+                <div class="role-icon-box">🌱</div>
+                <div class="role-name">供应商工作台</div>
+                <div class="role-en">Supplier Workbench</div>
+                <ul class="feature-list">
+                    <li class="feature-item"><div class="feature-dot"></div>数据采集与上链</li>
+                    <li class="feature-item"><div class="feature-dot"></div>PCF 报告管理</li>
+                    <li class="feature-item"><div class="feature-dot"></div>绿色金融服务申请</li>
+                </ul>
+                <div class="entry-btn">进入系统 →</div>
+            </div>
+
+            <div class="role-card theme-certifier" @click="enterSystem('certifier')">
+                <div class="color-bar"></div>
+                <div class="role-icon-box">⚖️</div>
+                <div class="role-name">认证机构工作台</div>
+                <div class="role-en">Certifier Workbench</div>
+                <ul class="feature-list">
+                    <li class="feature-item"><div class="feature-dot"></div>核查任务管理</li>
+                    <li class="feature-item"><div class="feature-dot"></div>模型因子库维护</li>
+                    <li class="feature-item"><div class="feature-dot"></div>证书签发与存证</li>
+                </ul>
+                <div class="entry-btn">进入系统 →</div>
+            </div>
+
+            <div class="role-card theme-operator" @click="enterSystem('operator')">
+                <div class="color-bar"></div>
+                <div class="role-icon-box">🌍</div>
+                <div class="role-name">运营管理端</div>
+                <div class="role-en">Operator Dashboard</div>
+                <ul class="feature-list">
+                    <li class="feature-item"><div class="feature-dot"></div>生态伙伴与应用管理</li>
+                    <li class="feature-item"><div class="feature-dot"></div>碳足迹核算任务调度</li>
+                    <li class="feature-item"><div class="feature-dot"></div>模板与标准中心</li>
+                </ul>
+                <div class="entry-btn">进入系统 →</div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            © 2026 钢铁行业产业链碳足迹数据服务系统 | V 2.1.0 Build 20260203
+        </div>
+    </div>
+
+    <script>
+        const app = Vue.createApp({
+            setup() {
+                const enterSystem = (role) => {
+                    if (role === 'operator') {
+                        // ✅ 指向我们已经做好的核心页面：任务管理列表
+                        // 这样一点进来就能看到“看板”和“任务”，体验最好
+                        window.location.href = 'operator/task_list.html';
+                    } else {
+                        // 其他角色暂未开发，先给个提示
+                        ElementPlus.ElMessage.info(`【${role}】子系统暂未接入原型演示，请先查看运营端。`);
+                        // 如果您后续做了 supplier/index.html，可以在这里放开跳转
+                        // window.location.href = `${role}/dashboard.html`;
+                    }
+                };
+
+                return { enterSystem };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount("#app");
+    </script>
+</body>
+</html>

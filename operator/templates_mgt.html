@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>模版管理 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 🛡️ 关键样式内联 (防止外部CSS未加载导致布局塌陷) === */
+        html, body, #app { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        [v-cloak] { display: none; }
+
+        /* 标准 Flex 固底布局 */
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
+        .table-wrapper { flex: 1; overflow: hidden; padding: 10px 15px 50px 15px; position: relative; }
+        .pagination-footer { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; border-top: 1px solid #ebeef5; background: #fff; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px; z-index: 10; }
+        .search-card { padding: 18px 20px; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; margin-bottom: 15px; flex-shrink: 0; }
+
+        /* 模版特色图标 (青色系) */
+        .info-group { display: flex; align-items: flex-start; width: 100%; }
+        .info-text-wrapper { flex: 1; min-width: 0; overflow: hidden; } 
+        .info-icon-box {
+            width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; margin-right: 12px;
+            background: #e6fffb; color: #13c2c2; border: 1px solid #b5f5ec;
+        }
+        .info-main-text { font-weight: 600; color: #303133; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .info-sub-text { font-family: monospace; color: #909399; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* 状态徽章 */
+        .status-badge { display: inline-flex; align-items: center; padding: 0 10px; border-radius: 12px; font-size: 12px; height: 24px; box-sizing: border-box; white-space: nowrap; border: 1px solid transparent; }
+        .status-success { background: #f0f9eb; border-color: #e1f3d8; color: #67C23A; }
+        .status-info    { background: #f4f4f5; border-color: #e9e9eb; color: #909399; }
+        .status-danger  { background: #fef0f0; border-color: #fde2e2; color: #F56C6C; }
+
+        /* 上传组件样式 */
+        .upload-demo .el-upload-dragger { padding: 20px 10px; height: 120px; }
+        .upload-demo .el-icon--upload { font-size: 40px; margin-bottom: 10px; color: #a8abb2; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'7'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon"></component></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                    <el-breadcrumb-item>模版管理</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: hidden; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    
+                    <div class="search-card">
+                        <el-form :inline="true" :model="query" style="margin-bottom: -18px;">
+                            <el-form-item label="模版名称">
+                                <el-input v-model="query.name" placeholder="请输入名称" clearable style="width: 200px;"></el-input>
+                            </el-form-item>
+                            <el-form-item label="适用产品">
+                                <el-input v-model="query.product" placeholder="产品名称/类别" clearable style="width: 180px;"></el-input>
+                            </el-form-item>
+                            <el-form-item label="状态">
+                                <el-select v-model="query.status" placeholder="全部" clearable style="width: 120px;">
+                                    <el-option label="已启用" value="active"></el-option>
+                                    <el-option label="草稿" value="draft"></el-option>
+                                    <el-option label="已停用" value="disabled"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" icon="Search" @click="handleSearch">查询</el-button>
+                                <el-button icon="Refresh" @click="handleReset">重置</el-button>
+                                <el-button type="success" icon="Plus" style="margin-left: 12px;" @click="openCreateDialog">新建模版</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+
+                    <div class="list-card-container">
+                        <div class="table-wrapper">
+                            <el-table 
+                                :data="tableData" 
+                                border 
+                                stripe 
+                                style="width: 100%; height: 100%;" 
+                                :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}"
+                            >
+                                <el-table-column label="模版信息 (Template)" min-width="280" fixed show-overflow-tooltip>
+                                    <template #default="scope">
+                                        <div class="info-group">
+                                            <div class="info-icon-box"><el-icon><Files /></el-icon></div>
+                                            <div class="info-text-wrapper">
+                                                <div class="info-main-text" :title="scope.row.name">{{ scope.row.name }}</div>
+                                                <div class="info-sub-text">Code: {{ scope.row.code }}</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="version" label="版本" width="100" align="center">
+                                    <template #default="scope">
+                                        <el-tag size="small" type="info" effect="plain" round>v{{ scope.row.version }}</el-tag>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="productCategory" label="适用产品" width="180" show-overflow-tooltip></el-table-column>
+                                <el-table-column prop="standard" label="核算标准" width="160" show-overflow-tooltip></el-table-column>
+                                <el-table-column prop="boundary" label="核算边界" width="140" show-overflow-tooltip></el-table-column>
+                                <el-table-column prop="updateTime" label="更新时间" width="160" sortable></el-table-column>
+                                
+                                <el-table-column label="状态" width="120">
+                                    <template #default="scope">
+                                        <div v-if="scope.row.status === '已启用'" class="status-badge status-success">
+                                            <span style="display:inline-block; width:6px; height:6px; background:#67C23A; border-radius:50%; margin-right:6px;"></span>已启用
+                                        </div>
+                                        <div v-else-if="scope.row.status === '草稿'" class="status-badge status-info">
+                                            <span style="display:inline-block; width:6px; height:6px; background:#909399; border-radius:50%; margin-right:6px;"></span>草稿
+                                        </div>
+                                        <div v-else class="status-badge status-danger">
+                                            <span style="display:inline-block; width:6px; height:6px; background:#F56C6C; border-radius:50%; margin-right:6px;"></span>已停用
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="操作" width="220" fixed="right" align="center">
+                                    <template #default="scope">
+                                        <el-button link type="primary" @click="editTemplate(scope.row)">编辑</el-button>
+                                        <el-button link type="primary" @click="copyTemplate(scope.row)">复制</el-button>
+                                        <el-divider direction="vertical"></el-divider>
+                                        <el-button link type="danger" v-if="scope.row.status === '草稿'" @click="deleteTemplate(scope.row)">删除</el-button>
+                                        <el-button link type="warning" v-if="scope.row.status === '已启用'" @click="toggleStatus(scope.row)">停用</el-button>
+                                        <el-button link type="success" v-if="scope.row.status === '已停用'" @click="toggleStatus(scope.row)">启用</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </div>
+
+                        <div class="pagination-footer">
+                            <el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="45" :page-sizes="[10, 20, 50]"></el-pagination>
+                        </div>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+
+        <el-dialog v-model="createDialogVisible" title="新建核算模版" width="600px" destroy-on-close>
+            <el-form label-width="110px" :model="createForm" ref="createFormRef">
+                <el-alert title="请先维护模版基础信息，然后选择配置方式" type="info" :closable="false" style="margin-bottom: 20px;"></el-alert>
+                
+                <el-form-item label="模版名称" required>
+                    <el-input v-model="createForm.name" placeholder="例如：螺纹钢PCR通用模版"></el-input>
+                </el-form-item>
+                
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="适用产品" required>
+                            <el-input v-model="createForm.productCategory" placeholder="例如：钢铁/长材"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="核算标准" required>
+                            <el-select v-model="createForm.standard" style="width: 100%;">
+                                <el-option label="ISO 14067:2018" value="ISO 14067:2018"></el-option>
+                                <el-option label="PAS 2050:2011" value="PAS 2050:2011"></el-option>
+                                <el-option label="GHG Protocol" value="GHG Protocol"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <el-form-item label="核算边界">
+                    <el-radio-group v-model="createForm.boundary">
+                        <el-radio label="Cradle-to-Gate">摇篮到大门</el-radio>
+                        <el-radio label="Cradle-to-Grave">摇篮到坟墓</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+
+                <el-divider content-position="left">创建方式</el-divider>
+                
+                <el-form-item label="配置模式" required>
+                    <el-radio-group v-model="createForm.mode">
+                        <el-radio label="online" border>
+                            <span style="font-weight: bold;">在线设计</span>
+                            <span style="font-size: 12px; color: #999; margin-left: 5px;">(SpreadJS 画布)</span>
+                        </el-radio>
+                        <el-radio label="import" border>
+                            <span style="font-weight: bold;">Excel 导入</span>
+                            <span style="font-size: 12px; color: #999; margin-left: 5px;">(离线文件)</span>
+                        </el-radio>
+                    </el-radio-group>
+                </el-form-item>
+
+                <div v-if="createForm.mode === 'import'" style="margin-left: 110px; margin-bottom: 20px;">
+                    <el-upload
+                        class="upload-demo"
+                        drag
+                        action="#"
+                        :auto-upload="false"
+                        :on-change="handleFileChange"
+                        :limit="1">
+                        <el-icon class="el-icon--upload"><component :is="'UploadFilled'"></component></el-icon>
+                        <div class="el-upload__text">
+                            将 Excel 文件拖到此处，或 <em>点击上传</em>
+                        </div>
+                        <template #tip>
+                            <div class="el-upload__tip">只能上传 xlsx/xls 文件，且不超过 10MB</div>
+                        </template>
+                    </el-upload>
+                </div>
+
+                <el-form-item label="备注说明">
+                    <el-input type="textarea" v-model="createForm.desc" rows="2"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="createDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitCreate">
+                        {{ createForm.mode === 'online' ? '进入画布配置' : '确认导入创建' }}
+                    </el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </el-container>
+</div>
+
+<script>
+    // 依赖外部 layout.js (复原项目结构)
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            const query = Vue.reactive({ name: '', product: '', status: '' });
+            
+            // 弹窗控制
+            const createDialogVisible = Vue.ref(false);
+            const createForm = Vue.reactive({
+                name: '', productCategory: '', standard: 'ISO 14067:2018',
+                boundary: 'Cradle-to-Gate', desc: '', mode: 'online', file: null
+            });
+
+            // Mock Data
+            const tableData = Vue.ref([
+                { 
+                    code: 'TPL-2026-001', name: '石墨电极_工序拆解版', version: '2.0', 
+                    productCategory: '石墨电极/炭素制品', standard: 'ISO 14067:2018', boundary: 'Cradle-to-Gate',
+                    updateTime: '2026-02-01 10:00', status: '已启用' 
+                },
+                { 
+                    code: 'TPL-2026-002', name: '通用_基础原材料_标准版', version: '1.5', 
+                    productCategory: '基础原材料', standard: 'PAS 2050', boundary: 'Cradle-to-Gate',
+                    updateTime: '2026-01-15 14:30', status: '已启用' 
+                },
+                { 
+                    code: 'TPL-2026-003', name: '聚丙烯(PP)颗粒核算', version: '0.9', 
+                    productCategory: '化工/聚烯烃', standard: 'ISO 14067:2018', boundary: 'Cradle-to-Grave',
+                    updateTime: '2026-02-05 09:20', status: '草稿' 
+                }
+            ]);
+
+            const getStatusType = (status) => {
+                if (status === '已启用') return 'success';
+                if (status === '草稿') return 'info';
+                if (status === '已停用') return 'danger';
+                return '';
+            };
+
+            const handleSearch = () => ElementPlus.ElMessage.success('列表已刷新');
+            const handleReset = () => { query.name = ''; query.product = ''; query.status = ''; };
+
+            const openCreateDialog = () => {
+                Object.assign(createForm, {
+                    name: '', productCategory: '', standard: 'ISO 14067:2018',
+                    boundary: 'Cradle-to-Gate', desc: '', mode: 'online', file: null
+                });
+                createDialogVisible.value = true;
+            };
+
+            const handleFileChange = (file) => { createForm.file = file; };
+
+            const submitCreate = () => {
+                if (!createForm.name || !createForm.productCategory) {
+                    ElementPlus.ElMessage.warning('请填写模版名称和适用产品');
+                    return;
+                }
+                if (createForm.mode === 'import' && !createForm.file) {
+                    ElementPlus.ElMessage.warning('请先上传 Excel 文件');
+                    return;
+                }
+
+                if (createForm.mode === 'online') {
+                    ElementPlus.ElMessage.success('配置保存，前往画布...');
+                    createDialogVisible.value = false;
+                    setTimeout(() => {
+                        window.location.href = 'template_detail.html?id=NEW&mode=edit';
+                    }, 500);
+                } else {
+                    const loading = ElementPlus.ElLoading.service({ text: '正在解析 Excel 结构...' });
+                    setTimeout(() => {
+                        loading.close();
+                        tableData.value.unshift({
+                            code: 'TPL-' + Date.now(), name: createForm.name, version: '1.0',
+                            productCategory: createForm.productCategory, standard: createForm.standard,
+                            boundary: createForm.boundary, updateTime: new Date().toLocaleString(), status: '草稿'
+                        });
+                        createDialogVisible.value = false;
+                        ElementPlus.ElMessage.success('模版导入成功，已生成草稿');
+                    }, 1000);
+                }
+            };
+
+            const editTemplate = (row) => window.location.href = `template_detail.html?id=${row.code}`;
+            const copyTemplate = (row) => ElementPlus.ElMessage.success('已复制');
+            const deleteTemplate = (row) => ElementPlus.ElMessage.success('已删除');
+            const toggleStatus = (row) => {
+                row.status = row.status === '已启用' ? '已停用' : '已启用';
+                ElementPlus.ElMessage.success('状态已更新');
+            };
+            
+            const openPage = (path) => {
+                const current = window.location.pathname.split('/').pop();
+                if (current !== path) window.location.href = path;
+            };
+
+            return {
+                menuConfig, currentUser, query, tableData, 
+                createDialogVisible, createForm,
+                handleSearch, handleReset, getStatusType,
+                openCreateDialog, handleFileChange, submitCreate,
+                editTemplate, copyTemplate, deleteTemplate, toggleStatus, openPage
+            };
+        }
+    });
+
+    app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
+    // 依赖 initApp 挂载 (复原项目结构)
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

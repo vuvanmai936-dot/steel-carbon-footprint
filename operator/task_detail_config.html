@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>任务详情 - 规则配置 (信息对齐版)</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/task_detail.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === Excel 仿真样式 === */
+        .excel-tabs-header { background: #f5f7fa; border-bottom: 1px solid #e4e7ed; padding: 0 10px; }
+        .el-tabs__item { height: 36px; line-height: 36px; font-size: 13px; }
+        .spreadsheet-table { width: 100%; border-collapse: collapse; border-right: 1px solid #dcdfe6; border-bottom: 1px solid #dcdfe6; table-layout: fixed; }
+        .spreadsheet-table th { background: #f5f7fa; color: #606266; font-weight: bold; padding: 5px; border-right: 1px solid #dcdfe6; border-bottom: 1px solid #dcdfe6; text-align: center; font-size: 12px; }
+        .spreadsheet-table td { padding: 0; border-right: 1px solid #dcdfe6; border-bottom: 1px solid #dcdfe6; height: 32px; font-size: 12px;}
+        .cell-input { width: 100%; height: 100%; border: none; outline: none; padding: 0 8px; font-size: 12px; color: #333; background: transparent; }
+        .cell-input:focus { border: 2px solid #409EFF; background: #fff; }
+        .cell-readonly { background: #fafafa; color: #909399; display: flex; align-items: center; padding: 0 8px; height: 100%; }
+        
+        /* 凭证卡片 */
+        .evidence-card { 
+            border: 1px dashed #dcdfe6; background: #fff; padding: 12px; border-radius: 4px; margin-bottom: 10px; 
+            transition: all 0.3s; position: relative;
+        }
+        .evidence-card:hover { border-color: #409EFF; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .card-actions { position: absolute; right: 10px; top: 10px; opacity: 0; transition: opacity 0.3s; }
+        .evidence-card:hover .card-actions { opacity: 1; }
+
+        /* 右侧面板底部操作栏 (固定底部) */
+        .panel-footer {
+            padding: 15px 20px; background: #fff; border-top: 1px solid #e4e7ed;
+            display: flex; flex-direction: column; gap: 10px; margin-top: auto;
+        }
+
+        /* === 悬浮全景进度 (圆形收起态) === */
+        .floating-timeline {
+            position: fixed; bottom: 20px; right: 20px; z-index: 2000;
+            background: #fff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            border: 1px solid #ebeef5; transition: all 0.3s;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .floating-timeline.collapsed {
+            width: 48px; height: 48px; border-radius: 50%; cursor: pointer;
+            align-items: center; justify-content: center; background: #409EFF; color: #fff;
+        }
+        .floating-timeline.collapsed:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(64,158,255,0.4); }
+        .floating-timeline.expanded { width: 340px; height: 550px; border-radius: 8px; }
+        
+        .ft-header { padding: 12px 15px; background: #409EFF; color: #fff; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; flex: none; }
+        .ft-body { flex: 1; overflow-y: auto; padding: 15px; background: #fff; }
+
+        /* 状态节点样式 */
+        .stage-node { transition: all 0.3s; }
+        .stage-node.clickable { cursor: pointer; }
+        .stage-node.clickable:hover .stage-title { color: #409EFF !important; text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140;">碳足迹数据服务</div>
+            <el-menu :default-active="'3'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container>
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
+                <div style="display: flex; align-items: center;">
+                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
+                    <el-breadcrumb separator="/">
+                        <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                        <el-breadcrumb-item>任务管理</el-breadcrumb-item>
+                        <el-breadcrumb-item>配置规则</el-breadcrumb-item>
+                    </el-breadcrumb>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <el-tooltip content="SLA 剩余时间 (截止: 2026-02-10)" placement="bottom">
+                        <div class="sla-capsule"><el-icon><Timer /></el-icon> 23:45:12</div>
+                    </el-tooltip>
+                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">Op</el-avatar>
+                    <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column;">
+                
+                <div class="task-info-dashboard">
+                    
+                    <div class="dash-block" style="flex: 1.5;">
+                        <div class="dash-title">Product & Task</div>
+                        <div class="dash-content">
+                            <div class="prod-main">
+                                <span class="prod-name">{{ taskInfo.productName }}</span>
+                                <span class="prod-id" style="font-family:monospace; font-size:12px; background:#f4f4f5; padding:2px 6px; border-radius:4px; margin-left:8px;">{{ taskInfo.taskId }}</span>
+                            </div>
+                            <div class="prod-sub">
+                                <span style="margin-right: 10px;">规格: {{ taskInfo.specs }}</span>
+                                <span style="color:#dcdfe6; margin-right: 10px;">|</span>
+                                <el-icon style="margin-right:4px; vertical-align:-1px"><Tickets /></el-icon>
+                                <span>订单: </span>
+                                <el-link type="primary" :underline="false" style="font-size:12px; margin-left:2px" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dash-block" style="flex: 1.2;">
+                        <div class="dash-title">Target Supplier</div>
+                        <div class="dash-content">
+                            <div style="display:flex; align-items:center;">
+                                <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
+                                <el-link type="primary" :underline="false" style="font-weight:bold; font-size:14px;" @click="viewSupplier">{{ taskInfo.supplier }}</el-link>
+                            </div>
+                            <div style="font-size:12px; color:#909399; margin-top:4px; margin-left:32px;">
+                                <span style="background:#f0f9eb; color:#67C23A; padding:0 4px; border-radius:2px; font-size:10px;">Level A</span>
+                                信用良好
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dash-block" style="flex: 1;">
+                        <div class="dash-title">Configuration Status</div>
+                        <div class="dash-content">
+                            <div style="display:flex; align-items:center; gap:8px">
+                                <el-tag v-if="!snapshotGenerated" type="info">Step 1: 待初始化</el-tag>
+                                <el-tag v-else-if="!isLocked" type="warning" effect="dark">Step 2: 配置中 (Draft)</el-tag>
+                                <el-tag v-else type="success" effect="dark">Step 3: 已锁定 (Locked)</el-tag>
+                            </div>
+                            <div style="font-size:12px; color:#999; margin-top:4px;">
+                                {{ isLocked ? '规则已固化，不可变更' : '请根据订单调整模版快照' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dash-block">
+                        <div class="dash-title">Rules Definition</div>
+                        <div class="data-stats">
+                            <div class="stat-item">
+                                <div class="stat-num" style="color:#409EFF">{{ totalItems }}</div>
+                                <div class="stat-label">Items</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-num" style="color:#E6A23C">{{ evidenceRequirements.length }}</div>
+                                <div class="stat-label">Rules</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="flex: 1; overflow: hidden; position: relative; background: #f0f2f5;">
+                    
+                    <div v-if="!snapshotGenerated" style="height: 100%; display: flex; justify-content: center; align-items: center;">
+                        <div style="background: #fff; padding: 40px; border-radius: 8px; width: 500px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center;">
+                            <el-icon size="48" color="#409EFF"><SetUp /></el-icon>
+                            <h3 style="margin: 20px 0 10px;">初始化任务配置</h3>
+                            <p style="color: #909399; font-size: 13px; margin-bottom: 30px;">请为该订单选择合适的核算标准与行业模版</p>
+                            
+                            <el-form label-position="top" style="text-align: left;">
+                                <el-form-item label="1. 核算标准 (Standard)">
+                                    <el-select v-model="wizard.standard" style="width: 100%;">
+                                        <el-option label="ISO 14067:2018" value="iso"></el-option>
+                                        <el-option label="PAS 2050" value="pas"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="2. 行业模版 (Source Template)">
+                                    <el-select v-model="wizard.templateId" placeholder="请选择..." style="width: 100%;" :disabled="!wizard.standard">
+                                        <el-option label="石墨电极_工序拆解版_V2.0" value="tpl_01">
+                                            <span style="float: left">石墨电极_工序拆解版_V2.0</span>
+                                            <span style="float: right; color: #8492a6; font-size: 13px">4 Sheet</span>
+                                        </el-option>
+                                        <el-option label="电池行业_动力电池_V1.0" value="tpl_02"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="3. 核算边界 (System Boundary)">
+                                    <el-input v-model="wizard.boundary" placeholder="例如：Cradle-to-Gate"></el-input>
+                                </el-form-item>
+                                <el-button type="primary" size="large" style="width: 100%; margin-top: 15px;" 
+                                    :disabled="!wizard.templateId" @click="generateSnapshot" icon="MagicStick">
+                                    确认并实例化模版 (Instantiate)
+                                </el-button>
+                            </el-form>
+                        </div>
+                    </div>
+
+                    <el-row v-else :gutter="0" style="height: 100%;">
+                        
+                        <el-col :span="14" style="height: 100%; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #dcdfe6;">
+                            <div style="padding: 10px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+                                <span style="font-weight: bold; font-size: 14px; color: #303133;">
+                                    <el-icon style="vertical-align: -2px; margin-right: 5px;"><Grid /></el-icon> 
+                                    Excel 采集结构实例化 (Instance)
+                                </span>
+                                <el-tag v-if="!isLocked" size="small" type="warning">Editable</el-tag>
+                                <el-tag v-else size="small" type="info"><el-icon><Lock /></el-icon> Read-only</el-tag>
+                            </div>
+                            
+                            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                                <el-tabs v-model="activeSheet" type="card" class="excel-tabs-header">
+                                    <el-tab-pane v-for="(sheetData, sheetName) in excelSheets" :key="sheetName" :label="sheetName" :name="sheetName"></el-tab-pane>
+                                </el-tabs>
+                                
+                                <div style="flex: 1; overflow-y: auto; background: #fff;">
+                                    <table class="spreadsheet-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 40px;">#</th>
+                                                <th style="width: 100px;">A 类别</th>
+                                                <th style="width: 200px;">B 数据项名称</th>
+                                                <th style="width: 80px;">C 单位</th>
+                                                <th>D 填报指引 (仅对本次任务有效)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(row, idx) in excelSheets[activeSheet]" :key="idx">
+                                                <td style="text-align: center; background: #f5f7fa; color: #999;">{{ idx + 1 }}</td>
+                                                <td><div class="cell-readonly">{{ row.category }}</div></td>
+                                                <td>
+                                                    <input v-if="!isLocked" v-model="row.item" class="cell-input" placeholder="项目名">
+                                                    <div v-else class="cell-readonly">{{ row.item }}</div>
+                                                </td>
+                                                <td style="text-align: center;"><div class="cell-readonly" style="justify-content: center;">{{ row.unit }}</div></td>
+                                                <td>
+                                                    <input v-if="!isLocked" v-model="row.guide" class="cell-input" placeholder="输入针对此订单的特殊指引..." style="background: #fdf6ec;">
+                                                    <div v-else class="cell-readonly" style="color: #e6a23c;">{{ row.guide }}</div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </el-col>
+
+                        <el-col :span="10" style="height: 100%; display: flex; flex-direction: column; background: #f9f9f9; border-left: 1px solid #dcdfe6;">
+                            <div style="padding: 10px 20px; border-bottom: 1px solid #dcdfe6; background: #fff; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: bold; font-size: 14px; color: #303133;">
+                                    <el-icon style="vertical-align: -2px; margin-right: 5px;"><Files /></el-icon> 
+                                    凭证要求配置
+                                </span>
+                                <el-button v-if="!isLocked" type="primary" link icon="Plus" size="small" @click="addRequirement">新增要求</el-button>
+                            </div>
+
+                            <div style="flex: 1; overflow-y: auto; padding: 15px;">
+                                <div v-if="evidenceRequirements.length > 0">
+                                    <div v-for="(req, idx) in evidenceRequirements" :key="idx" class="evidence-card">
+                                        <div class="card-actions" v-if="!isLocked">
+                                            <el-button link type="danger" icon="Delete" @click="removeRequirement(idx)"></el-button>
+                                        </div>
+                                        
+                                        <el-form label-position="top" size="small">
+                                            <el-form-item label="凭证名称">
+                                                <el-input v-model="req.name" :disabled="isLocked" placeholder="凭证名称"></el-input>
+                                            </el-form-item>
+                                            <el-form-item label="关联数据行 (绑定后供应商必填)">
+                                                <el-select v-model="req.relatedItems" multiple placeholder="选择关联行" style="width: 100%;" :disabled="isLocked">
+                                                    <el-option-group v-for="(items, sheetName) in excelSheets" :key="sheetName" :label="sheetName">
+                                                        <el-option v-for="(row, rIdx) in items" :key="rIdx" :label="row.item" :value="sheetName + '-' + row.item"></el-option>
+                                                    </el-option-group>
+                                                </el-select>
+                                            </el-form-item>
+                                            <el-form-item label="特殊说明">
+                                                <el-input type="textarea" v-model="req.desc" :rows="2" :disabled="isLocked"></el-input>
+                                            </el-form-item>
+                                        </el-form>
+                                    </div>
+                                </div>
+                                <el-empty v-else description="暂无凭证要求"></el-empty>
+                            </div>
+
+                            <div v-if="!isLocked" class="panel-footer">
+                                <el-button type="primary" size="large" style="width: 100%;" icon="Position" @click="issueTask">
+                                    确认规则并下发 (Lock & Issue)
+                                </el-button>
+                                <div style="text-align: center; margin-top: 5px;">
+                                    <el-button link type="danger" @click="resetConfig">重置回初始状态</el-button>
+                                </div>
+                            </div>
+                            <div v-else class="panel-footer" style="text-align: center; color: #909399; padding: 30px;">
+                                <el-icon size="24" color="#67C23A" style="margin-bottom: 5px;"><CircleCheckFilled /></el-icon>
+                                <div style="font-weight: bold; color: #303133;">规则已下发</div>
+                                <div style="font-size: 12px;">等待供应商响应中...</div>
+                            </div>
+
+                        </el-col>
+                    </el-row>
+                </div>
+
+                <div class="floating-timeline" :class="isExpanded ? 'expanded' : 'collapsed'">
+                    <div v-if="!isExpanded" @click="toggleExpand" title="展开全景进度" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+                        <el-icon size="24"><DataLine /></el-icon>
+                    </div>
+                    
+                    <div v-else style="height:100%; display:flex; flex-direction:column;">
+                        <div class="ft-header" @click="toggleExpand">
+                            <span>全景进度 (Timeline)</span>
+                            <el-icon><ArrowDown /></el-icon>
+                        </div>
+                        
+                        <div class="ft-body timeline-scroll" style="position: relative;">
+                            <div style="position: absolute; left: 24px; top: 15px; bottom: 15px; width: 2px; background: #f0f2f5; z-index: 0;"></div>
+
+                            <div class="stage-node active">
+                                <div class="stage-marker">1</div>
+                                <div class="stage-content">
+                                    <div class="stage-title">规则配置 (Config)</div>
+                                    <div class="stage-meta">
+                                        <span v-if="isLocked">2026-02-04 09:30 完成</span>
+                                        <span v-else>正在进行中...</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="snapshotGenerated" class="event-node sys">
+                                <div class="event-dot"></div>
+                                <div class="event-box">
+                                    <div class="evt-head"><span class="evt-user">System</span> <span class="evt-time">09:10</span></div>
+                                    <div class="evt-body">模版 [石墨电极_V2.0] 已实例化，版本号 v1.0-draft</div>
+                                </div>
+                            </div>
+
+                            <div v-if="isLocked" class="event-node sub">
+                                <div class="event-dot"></div>
+                                <div class="event-box">
+                                    <div class="evt-head"><span class="evt-user">{{ currentUser.name }}</span> <span class="evt-time">09:30</span></div>
+                                    <div class="evt-body">规则已锁定并下发至供应商 [南通碳素]</div>
+                                </div>
+                            </div>
+
+                            <div class="stage-node" 
+                                 :class="[supplierConfirmed ? 'active clickable' : 'pending']"
+                                 @click="navigateToCollect">
+                                <div class="stage-marker">
+                                    <span v-if="supplierConfirmed">2</span>
+                                    <el-icon v-else><More /></el-icon>
+                                </div>
+                                <div class="stage-content">
+                                    <div class="stage-title" :style="{ color: supplierConfirmed ? '#303133' : '#909399' }">
+                                        数据采集 (Collect)
+                                        <el-icon v-if="supplierConfirmed"><Right /></el-icon>
+                                    </div>
+                                    <div class="stage-meta">
+                                        <span v-if="!isLocked">等待规则下发</span>
+                                        <span v-else-if="!supplierConfirmed">等待供应商确认...</span>
+                                        <span v-else style="color: #67C23A">供应商已提交，点击前往审核</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="isLocked && !supplierConfirmed" class="event-node" style="margin-top: 10px;">
+                                <div class="event-dot" style="background: #E6A23C; border-color: #E6A23C;"></div>
+                                <div class="event-box" style="background: #fdf6ec; border-color: #faecd8; text-align: center;">
+                                    <div style="font-size: 12px; color: #e6a23c; margin-bottom: 5px;">[演示控制] 模拟供应商端操作</div>
+                                    <el-button type="warning" size="small" plain @click="simulateSupplierSubmit">
+                                        模拟：供应商确认并提交数据
+                                    </el-button>
+                                </div>
+                            </div>
+
+                            <div v-if="supplierConfirmed" class="event-node sub">
+                                <div class="event-dot"></div>
+                                <div class="event-box">
+                                    <div class="evt-head"><span class="evt-user">供应商</span> <span class="evt-time">Now</span></div>
+                                    <div class="evt-body">已提交数据快照 (v1.0)，请审核</div>
+                                </div>
+                            </div>
+
+                            <div class="stage-node pending">
+                                <div class="stage-marker">3</div>
+                                <div class="stage-content">
+                                    <div class="stage-title" style="color: #909399">LCA 计算</div>
+                                </div>
+                            </div>
+                            <div class="stage-node pending">
+                                <div class="stage-marker">4</div>
+                                <div class="stage-content">
+                                    <div class="stage-title" style="color: #909399">核查认证</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            // === 状态管理 ===
+            const taskInfo = Vue.reactive({ 
+                taskId: 'TSK-2026-889', 
+                productName: '普通功率石墨电极', 
+                specs: 'Φ400mm', 
+                supplier: '南通碳素有限公司', 
+                orderNo: 'ORD-20260203' 
+            });
+            
+            const snapshotGenerated = Vue.ref(false); // Step 1 -> Step 2
+            const isLocked = Vue.ref(false); // Step 2 -> Step 3
+            const supplierConfirmed = Vue.ref(false); // Step 3 -> Jump Condition
+
+            const wizard = Vue.reactive({ standard: 'iso', templateId: 'tpl_01', boundary: 'Cradle-to-Gate' });
+            const activeSheet = Vue.ref('M配料');
+            const isExpanded = Vue.ref(true); // Timeline 展开状态
+
+            // Data
+            const excelSheets = Vue.reactive({}); 
+            const evidenceRequirements = Vue.ref([]);
+
+            // === Actions ===
+            const generateSnapshot = () => {
+                const loading = ElementPlus.ElLoading.service({ text: '正在实例化模版数据...', background: 'rgba(255,255,255,0.8)' });
+                setTimeout(() => {
+                    loading.close();
+                    snapshotGenerated.value = true;
+                    // Mock Data
+                    Object.assign(excelSheets, {
+                        'M配料': [{ category: '能源', item: '电力消耗', unit: 'kWh', guide: '请提供含峰谷平分项的电费单' }, { category: '原料', item: '针状焦投入', unit: '吨', guide: '' }, { category: '原料', item: '煤沥青', unit: '吨', guide: '' }],
+                        'M焙烧': [{ category: '能源', item: '天然气', unit: 'm³', guide: '' }, { category: '排放', item: '废气排放量', unit: 'm³', guide: '需第三方监测报告' }]
+                    });
+                    evidenceRequirements.value = [{ name: '电力采购结算单', relatedItems: ['M配料-电力消耗'], desc: '需体现用电量及结算周期。' }];
+                }, 600);
+            };
+
+            const issueTask = () => {
+                ElementPlus.ElMessageBox.confirm(
+                    '下发后配置将锁定，供应商将收到填报通知，是否继续？',
+                    '确认下发',
+                    { confirmButtonText: '确认下发', cancelButtonText: '取消', type: 'warning' }
+                ).then(() => {
+                    const loading = ElementPlus.ElLoading.service({ text: '正在同步配置到供应商门户...' });
+                    setTimeout(() => {
+                        loading.close();
+                        isLocked.value = true;
+                        ElementPlus.ElMessage.success('任务已成功下发');
+                    }, 800);
+                });
+            };
+
+            const simulateSupplierSubmit = () => {
+                const loading = ElementPlus.ElLoading.service({ text: '模拟供应商填报中...', fullscreen: true });
+                setTimeout(() => {
+                    loading.close();
+                    supplierConfirmed.value = true;
+                    ElementPlus.ElMessage.success('供应商已提交数据');
+                    // 自动滚动到底部查看最新状态
+                    setTimeout(() => {
+                        const el = document.querySelector('.timeline-scroll');
+                        if(el) el.scrollTop = el.scrollHeight;
+                    }, 100);
+                }, 1000);
+            };
+
+            const navigateToCollect = () => {
+                if (supplierConfirmed.value) {
+                    window.location.href = 'task_detail_collect.html';
+                } else {
+                    if(!isLocked.value) ElementPlus.ElMessage.warning('请先完成配置并下发');
+                    else ElementPlus.ElMessage.warning('需等待供应商提交数据后方可进入');
+                }
+            };
+
+            const toggleExpand = () => isExpanded.value = !isExpanded.value;
+            const viewOrder = () => window.location.href='order.html';
+            const viewSupplier = () => window.location.href='supplier_mgt_detail.html';
+
+            // Helpers
+            const addRequirement = () => evidenceRequirements.value.push({ name: '', relatedItems: [], desc: '' });
+            const removeRequirement = (idx) => evidenceRequirements.value.splice(idx, 1);
+            const resetConfig = () => { snapshotGenerated.value = false; isLocked.value = false; supplierConfirmed.value = false; };
+            const totalItems = Vue.computed(() => { let count = 0; for(let k in excelSheets) count += excelSheets[k].length; return count; });
+            const goBack = () => window.location.href = 'task_list.html';
+            const openPage = (path) => window.location.href = path;
+
+            return {
+                menuConfig, currentUser, taskInfo, 
+                snapshotGenerated, isLocked, supplierConfirmed, wizard, activeSheet, isExpanded,
+                excelSheets, evidenceRequirements,
+                generateSnapshot, issueTask, simulateSupplierSubmit, navigateToCollect, toggleExpand,
+                addRequirement, removeRequirement, resetConfig,
+                totalItems, goBack, openPage, viewOrder, viewSupplier
+            };
+        }
+    });
+
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

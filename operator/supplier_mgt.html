@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>供应商管理 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/layout.js"></script>
+
+    <style>
+        /* === 🛡️ 关键样式内联 (防塌陷/防样式丢失) === */
+        
+        /* 1. Flex 布局与防塌陷 */
+        .info-group { display: flex; align-items: flex-start; width: 100%; }
+        .info-text-wrapper { flex: 1; min-width: 0; overflow: hidden; } 
+        
+        /* 2. 图标盒子 (供应商使用橙色系) */
+        .info-icon-box {
+            width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; margin-right: 12px;
+            background: #fdf6ec; color: #E6A23C; border: 1px solid #faecd8; /* Orange Theme */
+        }
+
+        /* 3. 文本排版 */
+        .info-main-text { font-weight: 600; color: #303133; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .info-sub-text { font-family: monospace; color: #909399; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* 4. 状态胶囊 */
+        .status-badge {
+            display: inline-flex; align-items: center; padding: 0 10px; border-radius: 12px; 
+            font-size: 12px; height: 24px; box-sizing: border-box; white-space: nowrap; border: 1px solid transparent;
+        }
+        .status-success { background: #f0f9eb; border-color: #e1f3d8; color: #67C23A; } /* 合格 */
+        .status-warning { background: #fdf6ec; border-color: #faecd8; color: #E6A23C; } /* 待审核 */
+        .status-danger  { background: #fef0f0; border-color: #fde2e2; color: #F56C6C; } /* 黑名单 */
+        .status-info    { background: #f4f4f5; border-color: #e9e9eb; color: #909399; }
+
+        /* 5. 数字字体 */
+        .num-font { font-family: 'DIN Alternate', sans-serif; font-weight: bold; }
+        
+        /* 6. 碳评级标签 */
+        .rating-tag {
+            font-family: 'DIN Alternate'; font-weight: bold; padding: 0 8px; border-radius: 4px;
+            font-size: 14px; display: inline-block; text-align: center;
+        }
+        .rating-A { background: #f0f9eb; color: #67C23A; border: 1px solid #e1f3d8; }
+        .rating-B { background: #ecf5ff; color: #409EFF; border: 1px solid #d9ecff; }
+        .rating-C { background: #fdf6ec; color: #E6A23C; border: 1px solid #faecd8; }
+
+        /* 7. 基础容器修正 */
+        html, body, #app { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
+        .table-wrapper { flex: 1; overflow: hidden; padding: 10px 15px 50px 15px; position: relative; }
+        .pagination-footer { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; border-top: 1px solid #ebeef5; background: #fff; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px; z-index: 10; }
+        .search-card { padding: 18px 20px; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; margin-bottom: 15px; flex-shrink: 0; }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'5'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                    <el-breadcrumb-item>供应商管理</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: hidden; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    
+                    <div class="search-card">
+                        <el-form :inline="true" :model="query" style="margin-bottom: -18px;">
+                            <el-form-item label="企业名称/代码">
+                                <el-input v-model="query.keyword" placeholder="输入名称或信用代码" clearable style="width: 220px;"></el-input>
+                            </el-form-item>
+                            <el-form-item label="连接器状态">
+                                <el-select v-model="query.connStatus" placeholder="全部" clearable style="width: 140px;">
+                                    <el-option label="在线" value="online"></el-option>
+                                    <el-option label="离线" value="offline"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="订单绑定">
+                                <el-select v-model="query.orderStatus" placeholder="全部" clearable style="width: 160px;">
+                                    <el-option label="已绑定 (服务中)" value="bound"></el-option>
+                                    <el-option label="未绑定 (需通知)" value="unbound"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" icon="Search" @click="handleSearch">查询</el-button>
+                                <el-button icon="Refresh" @click="handleReset">重置</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+
+                    <div class="list-card-container">
+                        <div class="table-wrapper">
+                            <el-table 
+                                :data="tableData" 
+                                border 
+                                stripe 
+                                style="width: 100%; height: 100%;" 
+                                :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}"
+                            >
+                                <el-table-column label="供应商 (Supplier)" min-width="280">
+                                    <template #default="scope">
+                                        <div class="info-group">
+                                            <div class="info-icon-box"><el-icon><OfficeBuilding /></el-icon></div>
+                                            <div class="info-text-wrapper">
+                                                <div class="info-main-text" :title="scope.row.name">
+                                                    {{ scope.row.name }}
+                                                </div>
+                                                <div class="info-sub-text">Code: {{ scope.row.creditCode }}</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+                                
+                                <el-table-column label="连接器状态" width="140">
+                                    <template #default="scope">
+                                        <div v-if="scope.row.connStatus === 'online'" class="status-badge status-success">
+                                            <span style="display:inline-block; width:6px; height:6px; background:#67C23A; border-radius:50%; margin-right:6px;"></span>在线
+                                        </div>
+                                        <div v-else class="status-badge status-info">
+                                            <span style="display:inline-block; width:6px; height:6px; background:#909399; border-radius:50%; margin-right:6px;"></span>离线
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="鑫采订单绑定状态" width="180">
+                                    <template #default="scope">
+                                        <div v-if="scope.row.orderStatus === 'bound'" class="status-badge status-success">
+                                            <el-icon style="margin-right: 4px;"><Link /></el-icon> 已绑定
+                                        </div>
+                                        <div v-else class="status-badge status-warning">
+                                            <el-icon style="margin-right: 4px;"><Warning /></el-icon> 未绑定
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="关联订单号" width="180" show-overflow-tooltip>
+                                    <template #default="scope">
+                                        <span v-if="scope.row.activeOrder" style="color: #409EFF; cursor: pointer; text-decoration: underline;" @click="viewOrder(scope.row.activeOrder)">
+                                            {{ scope.row.activeOrder }}
+                                        </span>
+                                        <span v-else style="color: #ccc;">--</span>
+                                    </template>
+                                </el-table-column>
+                                
+                                <el-table-column prop="contact" label="对接人" width="120"></el-table-column>
+                                <el-table-column prop="lastSyncTime" label="最近同步" width="160" sortable></el-table-column>
+                                
+                                <el-table-column label="操作" width="220" fixed="right" align="center">
+                                    <template #default="scope">
+                                        <el-button link type="primary" @click="viewDetail(scope.row)">详情</el-button>
+                                        <el-divider direction="vertical"></el-divider>
+                                        
+                                        <el-button 
+                                            v-if="scope.row.orderStatus === 'unbound'" 
+                                            link 
+                                            type="warning" 
+                                            :disabled="scope.row.connStatus === 'offline'"
+                                            @click="notifySupplier(scope.row)"
+                                        >
+                                            <el-icon style="margin-right: 4px;"><Bell /></el-icon> 通知下单
+                                        </el-button>
+                                        <span v-else style="color:#ccc; font-size:12px; cursor:not-allowed;">无需通知</span>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </div>
+
+                        <div class="pagination-footer">
+                            <el-pagination 
+                                background 
+                                layout="total, sizes, prev, pager, next, jumper" 
+                                :total="tableData.length" 
+                                :page-sizes="[10, 20, 50]"
+                                :current-page="1">
+                            </el-pagination>
+                        </div>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            const query = Vue.reactive({ keyword: '', connStatus: '', orderStatus: '' });
+            
+            // Mock Data: 保持原有数据结构不变
+            const tableData = Vue.ref([
+                { 
+                    abbr: '南通', 
+                    name: '南通碳素有限公司', 
+                    creditCode: '91320600MA1X882B', 
+                    connStatus: 'online', 
+                    orderStatus: 'bound',
+                    activeOrder: 'ORD-20260203-001',
+                    contact: '张伟', 
+                    lastSyncTime: '2026-02-06 10:05' 
+                },
+                { 
+                    abbr: '马钢', 
+                    name: '马钢股份', 
+                    creditCode: '913405001505092A', 
+                    connStatus: 'online', 
+                    orderStatus: 'bound',
+                    activeOrder: 'ORD-20250315-099',
+                    contact: '李四', 
+                    lastSyncTime: '2026-02-05 16:20' 
+                },
+                { 
+                    abbr: '新材', 
+                    name: '江苏新材料科技公司', 
+                    creditCode: '91320100MA2Y78EE', 
+                    connStatus: 'online', 
+                    orderStatus: 'unbound', 
+                    activeOrder: null,
+                    contact: '王五', 
+                    lastSyncTime: '2026-02-04 09:00' 
+                },
+                { 
+                    abbr: '中钢', 
+                    name: '某中小型钢厂', 
+                    creditCode: '91330200MA3Z11BB', 
+                    connStatus: 'offline', 
+                    orderStatus: 'unbound',
+                    activeOrder: null,
+                    contact: '赵六', 
+                    lastSyncTime: '2025-12-01 12:00' 
+                }
+            ]);
+
+            const handleSearch = () => {
+                ElementPlus.ElMessage.success('列表已刷新');
+            };
+            
+            const handleReset = () => {
+                query.keyword = ''; query.connStatus = ''; query.orderStatus = '';
+            };
+
+            const viewDetail = (row) => {
+                // 使用 creditCode 作为参数
+                window.location.href = 'supplier_mgt_detail.html?code=' + row.creditCode;
+            };
+
+            const viewOrder = (orderNo) => {
+                window.location.href = 'order.html?q=' + orderNo;
+            };
+
+            const notifySupplier = (row) => {
+                ElementPlus.ElMessageBox.confirm(
+                    `确认向 [${row.name}] 的接入连接器发送“订单办理提醒”消息吗？`, 
+                    '发送通知', 
+                    { confirmButtonText: '发送', cancelButtonText: '取消', type: 'warning' }
+                ).then(() => {
+                    const loading = ElementPlus.ElLoading.service({ text: '正在下发消息...', background: 'rgba(0,0,0,0.7)' });
+                    setTimeout(() => {
+                        loading.close();
+                        ElementPlus.ElMessage.success('消息已送达供应商端连接器');
+                    }, 1000);
+                });
+            };
+
+            const openPage = (path) => {
+                const current = window.location.pathname.split('/').pop();
+                if (current !== path) window.location.href = path;
+            };
+
+            return {
+                menuConfig, currentUser, query, tableData,
+                handleSearch, handleReset, viewDetail, viewOrder, notifySupplier,
+                openPage
+            };
+        }
+    });
+
+    app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+        app.component(key, component);
+    }
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

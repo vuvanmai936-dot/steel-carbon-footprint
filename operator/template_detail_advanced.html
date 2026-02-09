@@ -1,0 +1,246 @@
+//这是后续迭代功能，不在MVP阶段实现
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>模板配置详情 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 页面专用样式 === */
+        .config-layout { display: flex; height: calc(100vh - 130px); gap: 20px; }
+        .left-tree { width: 280px; background: #fff; border-right: 1px solid #eee; display: flex; flex-direction: column; }
+        .right-content { flex: 1; background: #fff; padding: 20px; overflow-y: auto; }
+        
+        .tree-header { padding: 15px; background: #f9fafe; border-bottom: 1px solid #eee; font-weight: bold; font-size: 14px; }
+        .tree-body { flex: 1; overflow-y: auto; padding: 10px; }
+        
+        /* 映射关系连线模拟 */
+        .mapping-row { 
+            display: flex; align-items: center; justify-content: space-between; 
+            padding: 15px; border: 1px solid #ebeef5; border-radius: 4px; margin-bottom: 10px;
+            background: #fdfdfd;
+        }
+        .mapping-row:hover { border-color: #c6e2ff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .mapping-icon { color: #909399; margin: 0 15px; }
+        
+        .tag-box { border: 1px dashed #dcdfe6; padding: 5px 10px; border-radius: 4px; font-size: 12px; color: #606266; background: #fff; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'7'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container>
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center;">
+                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
+                    <div>
+                        <div style="font-size: 16px; font-weight: bold; display: flex; align-items: center;">
+                            {{ templateInfo.name }}
+                            <el-tag size="small" type="success" style="margin-left: 10px;">{{ templateInfo.version }}</el-tag>
+                        </div>
+                        <div style="font-size: 12px; color: #999; margin-top: 4px;">最后更新：{{ templateInfo.updateTime }}</div>
+                    </div>
+                </div>
+                <div>
+                    <el-button @click="handlePreview">表单预览</el-button>
+                    <el-button type="primary" @click="handleSave">保存配置</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="background: #f0f2f5; padding: 20px;">
+                
+                <div class="pp-card" style="height: 100%; padding: 0; display: flex; flex-direction: column;">
+                    
+                    <el-tabs v-model="activeTab" type="card" class="demo-tabs">
+                        <el-tab-pane label="1. 采集结构定义" name="structure"></el-tab-pane>
+                        <el-tab-pane label="2. LCA 参数映射 (核心)" name="mapping"></el-tab-pane>
+                        <el-tab-pane label="3. 数据校验规则" name="validation"></el-tab-pane>
+                    </el-tabs>
+
+                    <div v-if="activeTab === 'structure'" class="config-layout">
+                        <div class="left-tree">
+                            <div class="tree-header">Excel 工序结构 (Sheet)</div>
+                            <div class="tree-body">
+                                <el-tree :data="treeData" :props="defaultProps" default-expand-all highlight-current @node-click="handleNodeClick"></el-tree>
+                            </div>
+                        </div>
+                        <div class="right-content">
+                            <div v-if="currentNode">
+                                <h3 style="margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                                    {{ currentNode.label }} - 属性配置
+                                </h3>
+                                <el-form label-width="100px" style="max-width: 500px;">
+                                    <el-form-item label="显示名称">
+                                        <el-input v-model="currentNode.label"></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="数据类型">
+                                        <el-select v-model="currentNode.type" disabled>
+                                            <el-option label="数值 (Number)" value="number"></el-option>
+                                            <el-option label="文本 (String)" value="string"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                    <el-form-item label="单位">
+                                        <el-input v-model="currentNode.unit"></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="说明提示">
+                                        <el-input type="textarea" v-model="currentNode.desc" placeholder="展示给供应商的填报提示"></el-input>
+                                    </el-form-item>
+                                </el-form>
+                            </div>
+                            <el-empty v-else description="请点击左侧树节点进行配置"></el-empty>
+                        </div>
+                    </div>
+
+                    <div v-if="activeTab === 'mapping'" class="scroll-content" style="padding: 20px;">
+                        <el-alert title="请将左侧采集项与右侧 LCA 系统的输入参数建立绑定关系" type="info" show-icon style="margin-bottom: 20px;"></el-alert>
+                        
+                        <div v-for="(map, idx) in mappings" :key="idx" class="mapping-row">
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold; font-size: 13px; margin-bottom: 5px;">采集项 (Source)</div>
+                                <div class="tag-box">
+                                    <el-tag size="small" type="info">{{ map.sheet }}</el-tag> 
+                                    <span style="margin-left: 8px;">{{ map.item }}</span>
+                                </div>
+                            </div>
+
+                            <div class="mapping-icon">
+                                <el-icon size="20"><Right /></el-icon>
+                            </div>
+
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold; font-size: 13px; margin-bottom: 5px; color: #409EFF;">LCA 模型参数 (Target)</div>
+                                <el-select v-model="map.lcaParam" placeholder="请选择 LCA 参数" style="width: 100%;" filterable>
+                                    <el-option label="Process_Electricity_Input (电力消耗)" value="p_elec"></el-option>
+                                    <el-option label="Process_Gas_Input (天然气消耗)" value="p_gas"></el-option>
+                                    <el-option label="Material_Coke_Input (针状焦投入)" value="m_coke"></el-option>
+                                    <el-option label="Output_Emission_CO2 (二氧化碳排放)" value="o_co2"></el-option>
+                                </el-select>
+                            </div>
+                            
+                            <div style="margin-left: 20px;">
+                                <el-button type="danger" icon="Delete" circle size="small" plain></el-button>
+                            </div>
+                        </div>
+
+                        <el-button style="width: 100%; margin-top: 10px; border-style: dashed;" icon="Plus">添加映射规则</el-button>
+                    </div>
+
+                    <div v-if="activeTab === 'validation'" class="scroll-content" style="padding: 20px;">
+                        <el-table :data="validations" border stripe>
+                            <el-table-column prop="field" label="字段名称"></el-table-column>
+                            <el-table-column label="必填">
+                                <template #default="scope"><el-switch v-model="scope.row.required" /></template>
+                            </el-table-column>
+                            <el-table-column label="数值范围 (Min-Max)">
+                                <template #default="scope">
+                                    <div style="display: flex; align-items: center; gap: 5px;">
+                                        <el-input v-model="scope.row.min" size="small" placeholder="0" style="width: 80px;"></el-input>
+                                        <span>-</span>
+                                        <el-input v-model="scope.row.max" size="small" placeholder="∞" style="width: 80px;"></el-input>
+                                    </div>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="需要凭证">
+                                <template #default="scope"><el-switch v-model="scope.row.evidence" active-text="是" inactive-text="否" /></template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            const activeTab = Vue.ref('structure');
+            const templateInfo = Vue.reactive({
+                name: '石墨电极_工序拆解版_V2.0.xlsx',
+                version: 'V2.0',
+                updateTime: '2026-02-01 10:30'
+            });
+
+            // Tab 1: 树形数据
+            const treeData = [
+                {
+                    label: '工序1: M配料',
+                    children: [
+                        { label: '电力消耗', type: 'number', unit: 'kWh', desc: '该工序总用电量' },
+                        { label: '针状焦投入', type: 'number', unit: '吨', desc: '主原料' }
+                    ]
+                },
+                {
+                    label: '工序2: M焙烧',
+                    children: [
+                        { label: '天然气', type: 'number', unit: 'm³', desc: '焙烧炉燃料' },
+                        { label: '生制品产出', type: 'number', unit: '吨', desc: '半成品' }
+                    ]
+                }
+            ];
+            const defaultProps = { children: 'children', label: 'label' };
+            const currentNode = Vue.ref(null);
+
+            // Tab 2: 映射数据
+            const mappings = Vue.ref([
+                { sheet: 'M配料', item: '电力消耗', lcaParam: 'p_elec' },
+                { sheet: 'M焙烧', item: '天然气', lcaParam: 'p_gas' },
+                { sheet: 'M配料', item: '针状焦投入', lcaParam: 'm_coke' }
+            ]);
+
+            // Tab 3: 校验数据
+            const validations = Vue.ref([
+                { field: 'M配料-电力消耗', required: true, min: '0', max: '', evidence: true },
+                { field: 'M焙烧-天然气', required: true, min: '0', max: '', evidence: true },
+                { field: 'M配料-针状焦投入', required: true, min: '0.1', max: '', evidence: false }
+            ]);
+
+            const handleNodeClick = (data) => {
+                if (!data.children) currentNode.value = data; // 只有叶子节点可编辑
+            };
+
+            const handleSave = () => {
+                ElementPlus.ElMessage.success('模板配置已保存');
+            };
+            
+            const handlePreview = () => {
+                ElementPlus.ElMessage.info('打开表单预览模式 (待开发)');
+            };
+
+            const goBack = () => { window.location.href = 'templates.html'; };
+            const openPage = (path) => window.location.href = path;
+
+            return {
+                menuConfig, currentUser, activeTab, templateInfo, 
+                treeData, defaultProps, currentNode, mappings, validations,
+                handleNodeClick, handleSave, handlePreview, goBack, openPage
+            };
+        }
+    });
+
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

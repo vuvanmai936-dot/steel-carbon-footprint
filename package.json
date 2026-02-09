@@ -1,0 +1,16 @@
+{
+  "name": "steel-carbon-footprint-prototype",
+  "version": "0.1.0",
+  "description": "钢铁行业产业链碳足迹数据服务系统 - 前端原型（多页面静态站点，基于 Vue 3 + Element Plus CDN）",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.1.2",
+    "vite": "^7.3.1"
+  }
+}

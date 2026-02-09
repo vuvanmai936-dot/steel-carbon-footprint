@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>任务详情 - LCA 计算与认证交互</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/task_detail.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 左侧报告预览 === */
+        .report-container {
+            background: #525659; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto; position: relative;
+        }
+        .pdf-page {
+            background: #fff; width: 595px; min-height: 842px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            padding: 40px; display: flex; flex-direction: column; position: relative;
+        }
+        .review-mask {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; backdrop-filter: blur(2px);
+        }
+
+        /* === 右侧交互流 (Chat Style) === */
+        .interaction-panel { display: flex; flex-direction: column; height: 100%; background: #fff; }
+        .certifier-header {
+            padding: 15px; border-bottom: 1px solid #ebeef5; background: #f9fafc;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .interaction-body { flex: 1; overflow-y: auto; padding: 15px; background: #fff; display: flex; flex-direction: column; gap: 15px; }
+        
+        .msg-bubble { max-width: 90%; padding: 12px; border-radius: 8px; font-size: 13px; line-height: 1.5; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .msg-bubble.sys { align-self: center; background: #f4f4f5; color: #909399; font-size: 12px; padding: 4px 12px; border-radius: 12px; box-shadow: none; }
+        .msg-bubble.me { align-self: flex-end; background: #ecf5ff; border: 1px solid #d9ecff; color: #303133; border-top-right-radius: 2px; }
+        .msg-bubble.certifier { align-self: flex-start; background: #fff; border: 1px solid #e4e7ed; border-left: 3px solid #F56C6C; color: #303133; border-top-left-radius: 2px; }
+        .msg-bubble.supplier { align-self: flex-start; background: #fdf6ec; border: 1px solid #faecd8; color: #606266; border-top-left-radius: 2px; }
+
+        .msg-meta { font-size: 11px; color: #999; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+        .msg-target-tag { font-size: 10px; padding: 1px 4px; border-radius: 2px; margin-left: 5px; }
+        .tag-me { background: #ecf5ff; color: #409EFF; border: 1px solid #d9ecff; }
+        .tag-supplier { background: #fdf6ec; color: #E6A23C; border: 1px solid #faecd8; }
+
+        .msg-action { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #dcdfe6; display: flex; justify-content: flex-end; gap: 8px; }
+
+        .interaction-footer { padding: 15px; border-top: 1px solid #e4e7ed; background: #fff; }
+
+        /* === 悬浮全景进度 (完美复刻版) === */
+        .floating-timeline {
+            position: fixed; bottom: 20px; right: 20px; z-index: 2000;
+            background: #fff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            border: 1px solid #ebeef5; transition: all 0.3s;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        /* 收起状态 */
+        .floating-timeline.collapsed {
+            width: 48px !important; height: 48px !important; border-radius: 50% !important; cursor: pointer;
+            align-items: center; justify-content: center; background: #409EFF; color: #fff; padding: 0;
+        }
+        .floating-timeline.collapsed .el-icon { margin: 0; }
+        .floating-timeline.collapsed:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(64,158,255,0.4); }
+        /* 展开状态 */
+        .floating-timeline.expanded { width: 340px; height: 650px; border-radius: 8px; }
+        
+        .ft-header { padding: 12px 15px; background: #409EFF; color: #fff; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; flex: none; }
+        .ft-body { flex: 1; overflow-y: auto; padding: 15px; background: #fff; }
+
+        /* Timeline Node Styles */
+        .stage-node { transition: all 0.3s; }
+        .stage-node.clickable { cursor: pointer; }
+        .stage-node.clickable:hover .stage-title { color: #409EFF !important; text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140;">碳足迹数据服务</div>
+            <el-menu :default-active="'3'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container>
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
+                <div style="display: flex; align-items: center;">
+                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
+                    <el-breadcrumb separator="/">
+                        <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                        <el-breadcrumb-item>任务管理</el-breadcrumb-item>
+                        <el-breadcrumb-item>LCA计算</el-breadcrumb-item>
+                    </el-breadcrumb>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <el-tooltip content="SLA 剩余时间" placement="bottom"><div class="sla-capsule"><el-icon><Timer /></el-icon> 18:05:22</div></el-tooltip>
+                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">Op</el-avatar>
+                    <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column;">
+                
+                <div class="task-info-dashboard">
+                    <div class="dash-block" style="flex: 1.5;">
+                        <div class="dash-title">Product & Task</div>
+                        <div class="dash-content">
+                            <div class="prod-main">
+                                <span class="prod-name">{{ taskInfo.productName }}</span>
+                                <span class="prod-id" style="font-family:monospace; font-size:12px; background:#f4f4f5; padding:2px 6px; border-radius:4px; margin-left:8px;">{{ taskInfo.taskId }}</span>
+                            </div>
+                            <div class="prod-sub">
+                                <span style="margin-right: 10px;">{{ taskInfo.specs }}</span>
+                                <span style="color:#dcdfe6; margin-right: 10px;">|</span>
+                                <el-link type="primary" :underline="false" style="font-size:12px;" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dash-block" style="flex: 1.2;">
+                        <div class="dash-title">Target Supplier</div>
+                        <div class="dash-content">
+                            <div style="display:flex; align-items:center;">
+                                <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
+                                <el-link type="primary" :underline="false" style="font-weight:bold; font-size:14px;">{{ taskInfo.supplier }}</el-link>
+                            </div>
+                            <div style="font-size:12px; color:#909399; margin-top:4px; margin-left:32px;">Level A 信用良好</div>
+                        </div>
+                    </div>
+
+                    <div class="dash-block" style="flex: 1;">
+                        <div class="dash-title">Status</div>
+                        <div class="dash-content">
+                            <div style="display:flex; align-items:center; gap:8px">
+                                <el-tag v-if="lcaState === 'uploaded'" type="primary" effect="dark">草稿待提交</el-tag>
+                                <el-tag v-else-if="lcaState === 'submitted'" type="warning" effect="dark">核查中</el-tag>
+                                <el-tag v-else-if="lcaState === 'clarifying'" type="danger">待澄清 (Action)</el-tag>
+                                <el-tag v-else-if="lcaState === 'waiting_supplier'" type="danger" effect="plain">供应商整改中</el-tag>
+                                <el-tag v-else type="success" effect="dark">已通过</el-tag>
+                                
+                                <el-tag v-if="reportVersion > 0" effect="plain" type="info">v{{ reportVersion.toFixed(1) }}</el-tag>
+                            </div>
+                            <div style="font-size:12px; color:#999; margin-top:4px;">{{ getStatusDesc() }}</div>
+                        </div>
+                    </div>
+
+                    <div class="dash-block">
+                        <div class="dash-title">Result</div>
+                        <div class="data-stats">
+                            <div class="stat-item">
+                                <div class="stat-num" style="color:#67C23A">{{ lcaResult }}</div>
+                                <div class="stat-label">kgCO₂e</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <el-row :gutter="0" style="flex: 1; overflow: hidden;">
+                    
+                    <el-col :span="15" style="height: 100%; border-right: 1px solid #dcdfe6; position: relative;">
+                        <div v-if="lcaState === 'waiting_upload'" style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #fff;">
+                            <el-icon size="64" color="#dcdfe6"><DocumentAdd /></el-icon>
+                            <h3 style="margin: 20px 0 10px; color: #606266;">等待 PCF 报告</h3>
+                            <p style="font-size: 13px; color: #909399; margin-bottom: 30px;">
+                                {{ dataChangedAlert ? '上游数据已更新，请重新计算并上传新版报告' : '请基于采集数据完成建模，并上传 PDF 报告草稿' }}
+                            </p>
+                            <el-upload action="#" :auto-upload="false" :on-change="handleFileSelect" :show-file-list="false">
+                                <el-button type="primary" icon="Upload">
+                                    {{ dataChangedAlert ? '上传更新版报告 (v' + (reportVersion+1).toFixed(1) + ')' : '上传报告草稿' }}
+                                </el-button>
+                            </el-upload>
+                        </div>
+
+                        <div v-else class="report-container">
+                            <div class="pdf-page">
+                                <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
+                                    <h2>产品碳足迹 (PCF) 核算报告</h2>
+                                    <div style="color: #666; margin-top: 10px;">Product Carbon Footprint Report</div>
+                                </div>
+                                <div style="font-size: 14px; line-height: 1.8;">
+                                    <p><strong>报告版本：</strong> v{{ reportVersion.toFixed(1) }}</p>
+                                    <p><strong>核算结果：</strong> {{ lcaResult }} kgCO₂e/kg</p>
+                                    <p><strong>关键因子：</strong> 
+                                        <el-tag size="small">电力: 0.5810</el-tag> 
+                                        <el-tag size="small">天然气: 2.160</el-tag>
+                                    </p>
+                                </div>
+                                <div v-if="['submitted','waiting_supplier'].includes(lcaState)" class="review-mask">
+                                    <el-icon size="48" class="is-loading"><Loading /></el-icon>
+                                    <h3 style="margin-top: 15px;">认证机构核查中...</h3>
+                                    <p style="opacity: 0.8; font-size: 13px;">报告内容已锁定</p>
+                                </div>
+                            </div>
+                        </div>
+                    </el-col>
+
+                    <el-col :span="9" class="interaction-panel">
+                        <div class="certifier-header">
+                            <div style="display:flex; align-items:center;">
+                                <el-avatar :size="32" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"></el-avatar>
+                                <div style="margin-left: 10px;">
+                                    <div style="font-weight: bold; font-size: 14px;">SGS 核查组</div>
+                                    <div style="font-size: 12px; color: #909399;">Alex.W (Online)</div>
+                                </div>
+                            </div>
+                            <el-tag size="small" type="info">ISO 14067</el-tag>
+                        </div>
+
+                        <div class="interaction-body" id="auditStream">
+                            <div v-for="(log, idx) in auditLogs" :key="idx" class="msg-bubble" :class="log.role">
+                                <div class="msg-meta">
+                                    <span>
+                                        <strong v-if="log.role==='certifier'">SGS 核查员</strong>
+                                        <strong v-else-if="log.role==='me'">我 (Operator)</strong>
+                                        <strong v-else-if="log.role==='supplier'">供应商</strong>
+                                        <span v-else>系统</span>
+                                    </span>
+                                    <div style="display:flex; align-items:center;">
+                                        <span class="msg-time">{{ log.time }}</span>
+                                        <span v-if="log.target==='me'" class="msg-target-tag tag-me">@Me</span>
+                                        <span v-if="log.target==='supplier'" class="msg-target-tag tag-supplier">@Supplier</span>
+                                    </div>
+                                </div>
+                                <div class="msg-content">{{ log.content }}</div>
+                                
+                                <div v-if="log.hasAttachment" style="margin-top:5px; font-size:12px; color:#409EFF; cursor:pointer;">
+                                    <el-icon style="vertical-align:-1px"><Paperclip /></el-icon> {{ log.attachmentName }}
+                                </div>
+
+                                <div v-if="log.role==='certifier' && log.isClarification && !log.handled" class="msg-action">
+                                    <template v-if="log.target === 'me'">
+                                        <el-button type="primary" size="small" plain @click="handleSelf(log)">我来处理</el-button>
+                                        <el-button type="warning" size="small" plain @click="handleForward(log)">转派供应商</el-button>
+                                    </template>
+                                    <template v-else>
+                                        <el-tag type="warning" size="small">等待供应商响应...</el-tag>
+                                        <el-button link type="primary" size="small" @click="handleForward(log)">追加指令/催办</el-button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="interaction-footer">
+                            <div v-if="lcaState === 'uploaded'">
+                                <el-button type="success" style="width: 100%;" icon="Promotion" @click="submitToVerifier">提交核查</el-button>
+                            </div>
+                            <div v-else-if="lcaState === 'clarifying'">
+                                <el-alert title="请处理上方的澄清请求" type="error" :closable="false"></el-alert>
+                            </div>
+                            <div v-else-if="lcaState === 'waiting_supplier'">
+                                <el-button type="warning" plain disabled style="width:100%;">供应商整改进行中...</el-button>
+                            </div>
+                            <div v-else-if="lcaState === 'verified'">
+                                <el-button type="primary" style="width: 100%;" icon="DocumentChecked" @click="navigateTo('verify')">
+                                    查看核查报告与声明
+                                </el-button>
+                            </div>
+                        </div>
+                    </el-col>
+                </el-row>
+
+                <div class="floating-timeline" :class="isExpanded ? 'expanded' : 'collapsed'">
+                    <div v-if="!isExpanded" @click="isExpanded = true" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+                        <el-icon size="24"><DataLine /></el-icon>
+                    </div>
+                    <div v-else style="height:100%; display:flex; flex-direction:column;">
+                        <div class="ft-header" @click="isExpanded = false"><span>全景进度 & 交互</span><el-icon><ArrowDown /></el-icon></div>
+                        <div class="ft-body timeline-scroll" id="timelineStream">
+                            <div class="stage-node done clickable" @click="navigateTo('config')">
+                                <div class="stage-marker"><el-icon><Check /></el-icon></div><div class="stage-content"><div class="stage-title">规则配置</div></div>
+                            </div>
+                            <div class="stage-node done clickable" @click="navigateTo('collect')">
+                                <div class="stage-marker"><el-icon><Check /></el-icon></div><div class="stage-content"><div class="stage-title">数据采集</div></div>
+                            </div>
+                            <div class="stage-node active">
+                                <div class="stage-marker">3</div><div class="stage-content"><div class="stage-title">LCA 计算 & 认证</div><div class="stage-meta">{{ getStatusDesc() }}</div></div>
+                            </div>
+
+                            <div v-for="(evt, idx) in timelineEvents" :key="idx" class="event-node" :class="evt.type">
+                                <div class="event-dot"></div>
+                                <div class="event-box">
+                                    <div class="evt-head"><span class="evt-user">{{ evt.user }}</span> <span class="evt-time">{{ evt.time }}</span></div>
+                                    <div class="evt-body">{{ evt.content }}</div>
+                                </div>
+                            </div>
+
+                            <div class="stage-node" :class="lcaState==='verified'?'done clickable':'pending'" @click="navigateTo('verify')">
+                                <div class="stage-marker">4</div>
+                                <div class="stage-content">
+                                    <div class="stage-title">核查报告</div>
+                                    <div v-if="lcaState==='verified'" class="stage-meta" style="color:#67C23A">点击查看结果</div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 20px; border-top: 1px dashed #dcdfe6; padding-top: 10px;">
+                                <div style="font-size: 12px; color: #909399; margin-bottom: 8px; text-align: center;">[演示控制台]</div>
+                                <div v-if="lcaState === 'submitted'">
+                                    <el-button type="warning" size="small" plain style="width:100%; margin-bottom:5px;" @click="simulateClarify('me')">模拟：SGS 澄清 -> 我</el-button>
+                                    <el-button type="warning" size="small" plain style="width:100%; margin-bottom:5px;" @click="simulateClarify('supplier')">模拟：SGS 澄清 -> 供应商</el-button>
+                                    <el-button type="success" size="small" plain style="width:100%; margin-left:0;" @click="simulateApprove">模拟：SGS 通过</el-button>
+                                </div>
+                                <div v-if="lcaState === 'waiting_supplier'">
+                                    <el-button type="primary" size="small" plain style="width:100%; margin-left:0;" @click="simulateSupplierFix">模拟：供应商完成整改</el-button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </el-main>
+        </el-container>
+    </el-container>
+
+    <el-dialog v-model="selfHandleDialogVisible" title="回复澄清 (自处理)" width="500px">
+        <el-form label-position="top">
+            <el-form-item label="回复类型">
+                <el-radio-group v-model="selfForm.type">
+                    <el-radio label="text">仅文字解释</el-radio>
+                    <el-radio label="file">补充附件</el-radio>
+                    <el-radio label="report">更新 PCF 报告</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="解释说明">
+                <el-input type="textarea" v-model="selfForm.content" :rows="3" placeholder="请输入回复内容..."></el-input>
+            </el-form-item>
+            <el-form-item v-if="selfForm.type !== 'text'" label="上传文件">
+                <el-upload action="#" :auto-upload="false"><el-button icon="Upload">{{ selfForm.type === 'report' ? '上传新版报告' : '上传佐证材料' }}</el-button></el-upload>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="selfHandleDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="submitSelfHandle">提交回复</el-button>
+        </template>
+    </el-dialog>
+
+    <el-dialog v-model="forwardDialogVisible" title="转派给供应商" width="500px">
+        <el-alert title="供应商将收到整改通知，期间报告将被标记为失效" type="warning" :closable="false" show-icon style="margin-bottom:15px;"></el-alert>
+        <el-form label-position="top">
+            <el-form-item label="原始问题">
+                <div style="background:#f4f4f5; padding:8px; border-radius:4px; color:#666;">{{ currentLog?.content }}</div>
+            </el-form-item>
+            <el-form-item label="附加指令 (Operator Instruction)">
+                <el-input type="textarea" v-model="forwardNote" :rows="3" placeholder="例如：请重新核对电费单据，并上传原件..."></el-input>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="forwardDialogVisible = false">取消</el-button>
+            <el-button type="danger" @click="submitForward">确认转派</el-button>
+        </template>
+    </el-dialog>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            // State
+            const taskInfo = Vue.reactive({ taskId: 'TSK-2026-889', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '南通碳素有限公司', orderNo: 'ORD-20260203' });
+            const lcaState = Vue.ref('waiting_upload'); 
+            const reportVersion = Vue.ref(0);
+            const lcaResult = Vue.ref(null);
+            const isExpanded = Vue.ref(true);
+            const dataChangedAlert = Vue.ref(false);
+            
+            // Interaction Data (Right Panel)
+            const auditLogs = Vue.ref([{ role: 'sys', time: '10:00', content: '数据采集已完成，请上传 LCA 报告草稿', target: 'me' }]);
+            // Timeline Data (Synced)
+            const timelineEvents = Vue.ref([]); 
+
+            // Dialogs
+            const selfHandleDialogVisible = Vue.ref(false);
+            const forwardDialogVisible = Vue.ref(false);
+            const currentLog = Vue.ref(null);
+            const selfForm = Vue.reactive({ type: 'text', content: '' });
+            const forwardNote = Vue.ref('');
+
+            // === Synced Log Pusher ===
+            const pushLog = (role, content, target = 'me', isClarification = false) => {
+                const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                
+                // 1. Push to Right Chat
+                auditLogs.value.push({ role, content, target, isClarification, handled: false, time });
+                
+                // 2. Sync to Timeline Event
+                let evtType = 'sys';
+                if(role === 'me') evtType = 'sub';
+                if(role === 'certifier') evtType = 'rej';
+                if(role === 'supplier') evtType = 'sub';
+                
+                let userLabel = 'System';
+                if(role === 'me') userLabel = '我';
+                if(role === 'certifier') userLabel = 'SGS';
+                if(role === 'supplier') userLabel = '供应商';
+
+                timelineEvents.value.push({ type: evtType, user: userLabel, time, content });
+
+                // Scroll both
+                setTimeout(() => {
+                    const el1 = document.getElementById('auditStream');
+                    if(el1) el1.scrollTop = el1.scrollHeight;
+                    const el2 = document.getElementById('timelineStream');
+                    if(el2) el2.scrollTop = el2.scrollHeight;
+                }, 100);
+            };
+
+            // Actions
+            const handleFileSelect = () => {
+                const loading = ElementPlus.ElLoading.service({ text: '正在解析报告...' });
+                setTimeout(() => {
+                    loading.close();
+                    lcaState.value = 'uploaded';
+                    reportVersion.value += 1.0;
+                    lcaResult.value = '2.45';
+                    dataChangedAlert.value = false;
+                    pushLog('me', `上传了报告 v${reportVersion.value.toFixed(1)}`);
+                }, 800);
+            };
+
+            const submitToVerifier = () => {
+                lcaState.value = 'submitted';
+                pushLog('me', '报告已提交，申请核查', 'certifier');
+            };
+
+            // Simulators
+            const simulateClarify = (target) => {
+                lcaState.value = 'clarifying';
+                const content = target === 'me' 
+                    ? '请补充原料运输距离的计算依据（页码 12）。' 
+                    : '发现天然气用量与发票不符，请供应商核实。';
+                pushLog('certifier', content, target, true);
+            };
+
+            // Handlers
+            const handleSelf = (log) => {
+                currentLog.value = log;
+                selfForm.content = '';
+                selfHandleDialogVisible.value = true;
+            };
+
+            const handleForward = (log) => {
+                currentLog.value = log;
+                forwardNote.value = '';
+                forwardDialogVisible.value = true;
+            };
+
+            const submitSelfHandle = () => {
+                selfHandleDialogVisible.value = false;
+                if(currentLog.value) currentLog.value.handled = true;
+                
+                let msg = selfForm.content;
+                if(selfForm.type === 'file') msg += ' [已附佐证材料]';
+                if(selfForm.type === 'report') {
+                    msg += ' [已更新报告]';
+                    reportVersion.value += 0.1;
+                }
+                
+                pushLog('me', `回复: ${msg}`, 'certifier');
+                lcaState.value = 'submitted'; 
+            };
+
+            const submitForward = () => {
+                forwardDialogVisible.value = false;
+                if(currentLog.value) currentLog.value.handled = true;
+                
+                pushLog('me', `转派给供应商: ${forwardNote.value}`, 'supplier');
+                lcaState.value = 'waiting_supplier';
+            };
+
+            const simulateSupplierFix = () => {
+                lcaState.value = 'waiting_upload';
+                dataChangedAlert.value = true;
+                pushLog('supplier', '已修正天然气数据，请重新计算', 'me');
+            };
+
+            const simulateApprove = () => {
+                lcaState.value = 'verified';
+                pushLog('certifier', '核查通过，签发符合性声明。', 'me');
+            };
+
+            const getStatusDesc = () => {
+                const map = {
+                    'waiting_upload': '等待上传', 'uploaded': '草稿待提交',
+                    'submitted': '核查中', 'clarifying': '待澄清',
+                    'waiting_supplier': '供应商整改中', 'verified': '认证通过'
+                };
+                return map[lcaState.value];
+            };
+
+            const goBack = () => window.location.href = 'task_list.html';
+            const openPage = (p) => window.location.href = p;
+            const viewOrder = () => window.location.href='order.html';
+            const navigateTo = (p) => { 
+                if(p==='config') window.location.href='task_detail_config.html';
+                if(p==='collect') window.location.href='task_detail_collect.html';
+                if(p==='verify' && lcaState.value==='verified') window.location.href='task_detail_verify.html';
+            };
+
+            return {
+                menuConfig, currentUser, taskInfo, lcaState, reportVersion, lcaResult, isExpanded, dataChangedAlert,
+                auditLogs, timelineEvents, selfHandleDialogVisible, forwardDialogVisible, selfForm, forwardNote, currentLog,
+                handleFileSelect, submitToVerifier, simulateClarify, handleSelf, handleForward, submitSelfHandle, submitForward,
+                simulateSupplierFix, simulateApprove, goBack, openPage, viewOrder, navigateTo, getStatusDesc
+            };
+        }
+    });
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

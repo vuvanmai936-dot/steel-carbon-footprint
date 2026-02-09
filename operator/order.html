@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>订单管理 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/dayjs/dayjs.min.js"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 样式内联：确保布局不塌陷 === */
+        html, body, #app { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        [v-cloak] { display: none; }
+
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
+        .table-wrapper { flex: 1; overflow: hidden; padding: 10px 15px 50px 15px; position: relative; }
+        .pagination-footer { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; border-top: 1px solid #ebeef5; background: #fff; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px; z-index: 10; }
+        .search-card { padding: 18px 20px; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; margin-bottom: 15px; flex-shrink: 0; }
+
+        /* 信息组合列 (替换原 company-cell) */
+        .info-group { display: flex; align-items: flex-start; width: 100%; }
+        .info-text-wrapper { flex: 1; min-width: 0; overflow: hidden; } 
+        .info-icon-box {
+            width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; margin-right: 12px;
+            background: #f0f9eb; color: #67C23A; border: 1px solid #e1f3d8; /* 绿色系代表订单 */
+        }
+        .info-main-text { font-weight: 600; color: #303133; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .info-sub-text { font-family: monospace; color: #909399; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* 详情抽屉样式 (保留原样) */
+        .drawer-container { display: flex; flex-direction: column; height: 100%; }
+        .drawer-body { flex: 1; overflow: hidden; padding: 0 20px; }
+        .drawer-footer { padding: 15px 20px; border-top: 1px solid #eee; background: #fff; display: flex; justify-content: space-between; align-items: center; }
+        .detail-section { margin-bottom: 24px; border: 1px solid #ebeef5; border-radius: 8px; background: #fff; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+        .section-header { background: #fafafa; padding: 12px 20px; border-bottom: 1px solid #ebeef5; font-size: 14px; font-weight: 600; color: #303133; display: flex; align-items: center; }
+        .section-body { padding: 20px; }
+        .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .info-item label { display: block; color: #909399; font-size: 13px; margin-bottom: 6px; }
+        .info-item div { font-size: 14px; color: #303133; font-weight: 500; line-height: 1.5; }
+        .amount-text { font-family: 'DIN Alternate', sans-serif; font-size: 18px; color: #F56C6C; font-weight: bold; }
+        .contact-card { display: flex; align-items: flex-start; padding: 16px; background: #f8f9fa; border: 1px solid #eee; border-radius: 6px; }
+        .contact-avatar { width: 40px; height: 40px; border-radius: 50%; background: #e6f7ff; color: #409EFF; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px; flex-shrink: 0; }
+        .contact-info .name { font-weight: bold; font-size: 14px; color: #303133; margin-bottom: 4px; }
+        .contact-info .meta { font-size: 12px; color: #606266; line-height: 1.6; }
+        .task-item { padding: 12px 10px; border-radius: 4px; cursor: pointer; border-bottom: 1px dashed #f0f0f0; transition: all 0.2s; }
+        .task-item:hover { background: #f0f9eb; transform: translateX(4px); }
+        .product-tags-wrapper { display: flex; flex-wrap: wrap; gap: 4px; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'2'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                    <el-breadcrumb-item>订单管理</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: hidden; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    
+                    <div class="search-card">
+                        <el-form :inline="true" :model="query" style="margin-bottom: -18px;">
+                            <el-form-item label="订单编号">
+                                <el-input v-model="query.orderNo" placeholder="输入商城订单号" clearable prefix-icon="Search" style="width: 200px;"></el-input>
+                            </el-form-item>
+                            <el-form-item label="企业名称">
+                                <el-input v-model="query.company" placeholder="购买方企业" clearable prefix-icon="OfficeBuilding" style="width: 200px;"></el-input>
+                            </el-form-item>
+                            <el-form-item label="服务状态">
+                                <el-select v-model="query.status" placeholder="全部" clearable style="width: 140px;">
+                                    <el-option label="服务中" value="active"></el-option>
+                                    <el-option label="即将到期" value="expiring"></el-option>
+                                    <el-option label="已结束" value="closed"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" @click="handleSearch">查询</el-button>
+                                <el-button @click="handleReset">重置</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+
+                    <div class="list-card-container">
+                        <div class="table-wrapper">
+                            <el-table 
+                                :data="processedOrderList" 
+                                border 
+                                stripe 
+                                style="width: 100%; height: 100%;" 
+                                :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}"
+                            >
+                                <el-table-column label="订单编号" min-width="220" fixed show-overflow-tooltip>
+                                    <template #default="scope">
+                                        <div class="info-group">
+                                            <div class="info-icon-box"><el-icon><Tickets /></el-icon></div>
+                                            <div class="info-text-wrapper">
+                                                <div class="info-main-text">{{ scope.row.orderNo }}</div>
+                                                <div class="info-sub-text">{{ scope.row.basic.serviceName }}</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="核算产品 (SKU)" min-width="240">
+                                    <template #default="scope">
+                                        <div class="product-tags-wrapper">
+                                            <div v-for="(prod, idx) in scope.row.products.slice(0, 2)" :key="idx" style="margin-bottom: 2px;">
+                                                <el-tag size="small" effect="plain" type="info">{{ prod.name }}</el-tag>
+                                                <span style="font-size: 12px; color: #999; margin-left: 4px;">{{ prod.specs }}</span>
+                                            </div>
+                                            <el-tag v-if="scope.row.products.length > 2" size="small" type="warning">+{{ scope.row.products.length - 2 }}</el-tag>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="购买企业" prop="buyer.company" width="200" show-overflow-tooltip></el-table-column>
+
+                                <el-table-column label="服务周期 (有效期)" width="220">
+                                    <template #default="scope">
+                                        <div style="font-size: 13px;">
+                                            <div style="display: flex; align-items: center; margin-bottom: 4px; color: #909399;">
+                                                <span style="width: 36px;">起始:</span>
+                                                <span>{{ scope.row.payment.payDate }}</span>
+                                            </div>
+                                            <div style="display: flex; align-items: center;">
+                                                <span style="width: 36px; color: #909399;">截止:</span>
+                                                <span :style="{ color: scope.row.isExpiring ? '#F56C6C' : '#303133', fontWeight: scope.row.isExpiring ? 'bold' : '500' }">
+                                                    {{ scope.row.serviceDeadline }}
+                                                </span>
+                                                <el-tag v-if="scope.row.isExpiring" size="small" type="danger" effect="dark" style="transform: scale(0.8); margin-left: 4px;">临期</el-tag>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="任务进度" width="160">
+                                    <template #default="scope">
+                                        <div style="display: flex; align-items: center;">
+                                            <el-progress 
+                                                :percentage="scope.row.avgProgress" 
+                                                :status="scope.row.avgProgress === 100 ? 'success' : ''"
+                                                style="width: 90px; margin-right: 8px;"
+                                                :stroke-width="8"
+                                            ></el-progress>
+                                        </div>
+                                        <div style="font-size: 12px; color: #909399; margin-top: 2px;">
+                                            已完成: {{ scope.row.completedTasks }}/{{ scope.row.subTasks.length }}
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="商务状态" width="120">
+                                    <template #default="scope">
+                                        <el-tag type="success" size="small" effect="dark">已支付</el-tag>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="操作" fixed="right" width="180" align="center">
+                                    <template #default="scope">
+                                        <el-button link type="primary" @click="viewDetail(scope.row)">详情</el-button>
+                                        <el-divider direction="vertical"></el-divider>
+                                        <el-popover placement="bottom-end" :width="340" trigger="click" :show-arrow="true">
+                                            <template #reference>
+                                                <el-button link type="primary">关联任务 <el-icon><ArrowDown /></el-icon></el-button>
+                                            </template>
+                                            <div class="popover-content">
+                                                <div style="padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                                                    <span>关联执行任务</span>
+                                                    <el-tag size="small" round effect="plain">{{ scope.row.subTasks.length }}个</el-tag>
+                                                </div>
+                                                <div style="max-height: 250px; overflow-y: auto;">
+                                                    <div v-for="task in scope.row.subTasks" :key="task.taskId" class="task-item" @click="goToTaskWorkspace(task)">
+                                                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                                            <span class="task-name" style="font-size: 13px; font-weight: bold; color: #303133;">{{ task.productName }}</span>
+                                                            <el-tag size="small" :type="getTaskStatusType(task.status)">{{ task.status }}</el-tag>
+                                                        </div>
+                                                        <div style="font-size: 12px; color: #999; display: flex; justify-content: space-between;">
+                                                            <span>{{ task.taskId }}</span>
+                                                            <span style="color: #409EFF; cursor: pointer; display: flex; align-items: center;">
+                                                                去处理 <el-icon style="margin-left: 2px;"><Right /></el-icon>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; text-align: center;">
+                                                    <el-button link type="info" size="small" @click="goToTaskList">前往任务列表页 >></el-button>
+                                                </div>
+                                            </div>
+                                        </el-popover>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </div>
+
+                        <div class="pagination-footer">
+                            <el-pagination 
+                                background 
+                                layout="total, sizes, prev, pager, next, jumper" 
+                                :total="128" 
+                                :page-sizes="[10, 20, 50]"
+                                :current-page="1">
+                            </el-pagination>
+                        </div>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+
+        <el-drawer v-model="drawerVisible" title="订单全维档案" size="650px" destroy-on-close :with-header="true">
+            <template #header>
+                <div style="font-size: 16px; font-weight: bold; color: #303133;">
+                    订单全维档案
+                    <el-tag size="small" type="info" effect="plain" style="margin-left: 10px;">来源: 鑫采商城</el-tag>
+                </div>
+            </template>
+            
+            <div class="drawer-container">
+                <el-scrollbar class="drawer-body">
+                    <div style="padding-top: 10px; padding-bottom: 20px;">
+                        
+                        <div class="detail-section">
+                            <div class="section-header">
+                                <el-icon style="margin-right: 8px; font-size: 16px; color: #409EFF;"><Goods /></el-icon> 
+                                基础信息
+                            </div>
+                            <div class="section-body">
+                                <div class="info-grid">
+                                    <div class="info-item"><label>商城订单编号</label><div>{{ currentOrder?.orderNo }}</div></div>
+                                    <div class="info-item"><label>购买服务名称</label><div>{{ currentOrder?.basic.serviceName }}</div></div>
+                                    <div class="info-item"><label>服务截止日期</label>
+                                        <div style="color: #F56C6C; font-weight: bold;">{{ currentOrder?.serviceDeadline }}</div>
+                                    </div>
+                                    <div class="info-item"><label>下单时间</label><div>{{ currentOrder?.basic.createTime }}</div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <div class="section-header"><el-icon style="margin-right: 8px; font-size: 16px; color: #E6A23C;"><List /></el-icon> 核算产品清单</div>
+                            <div class="section-body" style="padding: 0;">
+                                <el-table :data="currentOrder?.products" border size="small" style="width: 100%; border: none;">
+                                    <el-table-column type="index" width="50" align="center"></el-table-column>
+                                    <el-table-column prop="name" label="产品名称"></el-table-column>
+                                    <el-table-column prop="specs" label="规格型号"></el-table-column>
+                                    <el-table-column prop="quantity" label="核算数量" width="100"></el-table-column>
+                                    <el-table-column prop="skuId" label="SKU ID" width="140">
+                                        <template #default="scope"><span style="font-family: monospace; color: #666;">{{ scope.row.skuId }}</span></template>
+                                    </el-table-column>
+                                </el-table>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <div class="section-header"><el-icon style="margin-right: 8px; font-size: 16px; color: #67C23A;"><User /></el-icon> 联系人信息</div>
+                            <div class="section-body">
+                                <el-row :gutter="20">
+                                    <el-col :span="12">
+                                        <div class="contact-card">
+                                            <div class="contact-avatar"><el-icon><Money /></el-icon></div>
+                                            <div class="contact-info">
+                                                <div class="name">购买人 (商务)</div>
+                                                <div class="meta">{{ currentOrder?.buyer.name }}</div>
+                                                <div class="meta">{{ currentOrder?.buyer.phone }}</div>
+                                                <div class="meta" style="color:#999">{{ currentOrder?.buyer.company }}</div>
+                                            </div>
+                                        </div>
+                                    </el-col>
+                                    <el-col :span="12">
+                                        <div class="contact-card" style="background: #f0f9eb; border-color: #d1edc4;">
+                                            <div class="contact-avatar" style="background: #d1edc4; color: #67C23A;"><el-icon><Service /></el-icon></div>
+                                            <div class="contact-info">
+                                                <div class="name">业务对接人 (执行)</div>
+                                                <div class="meta">{{ currentOrder?.bizContact.name }}</div>
+                                                <div class="meta">{{ currentOrder?.bizContact.phone }}</div>
+                                                <div class="meta" style="color:#999">{{ currentOrder?.bizContact.email }}</div>
+                                            </div>
+                                        </div>
+                                    </el-col>
+                                </el-row>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <div class="section-header"><el-icon style="margin-right: 8px; font-size: 16px; color: #F56C6C;"><CreditCard /></el-icon> 支付与发票</div>
+                            <div class="section-body">
+                                <div class="info-grid">
+                                    <div class="info-item"><label>支付金额</label><div class="amount-text">¥{{ currentOrder?.payment.amount }}</div></div>
+                                    <div class="info-item"><label>付款比例</label><div><el-tag type="success" effect="plain">{{ currentOrder?.payment.ratio }}</el-tag></div></div>
+                                    <div class="info-item"><label>支付状态</label><div>{{ currentOrder?.payment.status }}</div></div>
+                                    <div class="info-item"><label>付款时间</label><div>{{ currentOrder?.payment.payTime }}</div></div>
+                                    <div class="info-item"><label>发票文件</label><el-button link type="primary" icon="Download">{{ currentOrder?.invoice.fileName }}</el-button></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <div class="section-header"><el-icon style="margin-right: 8px; font-size: 16px; color: #909399;"><Stamp /></el-icon> 核查方 & 合同</div>
+                            <div class="section-body">
+                                <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #eee;">
+                                    <span style="color:#999; margin-right:10px;">指定核查方:</span> 
+                                    <el-tag effect="dark" type="warning" size="large">{{ currentOrder?.certifier }}</el-tag>
+                                </div>
+                                <div v-for="(file, idx) in currentOrder?.contracts" :key="idx" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f5f5f5;">
+                                    <div style="display:flex; align-items:center;">
+                                        <el-icon style="margin-right:5px; color:#E6A23C"><DocumentChecked /></el-icon>
+                                        <span style="font-size:13px">{{ file.name }}</span>
+                                    </div>
+                                    <div>
+                                        <span style="font-size:12px; color:#ccc; margin-right:10px">{{ file.signDate }}</span>
+                                        <el-button link type="primary" size="small">下载</el-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </el-scrollbar>
+                <div class="drawer-footer">
+                    <span style="font-size: 12px; color: #999;">最后同步: 2026-02-03 10:15:30</span>
+                    <el-button @click="drawerVisible = false">关闭窗口</el-button>
+                </div>
+            </div>
+        </el-drawer>
+    </el-container>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            const query = Vue.reactive({ orderNo: '', company: '', status: '' });
+            const drawerVisible = Vue.ref(false);
+            const currentOrder = Vue.ref(null);
+
+            // Mock Data (10条)
+            const rawOrderList = [
+                {
+                    orderNo: 'ORD-20260203-001',
+                    certifier: 'SGS通标标准技术服务',
+                    basic: { serviceName: '钢铁产品碳足迹核算服务(L3)', createTime: '2026-02-03 09:30:00' },
+                    products: [
+                        { name: '超高功率石墨电极', specs: 'Φ600mm', quantity: '2000吨', skuId: 'SKU_1001' },
+                        { name: '普通功率石墨电极', specs: 'Φ400mm', quantity: '500吨', skuId: 'SKU_1002' },
+                        { name: '超高功率石墨电极接头', specs: 'T4L', quantity: '1000个', skuId: 'SKU_1003' }
+                    ],
+                    subTasks: [
+                        { taskId: 'TSK-2026-888', productName: '超高功率石墨电极', status: '核查认证', progress: 80, stageIndex: 3 },
+                        { taskId: 'TSK-2026-889', productName: '普通功率石墨电极', status: '数据采集', progress: 10, stageIndex: 1 },
+                        { taskId: 'TSK-2026-890', productName: '超高功率石墨电极接头', status: '待配置', progress: 0, stageIndex: 0 }
+                    ],
+                    buyer: { company: 'XX 耐火材料有限公司', name: '张总监', phone: '13800001111' },
+                    bizContact: { name: '李工 (生产部)', phone: '13912345678', email: 'ligong@nangang.com' },
+                    payment: { amount: '50,000.00', status: '已支付', ratio: '100%', payTime: '2026-02-03 10:15:22', payDate: '2026-02-03' },
+                    invoice: { fileName: '电子发票_002931.pdf', file: '#' },
+                    contracts: [
+                        { name: 'XX公司--保密协议.docx', signDate: '2026-02-03' },
+                        { name: 'XX公司--《廉洁合作协议》.docx', signDate: '2026-02-03' },
+                        { name: 'XX公司-- 上游两方合作协议.docx', signDate: '2026-02-03' }
+                    ]
+                },
+                {
+                    orderNo: 'ORD-20250315-099',
+                    certifier: 'TUV莱茵',
+                    basic: { serviceName: '钢铁产品碳足迹核算服务(L3)', createTime: '2025-03-15 14:00:00' },
+                    products: [ { name: '热轧卷板', specs: 'Q235B 5.0mm', quantity: '5000吨', skuId: 'SKU_2005' } ],
+                    subTasks: [ { taskId: 'TSK-2025-101', productName: '热轧卷板', status: '完成', progress: 100, stageIndex: 4 } ],
+                    buyer: { company: '南京钢铁集团', name: '王部长', phone: '13900002222' },
+                    bizContact: { name: '赵工', phone: '15912345678', email: 'zhao@nangang.com' },
+                    payment: { amount: '30,000.00', status: '已支付', ratio: '100%', payTime: '2025-03-15 14:20:00', payDate: '2025-03-15' },
+                    invoice: { fileName: '电子发票_001122.pdf' },
+                    contracts: [ { name: '年度合作框架协议.pdf', signDate: '2025-03-15' } ]
+                },
+                {
+                    orderNo: 'ORD-20260205-002',
+                    certifier: 'CQC中国质量认证中心',
+                    basic: { serviceName: '钢铁产品碳足迹核算服务(L3)', createTime: '2026-02-05 11:30:00' },
+                    products: [ { name: 'HRB400E 螺纹钢', specs: 'Φ22mm', quantity: '10000吨', skuId: 'SKU_3001' } ],
+                    subTasks: [ { taskId: 'TSK-2026-892', productName: 'HRB400E 螺纹钢', status: '待配置', progress: 0, stageIndex: 0 } ],
+                    buyer: { company: '沙钢集团', name: '刘经理', phone: '13700001234' },
+                    bizContact: { name: '钱工', phone: '13900005678', email: 'qian@shagang.com' },
+                    payment: { amount: '80,000.00', status: '已支付', ratio: '100%', payTime: '2026-02-05 11:45:00', payDate: '2026-02-05' },
+                    invoice: { fileName: '电子发票_003344.pdf' },
+                    contracts: [ { name: '单次服务协议.pdf', signDate: '2026-02-05' } ]
+                },
+                {
+                    orderNo: 'ORD-20260110-008',
+                    certifier: 'SGS通标标准技术服务',
+                    basic: { serviceName: '钢铁产品碳足迹核算服务(L3)', createTime: '2026-01-10 09:00:00' },
+                    products: [ { name: '中厚板', specs: 'Q345B 20mm', quantity: '3000吨', skuId: 'SKU_4002' } ],
+                    subTasks: [ { taskId: 'TSK-2026-870', productName: '中厚板', status: 'LCA计算', progress: 45, stageIndex: 2 } ],
+                    buyer: { company: '宝钢股份', name: '陈主任', phone: '13600009876' },
+                    bizContact: { name: '孙工', phone: '13800004321', email: 'sun@baosteel.com' },
+                    payment: { amount: '45,000.00', status: '已支付', ratio: '100%', payTime: '2026-01-10 09:30:00', payDate: '2026-01-10' },
+                    invoice: { fileName: '电子发票_005566.pdf' },
+                    contracts: [ { name: '年度服务协议.pdf', signDate: '2026-01-10' } ]
+                },
+                {
+                    orderNo: 'ORD-20251212-015',
+                    certifier: 'TUV莱茵',
+                    basic: { serviceName: '钢铁产品碳足迹核算服务(L3)', createTime: '2025-12-12 10:00:00' },
+                    products: [ { name: '汽车结构钢', specs: 'SAPH440', quantity: '2000吨', skuId: 'SKU_5005' } ],
+                    subTasks: [ { taskId: 'TSK-2025-999', productName: '汽车结构钢', status: '核查认证', progress: 80, stageIndex: 3 } ],
+                    buyer: { company: '马钢股份', name: '周经理', phone: '13500001122' },
+                    bizContact: { name: '吴工', phone: '13700003344', email: 'wu@magang.com' },
+                    payment: { amount: '60,000.00', status: '已支付', ratio: '100%', payTime: '2025-12-12 10:30:00', payDate: '2025-12-12' },
+                    invoice: { fileName: '电子发票_007788.pdf' },
+                    contracts: [ { name: '技术服务合同.pdf', signDate: '2025-12-12' } ]
+                },
+                {
+                    orderNo: 'ORD-20250601-020',
+                    certifier: 'CQC中国质量认证中心',
+                    basic: { serviceName: '钢铁产品碳足迹核算服务(L3)', createTime: '2025-06-01 14:00:00' },
+                    products: [ { name: '轴承钢', specs: 'GCr15', quantity: '1500吨', skuId: 'SKU_6006' } ],
+                    subTasks: [ { taskId: 'TSK-2025-500', productName: '轴承钢', status: '完成', progress: 100, stageIndex: 4 } ],
+                    buyer: { company: '兴澄特钢', name: '郑总', phone: '13900005566' },
+                    bizContact: { name: '王工', phone: '13600007788', email: 'wang@xc.com' },
+                    payment: { amount: '70,000.00', status: '已支付', ratio: '100%', payTime: '2025-06-01 14:30:00', payDate: '2025-06-01' },
+                    invoice: { fileName: '电子发票_009900.pdf' },
+                    contracts: [ { name: '长期合作协议.pdf', signDate: '2025-06-01' } ]
+                },
+                {
+                    orderNo: 'ORD-20260201-005',
+                    certifier: 'SGS通标标准技术服务',
+                    basic: { serviceName: '钢铁产品碳足迹核算服务(L3)', createTime: '2026-02-01 08:30:00' },
+                    products: [ { name: '优特钢', specs: '45#', quantity: '5000吨', skuId: 'SKU_7007' } ],
+                    subTasks: [ { taskId: 'TSK-2026-800', productName: '优特钢', status: '数据采集', progress: 15, stageIndex: 1 } ],
+                    buyer: { company: '中信泰富', name: '冯经理', phone: '13800009900' },
+                    bizContact: { name: '陈工', phone: '13500002233', email: 'chen@citic.com' },
+                    payment: { amount: '55,000.00', status: '已支付', ratio: '100%', payTime: '2026-02-01 09:00:00', payDate: '2026-02-01' },
+                    invoice: { fileName: '电子发票_001234.pdf' },
+                    contracts: [ { name: '服务采购合同.pdf', signDate: '2026-02-01' } ]
+                },
+                {
+                    orderNo: 'ORD-20251111-033',
+                    certifier: 'TUV莱茵',
+                    basic: { serviceName: '钢铁产品碳足迹核算服务(L3)', createTime: '2025-11-11 10:00:00' },
+                    products: [ { name: '管线钢', specs: 'X80', quantity: '8000吨', skuId: 'SKU_8008' } ],
+                    subTasks: [ { taskId: 'TSK-2025-888', productName: '管线钢', status: 'LCA计算', progress: 60, stageIndex: 2 } ],
+                    buyer: { company: '鞍钢股份', name: '褚处长', phone: '13700004455' },
+                    bizContact: { name: '杨工', phone: '13900006677', email: 'yang@angang.com' },
+                    payment: { amount: '90,000.00', status: '已支付', ratio: '100%', payTime: '2025-11-11 10:30:00', payDate: '2025-11-11' },
+                    invoice: { fileName: '电子发票_005678.pdf' },
+                    contracts: [ { name: '年度核算协议.pdf', signDate: '2025-11-11' } ]
+                },
+                {
+                    orderNo: 'ORD-20250909-077',
+                    certifier: 'CQC中国质量认证中心',
+                    basic: { serviceName: '钢铁产品碳足迹核算服务(L3)', createTime: '2025-09-09 15:00:00' },
+                    products: [ { name: '桥梁钢', specs: 'Q370q', quantity: '4000吨', skuId: 'SKU_9009' } ],
+                    subTasks: [ { taskId: 'TSK-2025-777', productName: '桥梁钢', status: '数据采集', progress: 30, stageIndex: 1 } ],
+                    buyer: { company: '首钢股份', name: '卫经理', phone: '13600008899' },
+                    bizContact: { name: '韩工', phone: '13800001122', email: 'han@shougang.com' },
+                    payment: { amount: '65,000.00', status: '已支付', ratio: '100%', payTime: '2025-09-09 15:30:00', payDate: '2025-09-09' },
+                    invoice: { fileName: '电子发票_009012.pdf' },
+                    contracts: [ { name: '项目合作合同.pdf', signDate: '2025-09-09' } ]
+                },
+                {
+                    orderNo: 'ORD-20250101-001',
+                    certifier: 'SGS通标标准技术服务',
+                    basic: { serviceName: '钢铁产品碳足迹核算服务(L3)', createTime: '2025-01-01 09:00:00' },
+                    products: [ { name: '取向硅钢', specs: '30Q130', quantity: '1000吨', skuId: 'SKU_0010' } ],
+                    subTasks: [ { taskId: 'TSK-2025-001', productName: '取向硅钢', status: '完成', progress: 100, stageIndex: 4 } ],
+                    buyer: { company: '武钢有限', name: '蒋总', phone: '13500003344' },
+                    bizContact: { name: '沈工', phone: '13700005566', email: 'shen@wugang.com' },
+                    payment: { amount: '100,000.00', status: '已支付', ratio: '100%', payTime: '2025-01-01 09:30:00', payDate: '2025-01-01' },
+                    invoice: { fileName: '电子发票_003456.pdf' },
+                    contracts: [ { name: '年度战略协议.pdf', signDate: '2025-01-01' } ]
+                }
+            ];
+
+            // 核心计算逻辑 (保留)
+            const processedOrderList = Vue.computed(() => {
+                return rawOrderList.map(order => {
+                    const payDate = dayjs(order.payment.payDate);
+                    const deadline = payDate.add(1, 'year');
+                    const isExpiring = deadline.diff(dayjs(), 'day') < 30;
+
+                    const totalProgress = order.subTasks.reduce((acc, t) => acc + t.progress, 0);
+                    const avgProgress = order.subTasks.length ? Math.floor(totalProgress / order.subTasks.length) : 0;
+                    const completedTasks = order.subTasks.filter(t => t.progress === 100).length;
+
+                    return {
+                        ...order,
+                        serviceStart: payDate.format('YYYY-MM-DD'),
+                        serviceDeadline: deadline.format('YYYY-MM-DD'),
+                        isExpiring,
+                        avgProgress,
+                        completedTasks
+                    };
+                });
+            });
+
+            const getTaskStatusType = (status) => {
+                const map = { 
+                    '待配置': 'info', 
+                    '数据采集': 'primary', 
+                    'LCA计算': 'primary', 
+                    '核查认证': 'warning', 
+                    '完成': 'success' 
+                };
+                return map[status] || 'info';
+            };
+
+            const goToTaskWorkspace = (task) => {
+                let targetPage = 'task_detail.html';
+                if (task.status === '待配置') targetPage = 'task_detail_config.html';
+                else if (task.status === '数据采集') targetPage = 'task_detail_collect.html';
+                else if (task.status === 'LCA计算') targetPage = 'task_detail_lca.html';
+                else if (task.status === '核查认证') targetPage = 'task_detail_verify.html';
+                else if (task.status === '完成') targetPage = 'task_detail.html';
+                
+                window.location.href = targetPage + `?taskId=${task.taskId}`;
+            };
+
+            const goToTaskList = () => window.location.href = 'task_list.html';
+            const handleSearch = () => ElementPlus.ElMessage.success('列表已刷新');
+            const handleReset = () => { query.orderNo = ''; query.company = ''; };
+            const viewDetail = (row) => { currentOrder.value = row; drawerVisible.value = true; };
+            const openPage = (path) => window.location.href = path;
+
+            return {
+                menuConfig, currentUser, query, processedOrderList, drawerVisible, currentOrder,
+                getTaskStatusType, handleSearch, handleReset, viewDetail, goToTaskWorkspace, goToTaskList, openPage
+            };
+        }
+    });
+
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

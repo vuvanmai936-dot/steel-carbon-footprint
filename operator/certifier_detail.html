@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>核查机构详情 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 1. 布局核心样式 === */
+        html, body, #app { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        [v-cloak] { display: none; }
+
+        .scrolling-main {
+            background: #f0f2f5; padding: 20px; overflow-y: auto; height: 100%; box-sizing: border-box;
+        }
+
+        /* === 2. 顶部画像 (Profile Header) === */
+        .profile-header {
+            background: #fff; padding: 20px; border-radius: 4px; border: 1px solid #ebeef5;
+            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+        .ph-left { display: flex; align-items: center; }
+        .ph-logo { 
+            width: 64px; height: 64px; border-radius: 4px; background: #fff; color: #409EFF; 
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; 
+            margin-right: 20px; border: 1px solid #e4e7ed;
+        }
+        .ph-name { font-size: 18px; font-weight: bold; color: #303133; margin-bottom: 6px; display: flex; align-items: center; }
+        .ph-meta { display: flex; gap: 24px; color: #606266; font-size: 13px; }
+        
+        .ph-stats { display: flex; gap: 40px; text-align: right; border-left: 1px solid #eee; padding-left: 40px; padding-top: 4px; }
+        .stat-num { font-family: 'DIN Alternate', sans-serif; font-size: 24px; font-weight: bold; color: #303133; }
+        .stat-label { font-size: 12px; color: #909399; }
+
+        /* === 3. 内容 Tabs === */
+        .detail-tabs { background: #fff; border: 1px solid #ebeef5; border-radius: 4px; min-height: 600px; }
+        .detail-tabs .el-tabs__header { margin: 0 0 20px !important; border-bottom: 1px solid #ebeef5; background: #fafafa; padding: 0 20px; }
+        
+        /* 利润计算器 (商业配置页专用) */
+        .profit-calc-box {
+            background: #f0f9eb; border: 1px solid #e1f3d8; border-radius: 4px; padding: 12px 16px; 
+            display: flex; justify-content: space-between; align-items: center; color: #67C23A; width: 100%;
+            font-size: 13px;
+        }
+        
+        /* 标题栏 */
+        .section-header {
+            font-size: 14px; font-weight: bold; color: #303133;
+            border-left: 3px solid #409EFF; padding-left: 10px; margin-bottom: 15px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* 链接样式 */
+        .link-text { color: #409EFF; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 4px; }
+        .link-text:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'6'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon"></component></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <div style="display: flex; align-items: center;">
+                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
+                    <el-breadcrumb separator="/">
+                        <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                        <el-breadcrumb-item>核查机构管理</el-breadcrumb-item>
+                        <el-breadcrumb-item>机构详情</el-breadcrumb-item>
+                    </el-breadcrumb>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main class="scrolling-main">
+                
+                <div class="profile-header">
+                    <div class="ph-left">
+                        <div class="ph-logo">{{ certInfo.abbr }}</div>
+                        <div>
+                            <div class="ph-name">
+                                {{ certInfo.name }}
+                                <el-tooltip content="连接器心跳正常，数据实时同步中" placement="top">
+                                    <el-tag v-if="certInfo.connStatus === 'online'" type="success" size="small" effect="dark" style="margin-left: 10px; cursor: help;">TDS 在线</el-tag>
+                                </el-tooltip>
+                                <el-tag v-else type="info" size="small" effect="dark" style="margin-left: 10px;">离线</el-tag>
+                            </div>
+                            <div class="ph-meta">
+                                <div><span style="color:#909399">统一社会信用代码：</span>{{ certInfo.creditCode }}</div>
+                                <div style="margin-left: 20px;">
+                                    <span style="color:#909399">商城合作：</span>
+                                    <span v-if="certInfo.bizStatus === 'signed'" style="color: #67C23A; font-weight: bold;">已签约 (接单中)</span>
+                                    <span v-else style="color: #F56C6C; font-weight: bold;">已暂停</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ph-stats">
+                        <div>
+                            <div class="stat-num" style="color: #409EFF;">{{ certInfo.stats.activeOrders }}</div>
+                            <div class="stat-label">进行中订单</div>
+                        </div>
+                        <div>
+                            <div class="stat-num">{{ certInfo.stats.pendingTasks }}</div>
+                            <div class="stat-label">待核查任务</div>
+                        </div>
+                        <div>
+                            <div class="stat-num">¥{{ certInfo.stats.unsettled.toLocaleString() }}</div>
+                            <div class="stat-label">待结算金额</div>
+                        </div>
+                    </div>
+                </div>
+
+                <el-tabs v-model="activeTab" class="detail-tabs">
+                    
+                    <el-tab-pane label="商业配置" name="config">
+                        <div style="padding: 30px; max-width: 800px;">
+                            <div class="section-header" style="border-color: #409EFF;">定价与分润 (总包分发模式)</div>
+                            
+                            <el-form label-width="150px" label-position="left">
+                                <el-form-item label="市场指导价">
+                                    <el-input v-model.number="form.marketPrice" style="width: 220px;">
+                                        <template #prefix>¥</template>
+                                        <template #append>元/单</template>
+                                    </el-input>
+                                    <span style="font-size: 12px; color: #909399; margin-left: 10px;">(A) 供应商支付给鑫智链的总费用</span>
+                                </el-form-item>
+                                
+                                <el-form-item label="核查结算成本">
+                                    <el-input v-model.number="form.settlePrice" style="width: 220px;">
+                                        <template #prefix>¥</template>
+                                        <template #append>元/单</template>
+                                    </el-input>
+                                    <span style="font-size: 12px; color: #909399; margin-left: 10px;">(B) 鑫智链需支付给核查机构的费用</span>
+                                </el-form-item>
+
+                                <el-form-item label="平台预期毛利">
+                                    <div class="profit-calc-box" style="width: 400px;">
+                                        <div>
+                                            <span style="font-weight:bold; font-size:16px;">¥ {{ platformProfit.toLocaleString() }}</span>
+                                            <span style="margin-left: 10px; opacity: 0.8;">( A - B )</span>
+                                        </div>
+                                        <el-tag size="small" type="success" effect="dark">毛利率 {{ profitMargin }}%</el-tag>
+                                    </div>
+                                </el-form-item>
+                                
+                                <el-form-item label="结算周期">
+                                    <el-radio-group v-model="form.cycle">
+                                        <el-radio label="week">T+7 (周结)</el-radio>
+                                        <el-radio label="month">T+30 (月结)</el-radio>
+                                    </el-radio-group>
+                                </el-form-item>
+
+                                <el-divider></el-divider>
+
+                                <div class="section-header" style="border-color: #E6A23C;">商务对接人</div>
+                                <el-row :gutter="20">
+                                    <el-col :span="12">
+                                        <el-form-item label="姓名"><el-input v-model="form.contactName"></el-input></el-form-item>
+                                    </el-col>
+                                    <el-col :span="12">
+                                        <el-form-item label="电话"><el-input v-model="form.contactPhone"></el-input></el-form-item>
+                                    </el-col>
+                                </el-row>
+
+                                <el-divider></el-divider>
+
+                                <el-form-item>
+                                    <el-button type="primary" @click="saveConfig">保存配置</el-button>
+                                    <el-button :type="certInfo.bizStatus === 'signed' ? 'danger' : 'success'" plain @click="toggleBizStatus">
+                                        {{ certInfo.bizStatus === 'signed' ? '暂停合作' : '恢复合作' }}
+                                    </el-button>
+                                </el-form-item>
+                            </el-form>
+                        </div>
+                    </el-tab-pane>
+
+                    <el-tab-pane label="基本档案 (TDS)" name="profile">
+                        <div style="padding: 20px;">
+                            <div class="section-header">
+                                <span>身份与资质</span>
+                                <div>
+                                    <span style="font-size: 12px; color: #909399; margin-right: 10px;">
+                                        数据版本: <span style="font-family: monospace;">v{{ certInfo.dataVersion }} ({{ certInfo.lastSync }})</span>
+                                    </span>
+                                    <el-button type="primary" link icon="Refresh" @click="handleSync">检查更新</el-button>
+                                </div>
+                            </div>
+
+                            <el-descriptions :column="2" border>
+                                <el-descriptions-item label="注册地址">{{ certInfo.address }}</el-descriptions-item>
+                                <el-descriptions-item label="官方邮箱">{{ certInfo.contact.email }}</el-descriptions-item>
+                                <el-descriptions-item label="办公电话">{{ certInfo.contact.officePhone }}</el-descriptions-item>
+                                <el-descriptions-item label="DID 标识">
+                                    <span style="font-family: monospace;">{{ certInfo.did }}</span>
+                                </el-descriptions-item>
+                            </el-descriptions>
+
+                            <div style="height: 20px;"></div>
+                            
+                            <h4 style="font-size: 14px; margin-bottom: 10px;">持有证书 (3)</h4>
+                            <el-table :data="certInfo.certs" border size="small">
+                                <el-table-column prop="name" label="证书名称"></el-table-column>
+                                <el-table-column prop="auth" label="发证机构"></el-table-column>
+                                <el-table-column prop="expireDate" label="有效期至"></el-table-column>
+                                <el-table-column label="状态" width="100">
+                                    <template #default="scope">
+                                        <el-tag size="small" type="success">有效</el-tag>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </div>
+                    </el-tab-pane>
+
+                    <el-tab-pane label="历史作业" name="tasks">
+                        <div style="padding: 20px;">
+                            <el-table :data="taskList" border stripe style="width: 100%">
+                                <el-table-column label="关联订单" width="200" show-overflow-tooltip>
+                                    <template #default="scope">
+                                        <span class="link-text" @click="goToOrder(scope.row.orderNo)">
+                                            <el-icon><component :is="'Document'"></component></el-icon> {{ scope.row.orderNo }}
+                                        </span>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="任务编号" width="180">
+                                    <template #default="scope">
+                                        <span class="link-text" @click="goToTask(scope.row.taskId)">{{ scope.row.taskId }}</span>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="product" label="核算产品"></el-table-column>
+                                <el-table-column prop="supplier" label="供应商"></el-table-column>
+                                <el-table-column label="状态" width="120">
+                                    <template #default="scope">
+                                        <el-tag size="small" :type="scope.row.status === '核查认证' ? 'warning' : 'success'">
+                                            {{ scope.row.status }}
+                                        </el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="endTime" label="完成时间" width="160"></el-table-column>
+                            </el-table>
+                        </div>
+                    </el-tab-pane>
+
+                    <el-tab-pane label="资金结算" name="finance">
+                        <div style="padding: 20px;">
+                            <el-alert title="数据来源：结算中心 (Settlement Center) 模块自动同步，仅供查阅。" type="info" :closable="false" show-icon style="margin-bottom: 15px;"></el-alert>
+                            
+                            <el-table :data="settleList" border stripe>
+                                <el-table-column prop="billNo" label="结算单号" width="220">
+                                    <template #default="s">
+                                        <span class="link-text" @click="openBillDetail(s.row.billNo)">{{ s.row.billNo }}</span>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="period" label="账期" width="120"></el-table-column>
+                                <el-table-column label="结算模式" min-width="180">
+                                    <template #default="s">
+                                        {{ s.row.rule }} <span style="color:#909399; font-size:12px;">(固定价: ¥{{ s.row.pricePerOrder }}/单)</span>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="结算金额 (Payable)" width="160" align="right">
+                                    <template #default="scope">
+                                        <span style="font-weight: bold; color: #F56C6C;">¥ {{ scope.row.amount }}</span>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="状态" width="120" align="center">
+                                    <template #default="scope">
+                                        <el-tag v-if="scope.row.status==='paid'" type="success" effect="plain">已打款</el-tag>
+                                        <el-tag v-else type="warning" effect="plain">处理中</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="payTime" label="打款时间" width="160"></el-table-column>
+                            </el-table>
+                        </div>
+                    </el-tab-pane>
+                </el-tabs>
+
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            const activeTab = Vue.ref('config');
+            
+            // Mock Data
+            const certInfo = Vue.reactive({
+                name: 'SGS 通标标准技术服务有限公司',
+                abbr: 'SGS',
+                did: 'did:xin:cert:sgs...001',
+                creditCode: '911100006000856000',
+                connStatus: 'online',
+                bizStatus: 'signed',
+                address: '北京市朝阳区阜通东大街 1 号',
+                contact: { email: 'official@sgs.com', officePhone: '010-68456699' },
+                dataVersion: '2026.02.05-V3',
+                lastSync: '2026-02-06 10:00:00',
+                stats: { activeOrders: 12, pendingTasks: 5, unsettled: 15000 },
+                certs: [
+                    { name: 'CNAS 认可证书', auth: 'CNAS', expireDate: '2028-12-31' },
+                    { name: 'CMA 资质认定', auth: 'CNCA', expireDate: '2027-06-30' },
+                    { name: 'ISO 14065 认可', auth: 'ISO', expireDate: '2026-09-15' }
+                ]
+            });
+
+            // 商业配置 (总包模式)
+            const form = Vue.reactive({
+                marketPrice: 20000,
+                settlePrice: 5000,
+                cycle: 'week',
+                contactName: 'Alice',
+                contactPhone: '13800000000'
+            });
+
+            const platformProfit = Vue.computed(() => form.marketPrice - form.settlePrice);
+            const profitMargin = Vue.computed(() => {
+                if(!form.marketPrice) return 0;
+                return Math.round((platformProfit.value / form.marketPrice) * 100);
+            });
+
+            const taskList = Vue.ref([
+                { orderNo: 'ORD-20260203-001', taskId: 'TSK-2026-888', product: '超高功率石墨电极', supplier: '南通碳素', status: '核查认证', endTime: '--' },
+                { orderNo: 'ORD-20250315-099', taskId: 'TSK-2025-101', product: '热轧卷板', supplier: '马钢股份', status: '已完成', endTime: '2025-04-01' }
+            ]);
+
+            const settleList = Vue.ref([
+                { billNo: 'BILL-202602-SGS', period: '2026-02', rule: 'SGS 2026年度框架协议', pricePerOrder: '5,000.00', amount: '15,000.00', status: 'paid', payTime: '2026-02-06 14:05' },
+                { billNo: 'STL-202601-001', period: '2026-01', rule: 'SGS 2026年度框架协议', pricePerOrder: '5,000.00', amount: '125,000.00', status: 'paid', payTime: '2026-02-01 10:00' }
+            ]);
+
+            const handleSync = () => {
+                const loading = ElementPlus.ElLoading.service({ text: '正在连接核查机构连接器...' });
+                setTimeout(() => {
+                    loading.close();
+                    certInfo.dataVersion = '2026.02.06-V4';
+                    certInfo.lastSync = '刚刚';
+                    ElementPlus.ElMessage.success('同步完成：检测到 0 项变更，当前为最新版本');
+                }, 1000);
+            };
+
+            const saveConfig = () => { ElementPlus.ElMessage.success('配置已保存'); };
+            const toggleBizStatus = () => {
+                certInfo.bizStatus = certInfo.bizStatus === 'signed' ? 'suspended' : 'signed';
+                ElementPlus.ElMessage.success('状态已变更');
+            };
+
+            // 关键路由修正：返回到核查机构管理列表
+            const goBack = () => window.location.href = 'certifier_mgt.html';
+            
+            const goToOrder = (orderNo) => window.location.href = 'order.html?q=' + orderNo;
+            const goToTask = (taskId) => window.location.href = 'task_detail_verify.html?taskId=' + taskId;
+            const openBillDetail = (id) => ElementPlus.ElMessage.info(`查看结算单 ${id} 详情`); // 暂不跳转，仅提示
+            
+            const openPage = (path) => window.location.href = path;
+
+            return {
+                menuConfig, currentUser, activeTab, certInfo, form, taskList, settleList,
+                platformProfit, profitMargin,
+                handleSync, saveConfig, toggleBizStatus, goBack, goToOrder, goToTask, openBillDetail, openPage
+            };
+        }
+    });
+
+    app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+        app.component(key, component);
+    }
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

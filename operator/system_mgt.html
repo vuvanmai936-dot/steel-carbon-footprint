@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>系统管理 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 1. 布局核心样式 === */
+        html, body, #app { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        [v-cloak] { display: none; }
+
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
+        
+        /* 全高 Tabs 容器 */
+        .full-height-tabs { height: 100%; display: flex; flex-direction: column; }
+        .full-height-tabs .el-tabs__content { flex: 1; overflow: auto; padding: 20px; }
+        .full-height-tabs .el-tabs__header { margin-bottom: 0; background: #fafafa; padding: 0 20px; border-bottom: 1px solid #ebeef5; }
+
+        /* === 2. 安全仪表盘 (Dashboard) === */
+        .security-panel { 
+            background: #fff; border: 1px solid #ebeef5; border-radius: 4px; padding: 20px; 
+            margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02); flex-shrink: 0;
+        }
+        .security-item { display: flex; align-items: center; gap: 15px; }
+        .security-icon { 
+            width: 48px; height: 48px; border-radius: 8px; 
+            display: flex; align-items: center; justify-content: center; font-size: 24px; 
+        }
+        .icon-blue { background: #ecf5ff; color: #409EFF; }
+        .icon-orange { background: #fdf6ec; color: #E6A23C; }
+        .icon-green { background: #f0f9eb; color: #67C23A; }
+        
+        .security-info h3 { margin: 0 0 5px 0; font-size: 16px; color: #303133; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .security-info p { margin: 0; font-size: 12px; color: #909399; }
+        .score-circle { 
+            width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; color: #67C23A; border: 4px solid #e1f3d8; border-radius: 50%; 
+            font-size: 18px; font-family: 'DIN Alternate', sans-serif;
+        }
+
+        /* === 3. 角色管理卡片 === */
+        .role-card {
+            border: 1px solid #ebeef5; border-radius: 4px; padding: 15px; margin-bottom: 12px;
+            transition: all 0.2s; cursor: pointer; position: relative; overflow: hidden; background: #fff;
+        }
+        .role-card:hover { border-color: #409EFF; transform: translateY(-2px); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .role-card.active { background: #ecf5ff; border-color: #409EFF; }
+        .role-card.active::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #409EFF;
+        }
+        .role-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .role-name { font-weight: bold; font-size: 14px; color: #303133; }
+        .role-desc { font-size: 12px; color: #909399; line-height: 1.4; }
+
+        /* === 4. 权限树与成员 === */
+        .perm-tree-box { border: 1px solid #dcdfe6; border-radius: 4px; padding: 10px; height: 400px; overflow-y: auto; background: #fff; }
+        .member-list-box { border: 1px solid #ebeef5; border-radius: 4px; height: 400px; overflow-y: auto; }
+        .member-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; border-bottom: 1px solid #f0f2f5; }
+        .member-item:last-child { border-bottom: none; }
+        .member-info { display: flex; align-items: center; gap: 12px; }
+
+        /* === 5. 日志 JSON === */
+        .log-json { 
+            background: #282c34; color: #abb2bf; padding: 15px; border-radius: 4px; 
+            font-family: 'Consolas', 'Monaco', monospace; font-size: 12px; max-height: 300px; overflow: auto; 
+            line-height: 1.5; white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'9'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon"></component></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                    <el-breadcrumb-item>系统管理</el-breadcrumb-item>
+                </el-breadcrumb>
+                
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: hidden; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    
+                    <div class="security-panel">
+                        <div class="security-item">
+                            <div class="security-icon icon-blue"><el-icon><component :is="'Shield'"></component></el-icon></div>
+                            <div class="security-info">
+                                <h3>
+                                    安全防护状态 
+                                    <el-tag size="small" type="danger" effect="plain" style="margin-left: 8px;">
+                                        <el-icon style="margin-right: 2px;"></component></el-icon> 核心控制区
+                                    </el-tag>
+                                </h3>
+                                <p>MFA 双重认证已开启，异地登录拦截已生效</p>
+                            </div>
+                        </div>
+                        <div class="security-item">
+                            <div class="security-icon icon-orange"><el-icon><component :is="'User'"></component></el-icon></div>
+                            <div class="security-info"><h3>在线账号监控</h3><p>当前活跃: 5 人 / 总账号: 12 个</p></div>
+                        </div>
+                        <div class="security-item">
+                            <div class="security-icon icon-green"><el-icon><component :is="'Cpu'"></component></el-icon></div>
+                            <div class="security-info"><h3>系统健康度</h3><p>服务运行正常，无待处理异常报警</p></div>
+                        </div>
+                        <div class="score-circle">98分</div>
+                    </div>
+
+                    <div class="list-card-container">
+                        <el-tabs v-model="activeTab" class="full-height-tabs">
+                            
+                            <el-tab-pane label="员工账号管理" name="users" style="height: 100%; display: flex; flex-direction: column;">
+                                <div style="margin-bottom: 15px; display: flex; justify-content: space-between;">
+                                    <div style="display: flex; gap: 10px;">
+                                        <el-input v-model="searchUser" placeholder="输入姓名、工号或手机号" style="width: 240px;" clearable>
+                                            <template #prefix><el-icon><component :is="'Search'"></component></el-icon></template>
+                                        </el-input>
+                                        <el-select v-model="filterDept" placeholder="所属部门" style="width: 120px;" clearable>
+                                            <el-option label="运营部" value="op"></el-option>
+                                            <el-option label="财务部" value="fi"></el-option>
+                                        </el-select>
+                                        <el-button type="primary" plain>查询</el-button>
+                                    </div>
+                                    <el-button type="primary" icon="Plus" @click="openUserDialog('create')">新增员工账号</el-button>
+                                </div>
+                                <div style="flex: 1; overflow: hidden;">
+                                    <el-table :data="userList" border stripe style="width: 100%; height: 100%;">
+                                        <el-table-column label="员工信息" width="220">
+                                            <template #default="s">
+                                                <div style="display: flex; align-items: center;">
+                                                    <el-avatar :size="32" style="background: #e6a23c; color: #fff; margin-right: 10px; font-size: 14px;">{{ s.row.name.charAt(0) }}</el-avatar>
+                                                    <div><div style="font-weight: bold;">{{ s.row.name }}</div><div style="font-size: 12px; color: #999;">{{ s.row.jobNo }}</div></div>
+                                                </div>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column prop="dept" label="所属部门" width="150"></el-table-column>
+                                        <el-table-column label="所属角色" width="180">
+                                            <template #default="s">
+                                                <el-tag size="small" :type="getRoleType(s.row.roleId)" effect="plain">{{ getRoleName(s.row.roleId) }}</el-tag>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column prop="phone" label="联系方式" width="150"></el-table-column>
+                                        <el-table-column prop="lastLogin" label="最近登录时间" width="180" style="color: #666;"></el-table-column>
+                                        <el-table-column label="账号状态" width="100" align="center">
+                                            <template #default="s">
+                                                <el-switch v-model="s.row.status" size="small" inline-prompt active-color="#13ce66" inactive-color="#ff4949"></el-switch>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column label="操作" min-width="150" align="center">
+                                            <template #default="s">
+                                                <el-button link type="primary" size="small" @click="openUserDialog('edit', s.row)">编辑</el-button>
+                                                <el-button link type="warning" size="small">重置密码</el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                </div>
+                            </el-tab-pane>
+
+                            <el-tab-pane label="角色与权限配置" name="roles" style="height: 100%;">
+                                <div style="display: flex; gap: 20px; height: 100%;">
+                                    <div style="width: 280px; flex-shrink: 0; display: flex; flex-direction: column;">
+                                        <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="font-weight: bold; font-size: 14px;">角色列表 (Roles)</span>
+                                            <el-button link type="primary" icon="Plus" size="small">新建</el-button>
+                                        </div>
+                                        <div style="flex: 1; overflow-y: auto;">
+                                            <div v-for="role in roleList" :key="role.id" 
+                                                 :class="['role-card', { active: currentRole.id === role.id }]"
+                                                 @click="currentRole = role">
+                                                <div class="role-header">
+                                                    <span class="role-name">{{ role.name }}</span>
+                                                    <el-tag size="small" effect="plain" type="info">{{ getUserCountByRole(role.id) }} 人</el-tag>
+                                                </div>
+                                                <div class="role-desc">{{ role.desc }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="flex: 1; border-left: 1px solid #eee; padding-left: 20px; display: flex; flex-direction: column;">
+                                        <div style="margin-bottom: 15px; font-weight: bold; font-size: 15px;">
+                                            当前配置：<span style="color: #409EFF;">{{ currentRole.name }}</span>
+                                        </div>
+                                        
+                                        <el-tabs type="card" class="role-config-tabs" style="flex: 1;">
+                                            <el-tab-pane label="功能权限 (Menu)">
+                                                <div class="perm-tree-box">
+                                                    <el-tree ref="permTree" :data="menuTree" show-checkbox node-key="id"
+                                                        :default-expanded-keys="['1', '5', '8']" :default-checked-keys="currentRole.perms"
+                                                        :props="{ label: 'title' }">
+                                                    </el-tree>
+                                                </div>
+                                                <div style="margin-top: 15px; text-align: right;">
+                                                    <el-button type="primary" @click="savePerms">保存权限配置</el-button>
+                                                </div>
+                                            </el-tab-pane>
+                                            
+                                            <el-tab-pane :label="`关联成员 (${getUserCountByRole(currentRole.id)})`">
+                                                <div class="member-list-box">
+                                                    <template v-if="getUsersByRole(currentRole.id).length > 0">
+                                                        <div v-for="u in getUsersByRole(currentRole.id)" :key="u.id" class="member-item">
+                                                            <div class="member-info">
+                                                                <el-avatar :size="32" style="background: #f56c6c; color: #fff; font-size: 12px;">{{ u.name.charAt(0) }}</el-avatar>
+                                                                <div>
+                                                                    <div style="font-weight: bold; font-size: 13px;">{{ u.name }} ({{ u.jobNo }})</div>
+                                                                    <div style="font-size: 12px; color: #999;">{{ u.dept }}</div>
+                                                                </div>
+                                                            </div>
+                                                            <el-button link type="danger" size="small" @click="removeRoleFromUser(u)">移除</el-button>
+                                                        </div>
+                                                    </template>
+                                                    <el-empty v-else description="该角色暂无关联成员"></el-empty>
+                                                </div>
+                                                <div style="margin-top: 15px; text-align: right;">
+                                                    <el-button type="primary" plain @click="activeTab = 'users'">去添加成员</el-button>
+                                                </div>
+                                            </el-tab-pane>
+                                        </el-tabs>
+                                    </div>
+                                </div>
+                            </el-tab-pane>
+
+                            <el-tab-pane label="系统日志中心" name="logs" style="height: 100%; display: flex; flex-direction: column;">
+                                <div style="margin-bottom: 15px;">
+                                    <el-form :inline="true" size="small">
+                                        <el-form-item label="类型">
+                                            <el-select v-model="logFilter.type" placeholder="全部" style="width: 120px;" clearable>
+                                                <el-option label="业务操作" value="operation"></el-option>
+                                                <el-option label="用户登录" value="login"></el-option>
+                                                <el-option label="系统异常" value="error"></el-option>
+                                            </el-select>
+                                        </el-form-item>
+                                        <el-form-item label="关键词">
+                                            <el-input v-model="logFilter.keyword" placeholder="操作人 / 模块 / IP" prefix-icon="Search" clearable>
+                                                <template #prefix><el-icon><component :is="'Search'"></component></el-icon></template>
+                                            </el-input>
+                                        </el-form-item>
+                                        <el-form-item><el-button type="primary" icon="Search" @click="searchLogs">查询</el-button></el-form-item>
+                                    </el-form>
+                                </div>
+                                <div style="flex: 1; overflow: hidden;">
+                                    <el-table :data="logList" border stripe size="small" style="width: 100%; height: 100%;">
+                                        <el-table-column prop="time" label="发生时间" width="160"></el-table-column>
+                                        <el-table-column prop="type" label="类型" width="100">
+                                            <template #default="s">
+                                                <el-tag size="small" :type="getLogTypeStyle(s.row.type)" effect="plain">{{ s.row.typeLabel }}</el-tag>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column prop="user" label="操作人" width="120"></el-table-column>
+                                        <el-table-column prop="ip" label="IP" width="130"></el-table-column>
+                                        <el-table-column prop="module" label="模块" width="120"></el-table-column>
+                                        <el-table-column prop="action" label="详情" min-width="200" show-overflow-tooltip></el-table-column>
+                                        <el-table-column label="结果" width="80">
+                                            <template #default="s">
+                                                <span v-if="s.row.status === 'success'" style="color: #67C23A;">成功</span>
+                                                <span v-else style="color: #F56C6C;">失败</span>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column label="报文" width="80" align="center">
+                                            <template #default="s">
+                                                <el-button link type="primary" size="small" @click="viewLogDetail(s.row)">查看</el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                </div>
+                            </el-tab-pane>
+                        </el-tabs>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+
+    <el-dialog v-model="userDialogVisible" :title="dialogMode === 'create' ? '新增员工账号' : '编辑员工信息'" width="500px">
+        <el-form :model="userForm" label-width="90px">
+            <el-form-item label="真实姓名" required><el-input v-model="userForm.name" placeholder="请输入姓名"></el-input></el-form-item>
+            <el-form-item label="手机号码" required><el-input v-model="userForm.phone" placeholder="用于接收验证码"></el-input></el-form-item>
+            <el-form-item label="工号/ID"><el-input v-model="userForm.jobNo" placeholder="可选"></el-input></el-form-item>
+            <el-form-item label="所属部门">
+                <el-select v-model="userForm.dept" style="width: 100%;">
+                    <el-option label="运营部" value="运营部"></el-option>
+                    <el-option label="财务部" value="财务部"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="分配角色" required>
+                <el-select v-model="userForm.roleId" placeholder="请选择系统角色" style="width: 100%;">
+                    <el-option v-for="role in roleList" :key="role.id" :label="role.name" :value="role.id"></el-option>
+                </el-select>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="userDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="saveUser">保存并生效</el-button>
+        </template>
+    </el-dialog>
+
+    <el-dialog v-model="logDialogVisible" title="日志报文详情 (JSON)" width="600px">
+        <div v-if="currentLog">
+            <div style="margin-bottom: 10px; font-size: 13px; color: #606266; background: #f4f4f5; padding: 10px; border-radius: 4px;">
+                <div><span style="font-weight: bold;">请求追踪号 (Trace ID):</span> {{ currentLog.reqId }}</div>
+                <div style="margin-top: 5px;"><span style="font-weight: bold;">客户端环境:</span> {{ currentLog.userAgent }}</div>
+            </div>
+            <div class="log-json">{{ currentLog.json }}</div>
+        </div>
+        <template #footer><el-button @click="logDialogVisible = false">关闭</el-button></template>
+    </el-dialog>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+    const app = Vue.createApp({
+        setup() {
+            const activeTab = Vue.ref('users');
+            const searchUser = Vue.ref('');
+            const filterDept = Vue.ref('');
+            
+            const userDialogVisible = Vue.ref(false);
+            const logDialogVisible = Vue.ref(false);
+            const dialogMode = Vue.ref('create'); 
+            
+            const userForm = Vue.reactive({ id: null, name: '', phone: '', jobNo: '', dept: '', roleId: '' });
+            const currentLog = Vue.ref(null);
+            const logFilter = Vue.reactive({ type: '', date: [], keyword: '' });
+
+            // 1. 角色列表
+            const roleList = Vue.ref([
+                { id: 'admin', name: '超级管理员', desc: '拥有系统所有功能权限。', perms: ['1','2','3','4','5','6','7','8','9'] },
+                { id: 'finance', name: '财务经理', desc: '负责结算与资金管理。', perms: ['8'] }, 
+                { id: 'operator', name: '运营专员', desc: '负责订单与供应商管理。', perms: ['2','3','5','6'] }
+            ]);
+            const currentRole = Vue.ref(roleList.value[0]);
+
+            // 2. 用户列表
+            const userList = Vue.ref([
+                { id: 1, name: '管理员', jobNo: 'OP-001', dept: '总经办', roleId: 'admin', phone: '138****0000', lastLogin: '2026-02-05 10:00', status: true },
+                { id: 2, name: '张财务', jobNo: 'FN-008', dept: '财务部', roleId: 'finance', phone: '139****1234', lastLogin: '2026-02-04 15:30', status: true },
+                { id: 3, name: '李运营', jobNo: 'OP-012', dept: '运营部', roleId: 'operator', phone: '137****8888', lastLogin: '2026-02-05 09:15', status: true }
+            ]);
+
+            // 3. 关联逻辑
+            const getRoleName = (roleId) => {
+                const role = roleList.value.find(r => r.id === roleId);
+                return role ? role.name : '未分配';
+            };
+            const getRoleType = (roleId) => {
+                if(roleId === 'admin') return 'danger';
+                if(roleId === 'finance') return 'warning';
+                return 'primary';
+            };
+            const getUserCountByRole = (roleId) => userList.value.filter(u => u.roleId === roleId).length;
+            const getUsersByRole = (roleId) => userList.value.filter(u => u.roleId === roleId);
+            
+            const removeRoleFromUser = (user) => {
+                ElementPlus.ElMessageBox.confirm(`确定要移除 [${user.name}] 的当前角色吗？`, '提示', { type: 'warning' })
+                    .then(() => { user.roleId = ''; ElementPlus.ElMessage.success('已移除'); });
+            };
+
+            // 4. 用户操作
+            const openUserDialog = (mode, row) => {
+                dialogMode.value = mode;
+                userDialogVisible.value = true;
+                if (mode === 'edit' && row) Object.assign(userForm, row);
+                else Object.assign(userForm, { id: null, name: '', phone: '', jobNo: '', dept: '', roleId: '' });
+            };
+
+            const saveUser = () => {
+                if (dialogMode.value === 'create') {
+                    userList.value.push({ ...userForm, id: Date.now(), lastLogin: '-', status: true });
+                } else {
+                    const index = userList.value.findIndex(u => u.id === userForm.id);
+                    if (index !== -1) userList.value[index] = { ...userForm, status: true, lastLogin: userList.value[index].lastLogin };
+                }
+                userDialogVisible.value = false;
+                ElementPlus.ElMessage.success('保存成功');
+            };
+
+            // 5. 日志数据
+            const logList = Vue.ref([
+                { 
+                    time: '2026-02-05 14:32:01', type: 'operation', typeLabel: '业务操作',
+                    user: '张财务', ip: '192.168.1.102', module: '结算中心', 
+                    action: '推送结算账单 [BILL-202602-SGS] 至商城财务系统', status: 'success', 
+                    reqId: 'req_abc123', userAgent: 'Chrome 120.0 / Windows 10',
+                    json: '{\n  "action": "push_settlement",\n  "bill_id": "BILL-202602-SGS",\n  "amount": 189000.00,\n  "target": "XC-Mall-Gateway"\n}'
+                },
+                { 
+                    time: '2026-02-05 10:15:22', type: 'operation', typeLabel: '业务操作',
+                    user: '管理员', ip: '192.168.1.5', module: '供应商管理', 
+                    action: '审核通过供应商 [DNV挪威船级社] 资质认证', status: 'success', 
+                    reqId: 'req_xyz987', userAgent: 'Safari 17.0 / macOS',
+                    json: '{\n  "action": "audit_supplier",\n  "supplier_id": "SUP-002",\n  "result": "pass",\n  "cert_files": ["iso14001.pdf"]\n}'
+                },
+                { 
+                    time: '2026-02-05 09:00:01', type: 'login', typeLabel: '用户登录',
+                    user: '李运营', ip: '114.22.xx.xx', module: '身份认证', 
+                    action: '账号登录成功', status: 'success', 
+                    reqId: 'req_login_001', userAgent: 'Chrome Mobile / Android',
+                    json: '{\n  "event": "user_login",\n  "method": "password",\n  "2fa_verified": true\n}'
+                },
+                { 
+                    time: '2026-02-04 18:00:05', type: 'error', typeLabel: '系统异常',
+                    user: '系统', ip: '127.0.0.1', module: '定时任务', 
+                    action: '每日数据归档任务执行失败', status: 'fail', 
+                    reqId: 'sys_err_404', userAgent: 'Server Worker',
+                    json: '{\n  "task": "daily_archive",\n  "error_code": "DB_CONNECTION_TIMEOUT",\n  "msg": "Database connection lost after 30s"\n}'
+                }
+            ]);
+
+            const getLogTypeStyle = (type) => {
+                if (type === 'login') return 'success'; 
+                if (type === 'error') return 'danger';  
+                return 'primary'; 
+            };
+
+            const viewLogDetail = (r) => { currentLog.value = r; logDialogVisible.value = true; };
+            const searchLogs = () => ElementPlus.ElMessage.success('已更新日志列表');
+            const savePerms = () => ElementPlus.ElMessage.success('权限配置已保存');
+            const menuTree = Vue.ref(menuConfig);
+            const openPage = (path) => window.location.href = path;
+
+            return {
+                menuConfig, currentUser, activeTab, searchUser, filterDept, logFilter,
+                userList, roleList, currentRole, menuTree, logList,
+                userDialogVisible, logDialogVisible, userForm, dialogMode, currentLog,
+                getRoleName, getRoleType, getUserCountByRole, getUsersByRole, removeRoleFromUser,
+                openUserDialog, saveUser, getLogTypeStyle, viewLogDetail, savePerms, searchLogs, openPage
+            };
+        }
+    });
+
+    app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+        app.component(key, component);
+    }
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

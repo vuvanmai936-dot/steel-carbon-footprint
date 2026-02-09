@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>订单全流程详情 | 运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* 页面专用样式 */
+        .stage-card { min-height: 500px; background: #fff; padding: 20px; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+        .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #ebeef5; }
+        .meta-item .label { font-size: 12px; color: #909399; margin-bottom: 4px; }
+        .meta-item .value { font-size: 14px; font-weight: bold; color: #303133; display: flex; align-items: center; }
+        
+        /* 模拟 A4 纸张效果 */
+        .a4-paper {
+            width: 210mm; min-height: 297mm; background: #fff; margin: 0 auto;
+            padding: 20mm; box-shadow: 0 0 15px rgba(0,0,0,0.1); 
+            font-family: "Times New Roman", serif; position: relative;
+        }
+        .watermark { 
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); 
+            font-size: 80px; color: rgba(200,200,200,0.3); font-weight: bold; pointer-events: none; border: 5px solid rgba(200,200,200,0.3); padding: 10px 40px;
+        }
+        
+        /* Excel 模拟样式 */
+        .excel-like-header { background: #f8f8f8 !important; font-weight: bold; color: #333; }
+        .excel-cell-edit { width: 100%; border: none; background: transparent; outline: none; }
+        .excel-cell-edit:focus { border-bottom: 1px solid #409EFF; }
+
+        /* 状态步骤条自定义 */
+        .custom-steps .el-step__title { font-size: 13px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'2'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container>
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center;">
+                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
+                    <div>
+                        <div style="font-size: 16px; font-weight: bold;">订单执行详情</div>
+                        <div style="font-size: 12px; color: #999;">流水号: {{ orderInfo.taskNo }}</div>
+                    </div>
+                    <el-tag :type="statusBadge.type" style="margin-left: 15px;" effect="dark">{{ statusBadge.text }}</el-tag>
+                </div>
+                <div>
+                    <el-button @click="viewLog">操作日志</el-button>
+                    <el-button type="danger" plain>终止订单</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="background: #f0f2f5; padding: 20px;">
+                <div class="meta-grid">
+                    <div class="meta-item">
+                        <div class="label">商城订单号</div>
+                        <div class="value">{{ orderInfo.orderNo }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">供应商 (数源方)</div>
+                        <div class="value">
+                            {{ orderInfo.supplier }}
+                            <el-tag size="small" v-if="!orderInfo.supplierBound" type="danger" style="margin-left: 5px;">待绑定</el-tag>
+                            <el-icon v-else color="#67C23A" style="margin-left: 5px;"><CircleCheckFilled /></el-icon>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">核算产品</div>
+                        <div class="value">{{ orderInfo.product }} ({{ orderInfo.specs }})</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">指定核查方</div>
+                        <div class="value"><el-icon color="#409EFF" style="margin-right: 4px;"><Stamp /></el-icon>{{ orderInfo.certifier }}</div>
+                    </div>
+                </div>
+
+                <el-steps :active="activeStep" finish-status="success" simple style="margin-bottom: 20px; background: #fff; padding: 15px 20px;">
+                    <el-step title="模板配置" icon="SetUp"></el-step>
+                    <el-step title="数据采集" icon="Coin"></el-step>
+                    <el-step title="LCA核算" icon="Cpu"></el-step>
+                    <el-step title="核查认证" icon="Stamp"></el-step>
+                    <el-step title="证书下发" icon="Trophy"></el-step>
+                </el-steps>
+
+                <div class="stage-card">
+                    
+                    <div v-if="activeStep === 0">
+                        <el-alert title="当前任务：请为该产品配置合适的数据采集模板" type="info" show-icon style="margin-bottom: 20px;"></el-alert>
+                        <el-form label-width="120px" style="max-width: 800px;">
+                            <el-form-item label="选择基础模板">
+                                <el-select v-model="config.template" placeholder="请选择" style="width: 100%;">
+                                    <el-option label="钢铁行业_电炉炼钢_基础数据采集表_V2.1" value="TPL-001"></el-option>
+                                    <el-option label="钢铁行业_高炉炼铁_基础数据采集表_V2.1" value="TPL-002"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="核算边界">
+                                <el-radio-group v-model="config.boundary">
+                                    <el-radio label="Cradle-to-Gate">摇篮到大门 (推荐)</el-radio>
+                                    <el-radio label="Cradle-to-Grave">摇篮到坟墓</el-radio>
+                                </el-radio-group>
+                            </el-form-item>
+                            <el-form-item label="补充佐证要求">
+                                <el-input type="textarea" :rows="3" v-model="config.requirements" placeholder="例如：需上传2025全年电费结算单..."></el-input>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" @click="handleNextStep">确认配置并下发任务</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+
+                    <div v-if="activeStep === 1">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                            <div>
+                                <span style="font-weight: bold; font-size: 16px;">供应商填报数据快照</span>
+                                <el-tag size="small" type="warning" style="margin-left: 10px;">待审核</el-tag>
+                            </div>
+                            <div>
+                                <el-button type="primary" plain size="small" icon="Download">导出原始Excel</el-button>
+                                <el-button type="danger" plain size="small" icon="ChatLineSquare" @click="openClarifyDialog">发起澄清/驳回</el-button>
+                                <el-button type="success" size="small" icon="Check" @click="handleNextStep">审核通过</el-button>
+                            </div>
+                        </div>
+
+                        <el-table :data="supplierData" border size="small" style="width: 100%" header-cell-class-name="excel-like-header">
+                            <el-table-column type="index" label="行号" width="50" align="center"></el-table-column>
+                            <el-table-column prop="category" label="数据分类" width="120"></el-table-column>
+                            <el-table-column prop="name" label="数据项名称" width="180"></el-table-column>
+                            <el-table-column prop="unit" label="单位" width="80" align="center"></el-table-column>
+                            <el-table-column prop="value" label="填报数值" width="120">
+                                <template #default="scope">
+                                    <span style="font-family: Consolas; font-weight: bold; color: #409EFF;">{{ scope.row.value }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="evidence" label="佐证文件">
+                                <template #default="scope">
+                                    <el-link type="primary" v-if="scope.row.evidence"><el-icon><Paperclip /></el-icon> {{ scope.row.evidence }}</el-link>
+                                    <span v-else style="color: #ccc;">-</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="运营备注">
+                                <template #default="scope">
+                                    <input class="excel-cell-edit" v-model="scope.row.remark" placeholder="审核备注..." />
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+
+                    <div v-if="activeStep === 2">
+                        <el-row :gutter="20">
+                            <el-col :span="16" style="background: #525659; padding: 20px; border-radius: 4px; height: 600px; overflow-y: auto;">
+                                <div class="a4-paper">
+                                    <div class="watermark">DRAFT</div>
+                                    <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
+                                        <h1 style="font-size: 24px;">产品碳足迹核算报告</h1>
+                                        <p>编号: PCF-2026-NANT-001</p>
+                                    </div>
+                                    <h3 style="border-left: 4px solid #000; padding-left: 10px;">1. 核算结果摘要</h3>
+                                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; border: 1px solid #000;">
+                                        <tr style="background: #f0f0f0;"><td style="border: 1px solid #000; padding: 8px;">单位产品排放量</td><td style="border: 1px solid #000; padding: 8px; font-weight: bold;">2.15 kgCO₂e / kg</td></tr>
+                                        <tr><td style="border: 1px solid #000; padding: 8px;">生命周期阶段</td><td style="border: 1px solid #000; padding: 8px;">摇篮到大门 (Cradle-to-Gate)</td></tr>
+                                    </table>
+                                    <p style="margin-top: 20px; font-size: 14px; line-height: 1.6;">
+                                        本次核算依据 ISO 14067:2018 标准，对南通碳素有限公司生产的超高功率石墨电极产品进行了碳足迹评价。
+                                        数据来源包括：企业实际生产数据（初级数据）及 Ecoinvent 3.8 数据库（次级数据）。
+                                    </p>
+                                </div>
+                            </el-col>
+                            <el-col :span="8">
+                                <div style="background: #fafafa; padding: 20px; height: 100%;">
+                                    <h4 style="margin-top: 0;">LCA 系统集成</h4>
+                                    <el-steps direction="vertical" :active="2" style="height: 200px;">
+                                        <el-step title="数据清洗" status="success"></el-step>
+                                        <el-step title="模型计算 (SimaPro/GaBi)" status="success"></el-step>
+                                        <el-step title="生成报告草稿" status="process"></el-step>
+                                    </el-steps>
+                                    <el-divider></el-divider>
+                                    <el-button type="primary" style="width: 100%;" @click="handleNextStep">
+                                        确认报告并提交核查
+                                        <el-icon class="el-icon--right"><Upload /></el-icon>
+                                    </el-button>
+                                </div>
+                            </el-col>
+                        </el-row>
+                    </div>
+
+                    <div v-if="activeStep === 3">
+                        <div style="text-align: center; padding: 60px;">
+                            <el-icon size="60" color="#409EFF" class="is-loading"><Loading /></el-icon>
+                            <h2 style="margin-top: 20px;">等待 SGS 第三方核查...</h2>
+                            <p style="color: #666;">已通过接口 (4.1) 推送至 SGS 核查工作台。</p>
+                            <div style="margin-top: 30px; display: inline-block; text-align: left; background: #f4f4f5; padding: 20px; border-radius: 4px;">
+                                <div style="margin-bottom: 10px; font-weight: bold;">实时交互日志：</div>
+                                <div style="font-size: 12px; color: #666;">[2026-02-03 10:00:01] 任务推送成功 (TaskID: SGS_9921)</div>
+                                <div style="font-size: 12px; color: #666;">[2026-02-03 10:05:22] 核查员 (Mike) 已接单</div>
+                                <div style="font-size: 12px; color: #666;">[2026-02-03 10:15:00] 发起凭证穿透查看请求 (ReqID: VIEW_001)</div>
+                                <div style="font-size: 12px; color: #67C23A;">[2026-02-03 10:15:05] L3系统自动授权通过 (临时Token生成)</div>
+                            </div>
+                            <div style="margin-top: 40px;">
+                                <el-button @click="simulateVerifyReject">模拟：核查驳回</el-button>
+                                <el-button type="primary" @click="handleNextStep">模拟：核查通过</el-button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="activeStep === 4">
+                        <el-result icon="success" title="认证完成" sub-title="SGS 已签发核查声明书，数字凭证 (VC) 已上链。">
+                            <template #extra>
+                                <el-button type="primary" @click="goBack">返回订单列表</el-button>
+                                <el-button>查看链上存证</el-button>
+                            </template>
+                        </el-result>
+                    </div>
+
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+
+    <el-dialog v-model="clarifyVisible" title="发起澄清 / 驳回数据" width="500px">
+        <el-form>
+            <el-form-item label="问题类型">
+                <el-select v-model="clarifyForm.type" placeholder="请选择">
+                    <el-option label="数据缺失" value="missing"></el-option>
+                    <el-option label="凭证模糊" value="blurry"></el-option>
+                    <el-option label="数值异常" value="abnormal"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="详细说明">
+                <el-input type="textarea" v-model="clarifyForm.content" rows="4" placeholder="请详细描述问题，将反馈至供应商工作台..."></el-input>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <span class="dialog-footer">
+                <el-button @click="clarifyVisible = false">取消</el-button>
+                <el-button type="primary" @click="submitClarify">发送通知</el-button>
+            </span>
+        </template>
+    </el-dialog>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            const activeStep = Vue.ref(1); // 默认从数据采集阶段开始演示
+            const clarifyVisible = Vue.ref(false);
+            const clarifyForm = Vue.reactive({ type: '', content: '' });
+
+            // 订单元数据
+            const orderInfo = Vue.reactive({
+                orderNo: 'ORD-20260203-001',
+                taskNo: 'TSK-2026-888',
+                supplier: '南通碳素有限公司',
+                supplierBound: true,
+                product: '超高功率石墨电极',
+                specs: 'Φ600mm',
+                certifier: 'SGS 通标标准'
+            });
+
+            // 阶段一配置
+            const config = Vue.reactive({
+                template: 'TPL-001',
+                boundary: 'Cradle-to-Gate',
+                requirements: '1. 需提供2025年全年电费结算单。\n2. 原材料采购需附带供应商质检单。'
+            });
+
+            // 阶段二数据 (模拟供应商填报)
+            const supplierData = Vue.ref([
+                { category: '能源消耗', name: '外购电力', unit: 'kWh', value: '4264774.06', evidence: '2025电费单.pdf', remark: '' },
+                { category: '能源消耗', name: '天然气', unit: 'm³', value: '15570.76', evidence: '燃气发票.jpg', remark: '' },
+                { category: '原材料', name: '油系针状焦', unit: '吨', value: '15943.35', evidence: '入库单_001.pdf', remark: '' },
+                { category: '原材料', name: '煤沥青', unit: '吨', value: '6059.93', evidence: '', remark: '需补充凭证' }
+            ]);
+
+            const statusBadge = Vue.computed(() => {
+                const map = ['info', 'warning', 'primary', 'primary', 'success'];
+                const text = ['待配置', '待审核', '核算中', '核查中', '已完成'];
+                return { type: map[activeStep.value], text: text[activeStep.value] };
+            });
+
+            const handleNextStep = () => {
+                if (activeStep.value < 4) activeStep.value++;
+            };
+
+            const openClarifyDialog = () => {
+                clarifyVisible.value = true;
+            };
+
+            const submitClarify = () => {
+                clarifyVisible.value = false;
+                ElementPlus.ElMessage.success('已将澄清请求发送至供应商工作台');
+            };
+
+            const simulateVerifyReject = () => {
+                ElementPlus.ElMessage.warning('模拟：SGS 驳回了核算报告，流程回退');
+                activeStep.value = 2; // 回退到 LCA 核算阶段
+            };
+
+            const goBack = () => {
+                window.location.href = 'order.html';
+            };
+            
+            const viewLog = () => {
+                ElementPlus.ElNotification({
+                    title: '操作日志',
+                    message: '2026-02-03 09:30 订单初始化\n2026-02-03 09:35 供应商绑定成功',
+                    type: 'info'
+                });
+            };
+
+            const openPage = (path) => window.location.href = path;
+
+            return {
+                menuConfig, currentUser, activeStep, orderInfo, config, supplierData,
+                clarifyVisible, clarifyForm, statusBadge,
+                handleNextStep, openClarifyDialog, submitClarify, simulateVerifyReject, goBack, viewLog, openPage
+            };
+        }
+    });
+
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

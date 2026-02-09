@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>任务执行工作台 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 任务页专用样式 === */
+        .steps-header { background: #fff; padding: 20px 40px; border-bottom: 1px solid #ebeef5; margin-bottom: 20px; }
+        
+        /* 布局调整 */
+        .workspace-container { display: flex; height: calc(100vh - 180px); gap: 20px; padding: 0 20px 20px 20px; }
+        .main-panel { flex: 1; background: #fff; border: 1px solid #dcdfe6; border-radius: 4px; display: flex; flex-direction: column; overflow: hidden; }
+        .side-panel { width: 340px; background: #fff; border: 1px solid #dcdfe6; border-radius: 4px; display: flex; flex-direction: column; }
+
+        /* Excel 视图 */
+        .excel-view-container { display: flex; flex-direction: column; height: 100%; border-bottom: 1px solid #eee; }
+        .excel-tabs-header { background: #f5f7fa; border-bottom: 1px solid #e4e7ed; padding: 0 10px; }
+        .el-tabs__item { height: 36px; line-height: 36px; font-size: 13px; }
+        .el-tabs__content { padding: 0 !important; }
+
+        /* 审核状态标记 */
+        .audit-btn { cursor: pointer; transition: all 0.2s; font-size: 16px; margin: 0 8px; }
+        .audit-btn:hover { transform: scale(1.2); }
+        .audit-btn.pass { color: #dcdfe6; } .audit-btn.pass:hover, .audit-btn.pass.active { color: #67C23A; }
+        .audit-btn.reject { color: #dcdfe6; } .audit-btn.reject:hover, .audit-btn.reject.active { color: #F56C6C; }
+
+        /* 日志增强样式 */
+        .log-header { padding: 10px 15px; border-bottom: 1px solid #ebeef5; background: #f9f9f9; }
+        .log-container { flex: 1; overflow-y: auto; padding: 15px; background: #fff; }
+        .log-entry { margin-bottom: 18px; font-size: 12px; display: flex; flex-direction: column; }
+        .log-meta { color: #999; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 气泡样式区分通道 */
+        .log-bubble { 
+            padding: 10px 12px; border-radius: 6px; line-height: 1.5; position: relative; word-break: break-all;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 90%;
+        }
+        /* 供应商通道 (左对齐，绿色系) */
+        .channel-supplier .log-bubble { background: #f0f9eb; border: 1px solid #e1f3d8; color: #333; align-self: flex-start; border-top-left-radius: 0; }
+        .channel-supplier .log-entry { align-items: flex-start; }
+        
+        /* 核查通道 (左对齐，蓝色系) */
+        .channel-verifier .log-bubble { background: #ecf5ff; border: 1px solid #d9ecff; color: #333; align-self: flex-start; border-top-left-radius: 0; }
+        .channel-verifier .log-entry { align-items: flex-start; }
+
+        /* 我方/系统 (右对齐，灰色系) */
+        .channel-system .log-entry { align-items: flex-end; }
+        .channel-system .log-bubble { background: #f4f4f5; border: 1px solid #e9e9eb; color: #606266; align-self: flex-end; border-top-right-radius: 0; }
+        
+        .channel-tag { font-size: 10px; padding: 1px 4px; border-radius: 2px; margin-right: 5px; }
+        .tag-sup { background: #e1f3d8; color: #67C23A; }
+        .tag-ver { background: #d9ecff; color: #409EFF; }
+
+        /* 模板预览卡片 */
+        .template-preview-card { background: #f8f9fb; border: 1px solid #dcdfe6; border-radius: 6px; padding: 15px; margin-top: 10px; display: flex; align-items: flex-start; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'3'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container>
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center;">
+                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
+                    <div>
+                        <div style="font-size: 16px; font-weight: bold;">
+                            {{ taskInfo.productName }} <el-tag size="small" type="info">{{ taskInfo.specs }}</el-tag>
+                        </div>
+                        <div style="font-size: 12px; color: #999;">
+                            任务号: {{ taskInfo.taskId }} | 供应商: {{ taskInfo.supplier }}
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <el-button link type="primary" @click="viewOrder">查看原订单</el-button>
+                    <el-button type="danger" plain size="small">挂起任务</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="background: #f0f2f5; padding: 0; display: flex; flex-direction: column;">
+                
+                <div class="steps-header">
+                    <el-steps :active="activeStep" finish-status="success" align-center>
+                        <el-step title="配置" description="模板/边界"></el-step>
+                        <el-step title="采集" description="供应商填报/初审"></el-step>
+                        <el-step title="计算" description="LCA建模"></el-step>
+                        <el-step title="核查" description="三方穿透核验"></el-step>
+                        <el-step title="发证" description="上链/赋码"></el-step>
+                    </el-steps>
+                </div>
+
+                <div class="workspace-container">
+                    
+                    <div class="main-panel">
+                        <div style="padding: 15px; border-bottom: 1px solid #ebeef5; font-weight: bold; background: #fafafa; display: flex; justify-content: space-between; align-items: center;">
+                            <span>{{ getStepTitle(activeStep) }}</span>
+                            
+                            <div v-if="activeStep === 0">
+                                <el-button type="primary" size="small" @click="confirmConfigAndNext" :disabled="!config.templateId">
+                                    <el-icon style="margin-right: 5px;"><Connection /></el-icon> 确认关联并下发
+                                </el-button>
+                            </div>
+                            <div v-if="activeStep === 1">
+                                <el-button type="danger" plain size="small" @click="openRejectDialog">驳回重填</el-button>
+                                <el-button type="success" size="small" @click="nextStep">审核通过，进入计算</el-button>
+                            </div>
+                            <div v-if="activeStep === 2">
+                                </div>
+                            <div v-if="activeStep === 3">
+                                </div>
+                        </div>
+                        
+                        <div class="scroll-content" style="padding: 0; height: 100%; overflow-y: auto;">
+                            
+                            <div v-if="activeStep === 0" style="padding: 40px; max-width: 650px; margin: 0 auto;">
+                                <el-alert title="请为该产品关联一个数据采集模板" type="info" show-icon style="margin-bottom: 25px;"></el-alert>
+                                <el-form label-width="120px" size="large">
+                                    <el-form-item label="核算标准">
+                                        <el-radio-group v-model="config.standard">
+                                            <el-radio label="ISO 14067" border></el-radio>
+                                            <el-radio label="PAS 2050" border></el-radio>
+                                        </el-radio-group>
+                                    </el-form-item>
+                                    <el-form-item label="选择模板">
+                                        <el-select v-model="config.templateId" placeholder="请从模板库中选择..." style="width: 100%;" @change="handleTemplateChange">
+                                            <el-option v-for="t in templateOptions" :key="t.id" :label="t.name" :value="t.id"></el-option>
+                                        </el-select>
+                                        <div v-if="selectedTemplate" class="template-preview-card">
+                                            <div class="tpl-info">
+                                                <div class="tpl-name">{{ selectedTemplate.name }}</div>
+                                                <div class="tpl-meta">
+                                                    <el-tag size="small" type="success">{{ selectedTemplate.version }}</el-tag>
+                                                    <span>{{ selectedTemplate.industry }}</span>
+                                                </div>
+                                                <div style="font-size: 12px; color: #909399;">Sheet: {{ selectedTemplate.sheets.join(', ') }}</div>
+                                            </div>
+                                            <el-button link type="primary" size="small" @click="goToTemplates">查看详情</el-button>
+                                        </div>
+                                    </el-form-item>
+                                    <el-form-item label="核算边界">
+                                        <el-input type="textarea" :rows="3" v-model="config.boundary" placeholder="Cradle-to-Gate"></el-input>
+                                    </el-form-item>
+                                </el-form>
+                            </div>
+
+                            <div v-if="activeStep === 1" class="excel-view-container">
+                                <el-tabs v-model="activeSheet" type="card" class="excel-tabs-header">
+                                    <el-tab-pane v-for="(rows, sheetName) in supplierData" :key="sheetName" :label="sheetName" :name="sheetName"></el-tab-pane>
+                                </el-tabs>
+                                <div style="flex: 1; overflow-y: auto;">
+                                    <el-table :data="supplierData[activeSheet]" border stripe size="small" style="width: 100%">
+                                        <el-table-column prop="item" label="数据项" min-width="150"></el-table-column>
+                                        <el-table-column label="填报数值" width="120">
+                                            <template #default="scope"><b>{{ scope.row.value }}</b> {{ scope.row.unit }}</template>
+                                        </el-table-column>
+                                        <el-table-column label="凭证" width="180">
+                                            <template #default="scope">
+                                                <el-link v-if="scope.row.file" type="primary" :underline="false" @click="previewFile(scope.row.file)">
+                                                    <el-icon><Paperclip /></el-icon> {{ scope.row.file }}
+                                                </el-link>
+                                                <span v-else style="color: #eee;">-</span>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column label="行审核" width="120" align="center">
+                                            <template #default="scope">
+                                                <el-icon :class="['audit-btn', 'pass', scope.row.status==='ok'?'active':'']" @click="markRowStatus(scope.row, 'ok')"><CircleCheckFilled /></el-icon>
+                                                <el-icon :class="['audit-btn', 'reject', scope.row.status==='error'?'active':'']" @click="markRowStatus(scope.row, 'error')"><CircleCloseFilled /></el-icon>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                </div>
+                            </div>
+
+                            <div v-if="activeStep === 2" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <div v-if="calcStatus === 'idle'">
+                                    <el-empty description="数据已就绪，等待启动 LCA 计算引擎">
+                                        <el-button type="primary" size="large" @click="startCalculation" icon="Cpu">启动计算引擎</el-button>
+                                    </el-empty>
+                                </div>
+                                <div v-if="calcStatus === 'running'" style="text-align: center;">
+                                    <el-progress type="dashboard" :percentage="calcPercentage" :status="calcPercentage===100?'success':''"></el-progress>
+                                    <div style="margin-top: 10px; color: #666;">正在调用 SimaPro 接口进行建模...</div>
+                                </div>
+                                <div v-if="calcStatus === 'done'" style="text-align: center;">
+                                    <el-result icon="success" title="计算完成" sub-title="碳足迹核算结果已生成">
+                                        <template #extra>
+                                            <div style="font-size: 32px; font-weight: bold; color: #303133; margin-bottom: 20px;">
+                                                2.15 <span style="font-size: 14px; color: #999;">kgCO₂e/kg</span>
+                                            </div>
+                                            <el-button type="primary" @click="nextStep">生成报告并推送核查</el-button>
+                                        </template>
+                                    </el-result>
+                                </div>
+                            </div>
+
+                            <div v-if="activeStep === 3" style="padding: 30px;">
+                                <el-steps direction="vertical" :active="1">
+                                    <el-step title="报告推送 SGS" status="success" description="2026-02-03 15:00 已送达"></el-step>
+                                    <el-step title="SGS 穿透核验" status="process">
+                                        <template #description>
+                                            <div style="margin-top: 10px; background: #fffbe6; padding: 15px; border: 1px solid #ffe58f; border-radius: 4px;">
+                                                <div style="font-weight: bold; margin-bottom: 8px; color: #E6A23C;">
+                                                    <el-icon><Message /></el-icon> 收到 1 条澄清请求
+                                                </div>
+                                                <div style="font-size: 13px; color: #666; margin-bottom: 10px;">
+                                                    核查员 Mike: “M焙烧”工序天然气凭证模糊，且数值与月度总量偏差较大，请解释。
+                                                </div>
+                                                <el-button size="small" type="primary" @click="openClarifyDialog">处理澄清</el-button>
+                                            </div>
+                                        </template>
+                                    </el-step>
+                                    <el-step title="核查声明签发" status="wait"></el-step>
+                                </el-steps>
+                                <div style="margin-top: 30px; text-align: center;">
+                                    <el-button @click="nextStep" type="primary" plain>模拟：核查通过</el-button>
+                                </div>
+                            </div>
+
+                            <div v-if="activeStep === 4" style="height: 100%; display: flex; align-items: center; justify-content: center;">
+                                <el-result icon="success" title="证书已签发" sub-title="数字凭证 (VC) 已存证上链">
+                                    <template #extra>
+                                        <div style="background: #f0f9eb; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-family: monospace; font-size: 12px;">
+                                            DID: did:cn:sim:293847293...<br>
+                                            Hash: 0x7f8a92b3c1d4...
+                                        </div>
+                                        <el-button type="primary" @click="goBack">返回任务列表</el-button>
+                                    </template>
+                                </el-result>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="side-panel">
+                        <div class="log-header">
+                            <el-tabs v-model="logFilter" class="log-tabs" style="width: 100%;">
+                                <el-tab-pane label="全部" name="all"></el-tab-pane>
+                                <el-tab-pane label="供应商" name="supplier"></el-tab-pane>
+                                <el-tab-pane label="核查方" name="verifier"></el-tab-pane>
+                            </el-tabs>
+                        </div>
+                        <div class="log-container">
+                            <div v-for="(log, idx) in filteredLogs" :key="idx" class="log-entry" :class="'channel-'+log.channel">
+                                <div class="log-meta">
+                                    <span>
+                                        <span v-if="log.channel === 'supplier'" class="channel-tag tag-sup">供</span>
+                                        <span v-if="log.channel === 'verifier'" class="channel-tag tag-ver">核</span>
+                                        {{ log.user }}
+                                    </span>
+                                    <span>{{ log.time }}</span>
+                                </div>
+                                <div class="log-bubble">{{ log.content }}</div>
+                            </div>
+                        </div>
+                        <div style="padding: 10px; border-top: 1px solid #eee;">
+                            <el-input v-model="logInput" placeholder="输入备注..." size="small">
+                                <template #append><el-button icon="Position" @click="addLog" /></template>
+                            </el-input>
+                        </div>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+
+    <el-dialog v-model="rejectVisible" title="驳回任务" width="400px">
+        <el-input type="textarea" :rows="3" placeholder="请输入驳回原因..."></el-input>
+        <template #footer><el-button @click="rejectVisible = false">取消</el-button><el-button type="danger" @click="confirmReject">确认驳回</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="clarifyVisible" title="处理核查澄清" width="500px">
+        <el-form label-position="top">
+            <el-form-item label="核查员问题">
+                <div style="background: #f5f7fa; padding: 10px; border-radius: 4px; width: 100%;">“M焙烧”工序天然气凭证模糊...</div>
+            </el-form-item>
+            <el-form-item label="处理方式">
+                <el-radio-group v-model="clarifyAction">
+                    <el-radio label="reply">直接回复 (已有数据)</el-radio>
+                    <el-radio label="forward">转发给供应商 (需补正)</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item :label="clarifyAction==='reply'?'回复内容':'转发备注'">
+                <el-input type="textarea" :rows="3"></el-input>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="clarifyVisible = false">取消</el-button>
+            <el-button type="primary" @click="confirmClarify">提交处理</el-button>
+        </template>
+    </el-dialog>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            const activeStep = Vue.ref(0);
+            const activeSheet = Vue.ref('M配料');
+            const logFilter = Vue.ref('all');
+            const logInput = Vue.ref('');
+            
+            // 状态控制
+            const rejectVisible = Vue.ref(false);
+            const clarifyVisible = Vue.ref(false);
+            const clarifyAction = Vue.ref('forward');
+            const calcStatus = Vue.ref('idle'); // idle, running, done
+            const calcPercentage = Vue.ref(0);
+
+            // 数据对象
+            const taskInfo = Vue.reactive({ taskId: 'TSK-2026-888', productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '南通碳素有限公司' });
+            const config = Vue.reactive({ standard: 'ISO 14067', templateId: '', boundary: 'Cradle-to-Gate' });
+            const selectedTemplate = Vue.ref(null);
+            
+            const templateOptions = [
+                { id: 'tpl_01', name: '石墨电极_工序拆解版_V2.0', version: 'V2.0', industry: '钢铁/冶金', itemsCount: 45, sheets: ['M配料', 'M焙烧'] }
+            ];
+
+            const supplierData = Vue.reactive({
+                'M配料': [{ item: '电力消耗', unit: 'kWh', value: '2720032', file: '2025Q4电费单.pdf', status: '' }],
+                'M焙烧': [{ item: '天然气', unit: 'm³', value: '6046144', file: '燃气发票.pdf', status: '' }]
+            });
+
+            // 核心：带通道的日志
+            const logs = Vue.ref([
+                { time: '09:30', user: '系统', content: '任务初始化', channel: 'system' },
+                { time: '09:35', user: 'Admin', content: '已配置模板并下发', channel: 'system' }
+            ]);
+
+            // 计算属性：过滤日志
+            const filteredLogs = Vue.computed(() => {
+                if (logFilter.value === 'all') return logs.value;
+                return logs.value.filter(l => l.channel === logFilter.value);
+            });
+
+            // === 交互方法 ===
+            const handleTemplateChange = (val) => { selectedTemplate.value = templateOptions.find(t => t.id === val); };
+            
+            const confirmConfigAndNext = () => {
+                logs.value.push({ time: 'Now', user: 'Admin', content: '配置完成，任务下发至供应商', channel: 'supplier' });
+                activeStep.value = 1;
+            };
+
+            const markRowStatus = (row, status) => {
+                row.status = status;
+                const msg = status === 'ok' ? `通过数据项：${row.item}` : `标记数据存疑：${row.item}`;
+                logs.value.push({ time: 'Now', user: 'Admin', content: msg, channel: 'supplier' }); // 视为与供应商的交互
+            };
+
+            const confirmReject = () => {
+                logs.value.push({ time: 'Now', user: 'Admin', content: '任务已驳回：请修正标记的数据项', channel: 'supplier' });
+                rejectVisible.value = false;
+                ElementPlus.ElMessage.warning('任务已驳回至供应商');
+            };
+
+            const startCalculation = () => {
+                calcStatus.value = 'running';
+                let p = 0;
+                const timer = setInterval(() => {
+                    p += 10; calcPercentage.value = p;
+                    if(p>=100) { clearInterval(timer); calcStatus.value = 'done'; logs.value.push({time:'Now', user:'系统', content:'LCA 计算完成', channel:'system'}); }
+                }, 200);
+            };
+
+            const openClarifyDialog = () => { clarifyVisible.value = true; };
+            const confirmClarify = () => {
+                if(clarifyAction.value === 'forward') {
+                    logs.value.push({ time: 'Now', user: 'Admin', content: '转发 SGS 澄清请求至供应商', channel: 'supplier' });
+                } else {
+                    logs.value.push({ time: 'Now', user: 'Admin', content: '回复 SGS 澄清：已核实，凭证无误', channel: 'verifier' });
+                }
+                clarifyVisible.value = false;
+                ElementPlus.ElMessage.success('处理已提交');
+            };
+
+            const addLog = () => {
+                if(logInput.value) {
+                    // 默认当做系统备注，实际可扩展选择发送对象
+                    logs.value.push({ time: 'Now', user: 'Admin', content: logInput.value, channel: 'system' });
+                    logInput.value='';
+                }
+            };
+
+            const getStepTitle = (step) => ['Step 1: 核算配置', 'Step 2: 数据采集审核', 'Step 3: LCA 建模与计算', 'Step 4: 第三方穿透核查', 'Step 5: 证书颁发'][step];
+            const nextStep = () => { if(activeStep.value < 4) activeStep.value++; };
+            const openRejectDialog = () => { rejectVisible.value = true; };
+            const goToTemplates = () => { window.location.href = 'templates.html'; };
+            const previewFile = (f) => ElementPlus.ElMessage.info(`预览: ${f}`);
+            const goBack = () => { window.location.href = 'task_list.html'; };
+            const viewOrder = () => { window.location.href = 'order.html'; };
+            const openPage = (path) => window.location.href = path;
+
+            return {
+                menuConfig, currentUser, activeStep, taskInfo, config, supplierData, activeSheet,
+                logs, filteredLogs, logFilter, logInput, 
+                rejectVisible, clarifyVisible, clarifyAction, calcStatus, calcPercentage,
+                selectedTemplate, templateOptions,
+                handleTemplateChange, confirmConfigAndNext, markRowStatus, confirmReject, startCalculation,
+                openClarifyDialog, confirmClarify, addLog,
+                getStepTitle, nextStep, openRejectDialog, goToTemplates, previewFile, goBack, viewOrder, openPage
+            };
+        }
+    });
+
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

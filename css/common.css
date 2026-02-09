@@ -1,0 +1,60 @@
+/* css/common.css */
+:root {
+    /* 品牌色 - 腾讯蓝风格 */
+    --el-color-primary: #0052D9; 
+    --el-color-success: #67C23A;
+    --el-color-warning: #E6A23C;
+    --el-color-danger: #F56C6C;
+    --el-text-color-primary: #303133;
+    --el-text-color-regular: #606266;
+    --el-text-color-secondary: #909399;
+    
+    /* 布局背景 */
+    --bg-gray: #f0f2f5;
+    --bg-white: #ffffff;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg-gray);
+    color: var(--el-text-color-primary);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* === 通用原子组件 === */
+
+/* 1. 标准白底卡片 */
+.pp-card {
+    background: var(--bg-white);
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    margin-bottom: 16px;
+    border: 1px solid #ebeef5;
+}
+
+/* 2. 状态小圆点 */
+.status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+.dot-success { background: var(--el-color-success); }
+.dot-process { background: var(--el-color-primary); }
+.dot-warn { background: var(--el-color-warning); }
+
+/* 3. 详情页通用布局容器 */
+.drawer-container { display: flex; flex-direction: column; height: 100%; }
+.drawer-body { flex: 1; overflow-y: auto; padding: 0 20px; }
+.drawer-footer { 
+    padding: 15px 20px; 
+    border-top: 1px solid #eee; 
+    background: #fff; 
+    display: flex; justify-content: space-between; align-items: center; 
+}
+
+/* Element Plus 样式微调 */
+.el-drawer__header { margin-bottom: 0 !important; padding-bottom: 15px; border-bottom: 1px solid #f0f0f0; }
+.el-menu { border-right: none !important; }

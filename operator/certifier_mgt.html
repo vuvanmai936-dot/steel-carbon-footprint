@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>核查机构管理 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/layout.js"></script>
+
+    <style>
+        /* === 样式内联防丢失 === */
+        .info-group { display: flex; align-items: flex-start; width: 100%; }
+        .info-text-wrapper { flex: 1; min-width: 0; overflow: hidden; } 
+        .info-icon-box {
+            width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; font-weight: bold; margin-right: 12px;
+            background: #ecf5ff; color: #409EFF; border: 1px solid #d9ecff;
+        }
+        .info-main-text { font-weight: 600; color: #303133; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .info-sub-text { font-family: monospace; color: #909399; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* 状态胶囊 */
+        .status-badge {
+            display: inline-flex; align-items: center; padding: 0 10px; border-radius: 12px; 
+            font-size: 12px; height: 24px; box-sizing: border-box; white-space: nowrap;
+        }
+        .status-success { background: #f0f9eb; border: 1px solid #e1f3d8; color: #67C23A; }
+        .status-warning { background: #fdf6ec; border: 1px solid #faecd8; color: #E6A23C; }
+        .status-info    { background: #f4f4f5; border: 1px solid #e9e9eb; color: #909399; }
+        .status-primary { background: #ecf5ff; border: 1px solid #d9ecff; color: #409EFF; }
+
+        .num-font { font-family: 'DIN Alternate', sans-serif; font-weight: bold; }
+        
+        html, body, #app { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
+        .table-wrapper { flex: 1; overflow: hidden; padding: 10px 15px 50px 15px; position: relative; }
+        .pagination-footer { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; border-top: 1px solid #ebeef5; background: #fff; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px; z-index: 10; }
+        .search-card { padding: 18px 20px; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; margin-bottom: 15px; flex-shrink: 0; }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                碳足迹数据服务
+            </div>
+            <el-menu :default-active="'6'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon>
+                    <span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                    <el-breadcrumb-item>核查机构管理</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: hidden; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    
+                    <div class="search-card">
+                        <el-form :inline="true" :model="query" style="margin-bottom: -18px;">
+                            <el-form-item label="机构名称/代码">
+                                <el-input v-model="query.keyword" placeholder="SGS / 统一信用代码" clearable style="width: 220px;"></el-input>
+                            </el-form-item>
+                            <el-form-item label="TDS连接">
+                                <el-select v-model="query.connStatus" placeholder="全部" clearable style="width: 120px;">
+                                    <el-option label="在线" value="online"></el-option>
+                                    <el-option label="离线" value="offline"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="合作状态">
+                                <el-select v-model="query.bizStatus" placeholder="全部" clearable style="width: 120px;">
+                                    <el-option label="已签约" value="signed"></el-option>
+                                    <el-option label="已暂停" value="suspended"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" icon="Search" @click="handleSearch">查询</el-button>
+                                <el-button type="success" icon="Refresh" @click="handleSync">同步 TDS 节点</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+
+                    <div class="list-card-container">
+                        <div class="table-wrapper">
+                            <el-table 
+                                :data="tableData" 
+                                border 
+                                stripe 
+                                style="width: 100%; height: 100%;" 
+                                :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}"
+                            >
+                                <el-table-column label="核查机构信息 (Identity)" min-width="280">
+                                    <template #default="scope">
+                                        <div class="info-group">
+                                            <div class="info-icon-box">{{ scope.row.abbr }}</div>
+                                            <div class="info-text-wrapper">
+                                                <div class="info-main-text" :title="scope.row.name">
+                                                    {{ scope.row.name }}
+                                                    <el-icon style="color: #67C23A; margin-left: 2px; vertical-align: -2px;"><CircleCheckFilled /></el-icon>
+                                                </div>
+                                                <div class="info-sub-text">Code: {{ scope.row.creditCode }}</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+                                
+                                <el-table-column label="TDS 连接" width="130">
+                                    <template #default="scope">
+                                        <div v-if="scope.row.connStatus === 'online'" class="status-badge status-success">
+                                            <span style="display:inline-block; width:6px; height:6px; background:#67C23A; border-radius:50%; margin-right:6px;"></span>在线
+                                        </div>
+                                        <div v-else class="status-badge status-info">
+                                            <span style="display:inline-block; width:6px; height:6px; background:#909399; border-radius:50%; margin-right:6px;"></span>离线
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="商城合作" width="130">
+                                    <template #default="scope">
+                                        <div v-if="scope.row.bizStatus === 'signed'" class="status-badge status-primary">
+                                            <el-icon style="margin-right: 4px;"><Check /></el-icon> 已签约
+                                        </div>
+                                        <div v-else class="status-badge status-warning">
+                                            <el-icon style="margin-right: 4px;"><VideoPause /></el-icon> 已暂停
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="实时作业负载" width="240">
+                                    <template #default="scope">
+                                        <div style="display: flex; gap: 20px; align-items: center;">
+                                            <div style="display: flex; flex-direction: column;">
+                                                <span class="num-font" style="font-size: 16px; color: #409EFF; cursor: pointer;">{{ scope.row.activeOrders }}</span>
+                                                <span style="font-size: 12px; color: #909399;">进行中</span>
+                                            </div>
+                                            <div style="width: 1px; height: 20px; background: #ebeef5;"></div>
+                                            <div style="display: flex; flex-direction: column;">
+                                                <span class="num-font" style="font-size: 16px; color: #E6A23C;">{{ scope.row.pendingTasks }}</span>
+                                                <span style="font-size: 12px; color: #909399;">待核查</span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="待结算金额" width="160" align="right">
+                                    <template #default="scope">
+                                        <span class="num-font">¥ {{ scope.row.unsettledAmount.toLocaleString() }}</span>
+                                    </template>
+                                </el-table-column>
+                                
+                                <el-table-column label="操作" width="120" fixed="right" align="center">
+                                    <template #default="scope">
+                                        <el-button link type="primary" @click="viewDetail(scope.row)">查看详情</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </div>
+
+                        <div class="pagination-footer">
+                            <el-pagination 
+                                background 
+                                layout="total, sizes, prev, pager, next, jumper" 
+                                :total="tableData.length" 
+                                :page-sizes="[10, 20, 50]"
+                                :current-page="1">
+                            </el-pagination>
+                        </div>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            const query = Vue.reactive({ keyword: '', connStatus: '', bizStatus: '' });
+            
+            const tableData = Vue.ref([
+                { 
+                    code: 'CER-001', 
+                    abbr: 'SGS', 
+                    name: 'SGS 通标标准技术服务有限公司', 
+                    creditCode: '911100006000856000', 
+                    connStatus: 'online', 
+                    bizStatus: 'signed',  
+                    activeOrders: 12,     
+                    pendingTasks: 5,      
+                    unsettledAmount: 45000
+                },
+                { 
+                    code: 'CER-002', 
+                    abbr: 'DNV', 
+                    name: 'DNV 挪威船级社 (中国)', 
+                    creditCode: '913100006072123456', 
+                    connStatus: 'online', 
+                    bizStatus: 'signed',
+                    activeOrders: 8, 
+                    pendingTasks: 3, 
+                    unsettledAmount: 28000
+                },
+                { 
+                    code: 'CER-003', 
+                    abbr: 'CCS', 
+                    name: 'CCS 中国船级社质量认证公司', 
+                    creditCode: '911100001000123456', 
+                    connStatus: 'offline', 
+                    bizStatus: 'suspended', 
+                    activeOrders: 0, 
+                    pendingTasks: 0, 
+                    unsettledAmount: 0
+                }
+            ]);
+
+            const handleSearch = () => ElementPlus.ElMessage.success('列表已刷新');
+            
+            const handleSync = () => {
+                const loading = ElementPlus.ElLoading.service({ text: '正在连接 TDS 可信数据空间同步节点数据...', background: 'rgba(0,0,0,0.7)' });
+                setTimeout(() => {
+                    loading.close();
+                    ElementPlus.ElMessage.success('同步完成：节点状态已更新');
+                }, 1500);
+            };
+
+            const viewDetail = (row) => {
+                window.location.href = 'certifier_detail.html?id=' + row.code;
+            };
+
+            const viewOrders = (row) => {
+                // 模拟跳转，实际项目中请确保 order.html 存在
+                window.location.href = 'order.html?certifier=' + encodeURIComponent(row.name);
+            };
+
+            const openPage = (path) => {
+                const current = window.location.pathname.split('/').pop();
+                if (current !== path) window.location.href = path;
+            };
+
+            return {
+                menuConfig, currentUser, query, tableData,
+                handleSearch, handleSync, viewDetail, viewOrders, openPage
+            };
+        }
+    });
+
+    // 确保图标组件被正确注册
+    app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+        app.component(key, component);
+    }
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

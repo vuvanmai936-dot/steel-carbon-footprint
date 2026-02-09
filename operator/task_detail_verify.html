@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>任务详情 - 核查认证验收</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/task_detail.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 文档预览区 === */
+        .doc-preview-container {
+            background: #525659; height: 100%; display: flex; flex-direction: column; 
+            align-items: center; padding: 20px; overflow-y: auto; position: relative;
+        }
+        .pdf-sheet {
+            background: #fff; width: 595px; min-height: 842px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            padding: 50px; display: flex; flex-direction: column; position: relative;
+        }
+        
+        /* 签章模拟 */
+        .stamp-seal {
+            position: absolute; bottom: 80px; right: 80px; width: 120px; height: 120px;
+            border: 3px solid #F56C6C; border-radius: 50%; color: #F56C6C;
+            display: flex; align-items: center; justify-content: center; transform: rotate(-15deg);
+            font-size: 14px; font-weight: bold; text-align: center; opacity: 0.8;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .stamp-inner {
+            width: 100px; height: 100px; border: 1px solid #F56C6C; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+        }
+
+        /* === 右侧面板 === */
+        .file-list-item {
+            display: flex; align-items: center; padding: 12px; border: 1px solid #ebeef5; border-radius: 4px; margin-bottom: 10px;
+            background: #fff; transition: all 0.3s;
+        }
+        .file-list-item:hover { border-color: #409EFF; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .file-icon { font-size: 24px; color: #F56C6C; margin-right: 12px; }
+        .file-info { flex: 1; overflow: hidden; }
+        .file-name { font-size: 13px; font-weight: bold; color: #303133; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-meta { font-size: 12px; color: #909399; margin-top: 4px; }
+
+        /* === 悬浮全景进度 === */
+        .floating-timeline {
+            position: fixed; bottom: 20px; right: 20px; z-index: 2000;
+            background: #fff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            border: 1px solid #ebeef5; transition: all 0.3s;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .floating-timeline.collapsed {
+            width: 48px !important; height: 48px !important; border-radius: 50% !important; cursor: pointer;
+            align-items: center; justify-content: center; background: #409EFF; color: #fff; padding: 0;
+        }
+        .floating-timeline.expanded { width: 340px; height: 680px; border-radius: 8px; }
+        
+        .ft-header { padding: 12px 15px; background: #409EFF; color: #fff; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; flex: none; }
+        .ft-body { flex: 1; overflow-y: auto; padding: 15px; background: #fff; }
+
+        .stage-node { transition: all 0.3s; }
+        .stage-node.clickable { cursor: pointer; }
+        .stage-node.clickable:hover .stage-title { color: #409EFF !important; text-decoration: underline; }
+
+        .panel-footer { padding: 15px; border-top: 1px solid #e4e7ed; background: #fff; display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140;">碳足迹数据服务</div>
+            <el-menu :default-active="'3'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container>
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
+                <div style="display: flex; align-items: center;">
+                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
+                    <el-breadcrumb separator="/">
+                        <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                        <el-breadcrumb-item>任务管理</el-breadcrumb-item>
+                        <el-breadcrumb-item>核查验收</el-breadcrumb-item>
+                    </el-breadcrumb>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <el-tooltip content="SLA 剩余时间" placement="bottom"><div class="sla-capsule"><el-icon><Timer /></el-icon> 12:30:05</div></el-tooltip>
+                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">Op</el-avatar>
+                    <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column;">
+                
+                <div class="task-info-dashboard">
+                    <div class="dash-block" style="flex: 1.5;">
+                        <div class="dash-title">Product & Task</div>
+                        <div class="dash-content">
+                            <div class="prod-main">
+                                <span class="prod-name">{{ taskInfo.productName }}</span>
+                                <span class="prod-id" style="font-family:monospace; font-size:12px; background:#f4f4f5; padding:2px 6px; border-radius:4px; margin-left:8px;">{{ taskInfo.taskId }}</span>
+                            </div>
+                            <div class="prod-sub">
+                                <span style="margin-right: 10px;">{{ taskInfo.specs }}</span>
+                                <span style="color:#dcdfe6; margin-right: 10px;">|</span>
+                                <el-link type="primary" :underline="false" style="font-size:12px;" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dash-block" style="flex: 1.2;">
+                        <div class="dash-title">Source Supplier</div>
+                        <div class="dash-content">
+                            <div style="display:flex; align-items:center;">
+                                <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
+                                <span style="font-weight:bold; font-size:14px;">{{ taskInfo.supplier }}</span>
+                            </div>
+                            <div style="font-size:12px; color:#909399; margin-top:4px; margin-left:32px;">Level A</div>
+                        </div>
+                    </div>
+
+                    <div class="dash-block" style="flex: 1;">
+                        <div class="dash-title">Verify Status</div>
+                        <div class="dash-content">
+                            <div style="display:flex; align-items:center; gap:8px">
+                                <el-tag v-if="verifyState === 'pending_review'" type="warning" effect="dark">待运营验收</el-tag>
+                                <el-tag v-else-if="verifyState === 'rejected'" type="danger">已驳回 (Rejected)</el-tag>
+                                <el-tag v-else type="success" effect="dark">已上链 (On-Chain)</el-tag>
+                            </div>
+                            <div style="font-size:12px; color:#999; margin-top:4px;">{{ getStatusDesc() }}</div>
+                        </div>
+                    </div>
+
+                    <div class="dash-block">
+                        <div class="dash-title">Documents</div>
+                        <div class="data-stats">
+                            <div class="stat-item">
+                                <div class="stat-num" style="color:#409EFF">3</div>
+                                <div class="stat-label">Files</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <el-row :gutter="0" style="flex: 1; overflow: hidden;">
+                    
+                    <el-col :span="16" style="height: 100%; border-right: 1px solid #dcdfe6; display: flex; flex-direction: column;">
+                        <div style="background: #fff; padding: 0 20px; border-bottom: 1px solid #dcdfe6;">
+                            <el-tabs v-model="activeTab">
+                                <el-tab-pane label="核算报告 (Calculation)" name="calc"></el-tab-pane>
+                                <el-tab-pane label="核查报告 (Verification)" name="verify"></el-tab-pane>
+                                <el-tab-pane label="核查声明 (Declaration)" name="decl"></el-tab-pane>
+                            </el-tabs>
+                        </div>
+                        
+                        <div class="doc-preview-container">
+                            <div v-if="activeTab === 'calc'" class="pdf-sheet">
+                                <div style="text-align:center; margin-bottom:40px;"><h2>产品碳足迹核算报告</h2></div>
+                                <p><strong>报告编号：</strong> RPT-2026-001</p>
+                                <p><strong>编制方：</strong> 碳足迹管理平台 (System)</p>
+                                <p><strong>核算结果：</strong> 2.45 kgCO₂e/kg</p>
+                                <div style="margin-top:20px; padding:15px; border:1px solid #eee;">
+                                    (此处展示详细的 LCA 建模数据与计算过程...)
+                                </div>
+                            </div>
+
+                            <div v-if="activeTab === 'verify'" class="pdf-sheet">
+                                <div style="text-align:center; margin-bottom:40px;"><h2>SGS 核查报告</h2></div>
+                                <p><strong>核查机构：</strong> SGS 通标标准技术服务有限公司</p>
+                                <p><strong>核查依据：</strong> ISO 14067:2018</p>
+                                <p><strong>核查结论：</strong> <span style="color:#67C23A; font-weight:bold;">符合 (Compliant)</span></p>
+                                <p><strong>发现点：</strong> 无重大不符合项。</p>
+                                <div class="stamp-seal"><div class="stamp-inner">SGS<br>VERIFIED</div></div>
+                            </div>
+
+                            <div v-if="activeTab === 'decl'" class="pdf-sheet" style="background:#fdfcf8;">
+                                <div style="text-align:center; margin-bottom:30px; border-bottom: 3px double #333; padding-bottom: 20px;">
+                                    <h1>核 查 声 明</h1>
+                                    <div style="font-family:serif; font-style:italic;">Verification Statement</div>
+                                </div>
+                                <div style="line-height: 2; font-family: serif; font-size: 16px;">
+                                    <p>兹证明：</p>
+                                    <p><strong>{{ taskInfo.supplier }}</strong> 生产的 <strong>{{ taskInfo.productName }}</strong> ({{ taskInfo.specs }})</p>
+                                    <p>其产品碳足迹 (PCF) 经核查符合 ISO 14067 标准。</p>
+                                    <p><strong>生命周期碳足迹：</strong> 2.45 kgCO₂e / kg</p>
+                                    <p><strong>声明编号：</strong> SGS-CN-2026-889</p>
+                                    <p><strong>签发日期：</strong> 2026-02-04</p>
+                                </div>
+                                <div class="stamp-seal" style="bottom: 100px; right: 100px; border-color: #B88230; color: #B88230;">
+                                    <div class="stamp-inner" style="border-color: #B88230;">SGS<br>APPROVED</div>
+                                </div>
+                            </div>
+                        </div>
+                    </el-col>
+
+                    <el-col :span="8" style="height: 100%; display: flex; flex-direction: column; background: #fff;">
+                        <div style="padding: 15px; border-bottom: 1px solid #ebeef5; background: #f9fafc;">
+                            <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">认证机构信息</div>
+                            <div style="display:flex; align-items:center;">
+                                <el-avatar :size="24" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"></el-avatar>
+                                <div style="margin-left: 10px; font-size: 13px;">SGS 核查组 (Alex.W)</div>
+                            </div>
+                        </div>
+
+                        <div style="flex: 1; overflow-y: auto; padding: 15px;">
+                            <div style="font-size: 12px; color: #909399; margin-bottom: 10px;">交付物列表 (Documents)</div>
+                            
+                            <div class="file-list-item">
+                                <el-icon class="file-icon"><Document /></el-icon>
+                                <div class="file-info">
+                                    <div class="file-name">核算报告_v1.1.pdf</div>
+                                    <div class="file-meta">平台生成 | 2.4MB</div>
+                                </div>
+                                <el-button link type="primary" icon="Download"></el-button>
+                            </div>
+
+                            <div class="file-list-item">
+                                <el-icon class="file-icon"><DocumentChecked /></el-icon>
+                                <div class="file-info">
+                                    <div class="file-name">SGS_核查报告.pdf</div>
+                                    <div class="file-meta">SGS 上传 | 2026-02-04 10:30</div>
+                                </div>
+                                <el-button link type="primary" icon="Download"></el-button>
+                            </div>
+
+                            <div class="file-list-item" style="border-color: #E6A23C; background: #fdf6ec;">
+                                <el-icon class="file-icon" style="color: #E6A23C;"><Trophy /></el-icon>
+                                <div class="file-info">
+                                    <div class="file-name">核查声明_SGS-CN-889.pdf</div>
+                                    <div class="file-meta">核心凭证 | 1.1MB</div>
+                                </div>
+                                <el-button link type="primary" icon="Download"></el-button>
+                            </div>
+
+                            <div v-if="verifyState === 'verified'" style="margin-top: 20px; padding: 15px; background: #f0f9eb; border-radius: 4px; border: 1px solid #e1f3d8;">
+                                <div style="font-size: 12px; color: #67C23A; margin-bottom: 5px; font-weight: bold;">
+                                    <el-icon><Link /></el-icon> 区块链存证成功
+                                </div>
+                                <div style="font-size: 11px; color: #999; word-break: break-all; font-family: monospace;">
+                                    TxHash: 0x71c...9a2b<br>
+                                    Block: #1029384
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel-footer">
+                            <div v-if="verifyState === 'pending_review'">
+                                <el-button type="success" size="large" style="width: 100%;" icon="Stamp" @click="confirmAndMint">
+                                    确认接收并上链 (Mint)
+                                </el-button>
+                                <el-button type="danger" plain style="width: 100%; margin-left: 0; margin-top: 10px;" icon="Close" @click="rejectDocs">
+                                    驳回 (要求重传)
+                                </el-button>
+                            </div>
+                            
+                            <div v-else-if="verifyState === 'rejected'">
+                                <el-alert title="已驳回，等待认证机构重新提交..." type="error" :closable="false" show-icon></el-alert>
+                            </div>
+
+                            <div v-else-if="verifyState === 'verified'">
+                                <el-button type="primary" size="large" style="width: 100%;" icon="Trophy" @click="navigateTo('certify')">
+                                    前往证书下发页面
+                                </el-button>
+                            </div>
+                        </div>
+                    </el-col>
+                </el-row>
+
+                <div class="floating-timeline" :class="isExpanded ? 'expanded' : 'collapsed'">
+                    <div v-if="!isExpanded" @click="isExpanded = true" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+                        <el-icon size="24"><DataLine /></el-icon>
+                    </div>
+                    <div v-else style="height:100%; display:flex; flex-direction:column;">
+                        <div class="ft-header" @click="isExpanded = false"><span>全景进度</span><el-icon><ArrowDown /></el-icon></div>
+                        <div class="ft-body timeline-scroll" id="timelineStream">
+                            <div class="stage-node done clickable" @click="navigateTo('config')">
+                                <div class="stage-marker"><el-icon><Check /></el-icon></div><div class="stage-content"><div class="stage-title">规则配置</div></div>
+                            </div>
+                            <div class="stage-node done clickable" @click="navigateTo('collect')">
+                                <div class="stage-marker"><el-icon><Check /></el-icon></div><div class="stage-content"><div class="stage-title">数据采集</div></div>
+                            </div>
+                            <div class="stage-node done clickable" @click="navigateTo('lca')">
+                                <div class="stage-marker"><el-icon><Check /></el-icon></div><div class="stage-content"><div class="stage-title">LCA 计算</div></div>
+                            </div>
+                            
+                            <div class="stage-node active">
+                                <div class="stage-marker">4</div>
+                                <div class="stage-content">
+                                    <div class="stage-title">核查认证 (Verify)</div>
+                                    <div class="stage-meta">{{ getStatusDesc() }}</div>
+                                </div>
+                            </div>
+
+                            <div v-for="(evt, idx) in events" :key="idx" class="event-node" :class="evt.type">
+                                <div class="event-dot"></div>
+                                <div class="event-box">
+                                    <div class="evt-head"><span class="evt-user">{{ evt.user }}</span> <span class="evt-time">{{ evt.time }}</span></div>
+                                    <div class="evt-body">{{ evt.content }}</div>
+                                </div>
+                            </div>
+
+                            <div class="stage-node" :class="verifyState==='verified'?'done clickable':'pending'" @click="navigateTo('certify')">
+                                <div class="stage-marker">5</div>
+                                <div class="stage-content">
+                                    <div class="stage-title">证书下发</div>
+                                    <div v-if="verifyState==='verified'" class="stage-meta" style="color:#67C23A">点击生成最终证书</div>
+                                </div>
+                            </div>
+
+                            <div v-if="verifyState === 'rejected'" style="margin-top: 20px; border-top: 1px dashed #dcdfe6; padding-top: 10px;">
+                                <div style="font-size: 12px; color: #909399; margin-bottom: 8px; text-align: center;">[演示控制台]</div>
+                                <el-button type="warning" size="small" plain style="width:100%;" @click="simulateReSubmit">模拟：SGS 重新提交</el-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            // State
+            const taskInfo = Vue.reactive({ taskId: 'TSK-2026-889', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '南通碳素有限公司', orderNo: 'ORD-20260203' });
+            const verifyState = Vue.ref('pending_review'); 
+            const activeTab = Vue.ref('decl'); // 默认看声明
+            const isExpanded = Vue.ref(true);
+            const events = Vue.ref([
+                { type: 'sys', user: 'System', time: '10:00', content: 'LCA 计算完成，SGS 已上传核查文档' }
+            ]);
+
+            // Actions
+            const confirmAndMint = () => {
+                const loading = ElementPlus.ElLoading.service({ text: '正在进行区块链存证 (Minting)...' });
+                setTimeout(() => {
+                    loading.close();
+                    verifyState.value = 'verified';
+                    pushEvent('sub', '我', '确认接收文档，并完成区块链上链存证');
+                    pushEvent('sys', 'System', '证书生成条件已满足');
+                }, 1500);
+            };
+
+            const rejectDocs = () => {
+                ElementPlus.ElMessageBox.prompt('请输入驳回原因', '驳回确认', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                }).then(({ value }) => {
+                    verifyState.value = 'rejected';
+                    pushEvent('rej', '我', `驳回了核查文档: ${value}`);
+                });
+            };
+
+            const simulateReSubmit = () => {
+                const loading = ElementPlus.ElLoading.service({ text: '模拟 SGS 重新上传中...' });
+                setTimeout(() => {
+                    loading.close();
+                    verifyState.value = 'pending_review';
+                    pushEvent('sys', 'SGS', '已重新提交核查报告 v1.2');
+                }, 1000);
+            };
+
+            // Util
+            const pushEvent = (type, user, content) => {
+                events.value.push({ type, user, content, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
+                setTimeout(() => { document.getElementById('timelineStream').scrollTop = 9999; }, 100);
+            };
+
+            const getStatusDesc = () => {
+                if(verifyState.value==='pending_review') return '文档已上传，请验收';
+                if(verifyState.value==='rejected') return '等待认证机构修正';
+                return '已上链，准备发证';
+            };
+
+            const goBack = () => window.location.href = 'task_list.html';
+            const openPage = (p) => window.location.href = p;
+            const viewOrder = () => window.location.href='order.html';
+            const navigateTo = (p) => { 
+                if(p==='config') window.location.href='task_detail_config.html';
+                if(p==='collect') window.location.href='task_detail_collect.html';
+                if(p==='lca') window.location.href='task_detail_lca.html';
+                if(p==='certify' && verifyState.value==='verified') window.location.href='task_detail_certify.html';
+            };
+
+            return {
+                menuConfig, currentUser, taskInfo, verifyState, activeTab, isExpanded, events,
+                confirmAndMint, rejectDocs, simulateReSubmit,
+                goBack, openPage, viewOrder, navigateTo, getStatusDesc
+            };
+        }
+    });
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>供应商详情 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../js/layout.js"></script>
+    
+    <style>
+        /* === 页面样式优化 === */
+        
+        /* 1. 头部重构：双栏布局 */
+        .profile-container { 
+            background: #fff; border-radius: 8px; border: 1px solid #e4e7ed; margin-bottom: 20px; 
+            display: flex; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+        }
+        
+        /* 左侧：企业基础画像 */
+        .profile-main { flex: 1; padding: 24px; border-right: 1px solid #f0f2f5; }
+        .profile-top { display: flex; align-items: flex-start; margin-bottom: 20px; }
+        .profile-logo { 
+            width: 64px; height: 64px; background: #409EFF; color: #fff; font-size: 24px; font-weight: bold; 
+            border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 15px; 
+            flex-shrink: 0; box-shadow: 0 4px 10px rgba(64, 158, 255, 0.2);
+        }
+        .profile-name-box { flex: 1; }
+        .profile-name { font-size: 20px; font-weight: bold; color: #303133; margin-bottom: 8px; display: flex; align-items: center; }
+        
+        /* CRM 字段网格 - 解决对齐问题 */
+        .crm-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 30px; font-size: 13px; color: #606266; }
+        .crm-item { display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .crm-label { color: #909399; margin-right: 8px; width: 70px; text-align: right; flex-shrink: 0; }
+        .crm-value { font-weight: 500; color: #303133; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .code-font { font-family: 'Consolas', 'Monaco', monospace; background: #f4f4f5; padding: 1px 4px; border-radius: 3px; letter-spacing: 0.5px; }
+
+        /* 右侧：核心联系人 (High Frequency) */
+        .profile-contacts { width: 340px; padding: 20px 24px; background: #fafafa; display: flex; flex-direction: column; justify-content: center; }
+        .contact-header { font-size: 12px; font-weight: bold; color: #909399; margin-bottom: 12px; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 联系人卡片 - 紧凑型 */
+        .contact-card { background: #fff; border: 1px solid #e4e7ed; border-radius: 6px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; transition: all 0.2s; }
+        .contact-card:hover { border-color: #c0c4cc; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .contact-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-right: 12px; flex-shrink: 0; }
+        .contact-details { flex: 1; overflow: hidden; }
+        .contact-role { font-size: 12px; color: #999; margin-bottom: 2px; }
+        .contact-name-row { display: flex; justify-content: space-between; align-items: center; }
+        .contact-name { font-weight: bold; font-size: 14px; color: #303133; }
+        .contact-actions { display: flex; gap: 8px; }
+        .action-icon { cursor: pointer; color: #909399; font-size: 14px; }
+        .action-icon:hover { color: #409EFF; }
+
+        /* KPI 卡片 */
+        .kpi-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .kpi-card { 
+            background: #fff; padding: 15px 20px; border-radius: 6px; border: 1px solid #e4e7ed; 
+            display: flex; align-items: center; justify-content: space-between; transition: all 0.3s;
+            cursor: pointer; position: relative;
+        }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: #409EFF; }
+        .kpi-main { display: flex; flex-direction: column; }
+        .kpi-label { font-size: 12px; color: #909399; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+        .kpi-value { font-size: 20px; font-weight: bold; color: #303133; font-family: 'DIN Alternate'; }
+        .kpi-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+        /* 布局 */
+        .detail-layout { display: flex; gap: 20px; min-height: 500px; }
+        .left-content { flex: 1; display: flex; flex-direction: column; }
+        .right-sidebar { width: 320px; display: flex; flex-direction: column; gap: 20px; }
+        .radar-box { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ebeef5; height: 340px; display: flex; flex-direction: column; align-items: center; }
+
+        /* TDS 代码块 */
+        .json-block { background: #1e1e1e; color: #ce9178; padding: 15px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 12px; height: 300px; overflow-y: auto; white-space: pre-wrap; }
+
+        /* 资质列表优化 */
+        .cert-list { display: flex; flex-direction: column; gap: 10px; }
+        .cert-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #fff; border: 1px solid #e4e7ed; border-radius: 6px; }
+        .cert-icon { font-size: 24px; margin-right: 12px; color: #67C23A; }
+        .cert-info { flex: 1; }
+        .cert-name { font-size: 13px; font-weight: bold; color: #303133; }
+        .cert-meta { font-size: 11px; color: #909399; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+        .source-tag { background: #f0f9eb; color: #67C23A; padding: 0 4px; border-radius: 2px; transform: scale(0.9); transform-origin: left; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-container style="height: 100vh;">
+        <el-aside width="220px" style="background-color: #001529;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140;">碳足迹数据服务</div>
+            <el-menu :default-active="'5'" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none;">
+                <el-menu-item v-for="item in menuConfig" :key="item.id" :index="item.id" @click="openPage(item.path)">
+                    <el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container>
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center;">
+                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
+                    <div>
+                        <div style="font-size: 16px; font-weight: bold;">供应商详情</div>
+                        <div style="font-size: 12px; color: #999;">统一管理供应商的身份、业务与技术连接</div>
+                    </div>
+                </div>
+                <div>
+                    <el-tag type="info" effect="plain" style="margin-right: 15px;"><el-icon><Connection /></el-icon> 数据源: TDS 可信空间节点</el-tag>
+                    <el-button icon="Refresh" @click="refreshStatus">同步节点信息</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="background: #f0f2f5; padding: 20px;">
+                
+                <div class="profile-container">
+                    <div class="profile-main">
+                        <div class="profile-top">
+                            <div class="profile-logo">{{ partner.abbr }}</div>
+                            <div class="profile-name-box">
+                                <div class="profile-name">
+                                    {{ partner.name }}
+                                    <el-tag type="success" size="small" effect="dark" style="margin-left: 10px;">资质合规</el-tag>
+                                    <el-tag v-if="partner.isCore" size="small" effect="plain" style="margin-left: 6px;">核心供应商</el-tag>
+                                </div>
+                                <div style="display: flex; gap: 15px; font-size: 12px; color: #666;">
+                                    <span style="display: flex; align-items: center; gap: 4px;"><el-icon><Link /></el-icon> 商城账号: <b style="color:#333">{{ partner.mallUser }}</b></span>
+                                    <span style="display: flex; align-items: center; gap: 4px;"><el-icon><Key /></el-icon> User ID: {{ partner.mallId }}</span>
+                                    <span style="color: #67C23A; font-weight: bold;">● 已连接</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="crm-grid">
+                            <div class="crm-item">
+                                <span class="crm-label">信用代码</span>
+                                <span class="crm-value code-font">{{ partner.creditCode }}</span>
+                                <el-icon style="margin-left:5px; cursor:pointer; color:#999;" @click="copyText(partner.creditCode)"><CopyDocument /></el-icon>
+                            </div>
+                            <div class="crm-item">
+                                <span class="crm-label">所属行业</span>
+                                <span class="crm-value">{{ partner.industry }}</span>
+                            </div>
+                            <div class="crm-item">
+                                <span class="crm-label">注册资本</span>
+                                <span class="crm-value">{{ partner.capital }}</span>
+                            </div>
+                            <div class="crm-item">
+                                <span class="crm-label">官方网站</span>
+                                <el-link type="primary" :href="'http://'+partner.website" target="_blank" style="font-size:13px;">{{ partner.website }}</el-link>
+                            </div>
+                            <div class="crm-item" style="grid-column: span 2;">
+                                <span class="crm-label">注册地址</span>
+                                <span class="crm-value">{{ partner.location }} ({{ partner.addressDetail }})</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-contacts">
+                        <div class="contact-header">
+                            核心联系人 (Key Contacts)
+                            <el-button link type="primary" size="small">查看全部</el-button>
+                        </div>
+                        
+                        <div class="contact-card" style="border-left: 3px solid #409EFF;">
+                            <div class="contact-avatar" style="background: #ecf5ff; color: #409EFF;"><el-icon><Suitcase /></el-icon></div>
+                            <div class="contact-details">
+                                <div class="contact-role">商务负责人 (合同/结算)</div>
+                                <div class="contact-name-row">
+                                    <span class="contact-name">张总 (VP)</span>
+                                    <div class="contact-actions">
+                                        <el-tooltip content="拨打电话" placement="top"><el-icon class="action-icon"><Phone /></el-icon></el-tooltip>
+                                        <el-tooltip content="发送邮件" placement="top"><el-icon class="action-icon"><Message /></el-icon></el-tooltip>
+                                    </div>
+                                </div>
+                                <div style="font-size: 12px; color: #666; margin-top: 2px;">13800001111</div>
+                            </div>
+                        </div>
+
+                        <div class="contact-card" style="border-left: 3px solid #67C23A;">
+                            <div class="contact-avatar" style="background: #f0f9eb; color: #67C23A;"><el-icon><Monitor /></el-icon></div>
+                            <div class="contact-details">
+                                <div class="contact-role">技术负责人 (IT/数据)</div>
+                                <div class="contact-name-row">
+                                    <span class="contact-name">李工</span>
+                                    <div class="contact-actions">
+                                        <el-tooltip content="拨打电话" placement="top"><el-icon class="action-icon"><Phone /></el-icon></el-tooltip>
+                                        <el-tooltip content="复制微信号" placement="top"><el-icon class="action-icon"><ChatDotRound /></el-icon></el-tooltip>
+                                    </div>
+                                </div>
+                                <div style="font-size: 12px; color: #666; margin-top: 2px;">13912345678</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-container">
+                    <div class="kpi-card" @click="jumpToList('order')">
+                        <div class="kpi-main">
+                            <div class="kpi-label">累计完成订单 <el-tooltip content="商城状态为'已完成'且已支付的订单总数" placement="top"><el-icon><InfoFilled /></el-icon></el-tooltip></div>
+                            <div class="kpi-value">128</div>
+                        </div>
+                        <div class="kpi-icon" style="background: #e1f3d8; color: #67C23A;"><el-icon><List /></el-icon></div>
+                    </div>
+                    <div class="kpi-card" @click="jumpToList('api')">
+                        <div class="kpi-main">
+                            <div class="kpi-label">碳数据调用 (API) <el-tooltip content="近30天该节点被外部调用的有效请求次数" placement="top"><el-icon><InfoFilled /></el-icon></el-tooltip></div>
+                            <div class="kpi-value">45.2K</div>
+                        </div>
+                        <div class="kpi-icon" style="background: #ecf5ff; color: #409EFF;"><el-icon><DataLine /></el-icon></div>
+                    </div>
+                    <div class="kpi-card" @click="jumpToList('contract')">
+                        <div class="kpi-main">
+                            <div class="kpi-label">有效数字合约 <el-tooltip content="在 TDS 空间内签署且状态为'生效中'的智能合约" placement="top"><el-icon><InfoFilled /></el-icon></el-tooltip></div>
+                            <div class="kpi-value">3</div>
+                        </div>
+                        <div class="kpi-icon" style="background: #fffbe6; color: #E6A23C;"><el-icon><DocumentChecked /></el-icon></div>
+                    </div>
+                    <div class="kpi-card" style="cursor: default;">
+                        <div class="kpi-main">
+                            <div class="kpi-label">数据完整度评分 <el-tooltip content="系统根据近10次任务的凭证缺失率自动计算" placement="top"><el-icon><InfoFilled /></el-icon></el-tooltip></div>
+                            <div class="kpi-value" style="color: #409EFF;">92.5</div>
+                        </div>
+                        <div class="kpi-icon" style="background: #f4f4f5; color: #909399;"><el-icon><TrendCharts /></el-icon></div>
+                    </div>
+                </div>
+
+                <div class="detail-layout">
+                    <div class="left-content">
+                        <div class="pp-card" style="padding: 0; flex: 1; display: flex; flex-direction: column;">
+                            <el-tabs v-model="activeTab" type="border-card" style="box-shadow: none; border: none; flex: 1;">
+                                
+                                <el-tab-pane label="产品碳档案" name="products">
+                                    <div style="padding: 15px;">
+                                        <el-table :data="productList" border stripe size="default">
+                                            <el-table-column prop="skuName" label="产品名称 / SKU" min-width="180"></el-table-column>
+                                            <el-table-column prop="specs" label="规格" width="100"></el-table-column>
+                                            <el-table-column label="核算依据" width="140">
+                                                <template #default="scope"><el-tag size="small" type="info">{{ scope.row.pcr }}</el-tag></template>
+                                            </el-table-column>
+                                            <el-table-column label="最近结果" width="140">
+                                                <template #default="scope">
+                                                    <span v-if="scope.row.lastResult" style="font-weight: bold;">{{ scope.row.lastResult }}</span>
+                                                    <span v-else style="color: #ccc;">-</span>
+                                                </template>
+                                            </el-table-column>
+                                            <el-table-column label="操作" width="120" fixed="right">
+                                                <template #default="scope">
+                                                    <el-button v-if="scope.row.lastResult" link type="primary" size="small">查看报告</el-button>
+                                                    <el-button v-else link type="warning" size="small" @click="handleCreateTask(scope.row)">
+                                                        <el-icon style="margin-right: 4px;"><VideoPlay /></el-icon>发起核算
+                                                    </el-button>
+                                                </template>
+                                            </el-table-column>
+                                        </el-table>
+                                    </div>
+                                </el-tab-pane>
+
+                                <el-tab-pane label="业务执行记录" name="business">
+                                    <div style="padding: 15px;">
+                                        <div style="margin-bottom: 10px; font-size: 12px; color: #666; background: #fdf6ec; padding: 8px; border-radius: 4px;">
+                                            <el-icon><InfoFilled /></el-icon> 展示链路：商城订单 -> 碳足迹核算任务 -> 最终报告
+                                        </div>
+                                        <el-table :data="businessList" border stripe size="small">
+                                            <el-table-column label="1. 商城订单" min-width="180">
+                                                <template #default="s">
+                                                    <el-link type="primary" :underline="false" @click="viewOrder(s.row.orderNo)">
+                                                        {{ s.row.orderNo }}
+                                                    </el-link>
+                                                    <div style="font-size: 12px; color: #999;">{{ s.row.product }}</div>
+                                                </template>
+                                            </el-table-column>
+                                            <el-table-column label="2. 关联任务" min-width="160">
+                                                <template #default="s">
+                                                    <el-link type="primary" :underline="false" @click="viewTask(s.row.taskNo)">
+                                                        <el-icon style="margin-right: 4px;"><Cpu /></el-icon>{{ s.row.taskNo }}
+                                                    </el-link>
+                                                    <div style="margin-top: 4px;">
+                                                        <el-tag size="small" :type="s.row.status==='已发证'?'success':'warning'">{{ s.row.status }}</el-tag>
+                                                    </div>
+                                                </template>
+                                            </el-table-column>
+                                            <el-table-column label="3. 产出报告" width="150">
+                                                <template #default="s">
+                                                    <el-button v-if="s.row.reportId" type="success" link size="small">
+                                                        <el-icon style="margin-right: 4px;"><Document /></el-icon> 下载
+                                                    </el-button>
+                                                    <span v-else style="color: #ccc; font-size: 12px;">等待生成</span>
+                                                </template>
+                                            </el-table-column>
+                                            <el-table-column prop="time" label="更新时间" width="140" style="color: #999;"></el-table-column>
+                                        </el-table>
+                                    </div>
+                                </el-tab-pane>
+
+                                <el-tab-pane label="TDS 节点与身份" name="tech">
+                                    <div style="padding: 20px;">
+                                        <el-row :gutter="20">
+                                            <el-col :span="12">
+                                                <div style="font-weight: bold; margin-bottom: 10px;">节点基本属性 (Node Properties)</div>
+                                                <el-descriptions :column="1" border size="small">
+                                                    <el-descriptions-item label="DID"><span style="font-family: monospace;">{{ partner.did }}</span></el-descriptions-item>
+                                                    <el-descriptions-item label="节点类型">Provider Node</el-descriptions-item>
+                                                    <el-descriptions-item label="公钥指纹">SHA256: a1b2c3...9988</el-descriptions-item>
+                                                    <el-descriptions-item label="Service Endpoint">https://node.xx-ref.com/api/v1</el-descriptions-item>
+                                                </el-descriptions>
+                                            </el-col>
+                                            <el-col :span="12">
+                                                <div style="font-weight: bold; margin-bottom: 10px;">身份文档 (DID Document)</div>
+                                                <div class="json-block">{
+  "@context": "https://www.w3.org/ns/did/v1",
+  "id": "{{ partner.did }}",
+  "verificationMethod": [{
+    "id": "#key-1",
+    "type": "Ed25519VerificationKey2020",
+    "controller": "{{ partner.did }}",
+    "publicKeyMultibase": "zH3C2AVvLMv6gmMNam3uVA..."
+  }],
+  "authentication": ["#key-1"],
+  "service": [{
+    "id": "#carbon-data",
+    "type": "CarbonFootprintService",
+    "serviceEndpoint": "https://node.xx-ref.com/pcf"
+  }]
+}</div>
+                                            </el-col>
+                                        </el-row>
+                                    </div>
+                                </el-tab-pane>
+                            </el-tabs>
+                        </div>
+                    </div>
+
+                    <div class="right-sidebar">
+                        <div class="radar-box">
+                            <div style="font-weight: bold; margin-bottom: 10px; width: 100%;">供应商画像 (Level A)</div>
+                            <canvas id="scoreRadar" width="260" height="260"></canvas>
+                            <div style="font-size: 12px; color: #999; margin-top: 15px; text-align: center;">基于近 90 天行为评估</div>
+                        </div>
+                        
+                        <div class="pp-card" style="padding: 15px;">
+                            <div style="font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>资质证书 (Assets)</span>
+                                <el-tag size="small" type="success" effect="plain">TDS Synced</el-tag>
+                            </div>
+                            <div class="cert-list">
+                                <div class="cert-item">
+                                    <el-icon class="cert-icon"><Files /></el-icon>
+                                    <div class="cert-info">
+                                        <div class="cert-name">营业执照 (副本)</div>
+                                        <div class="cert-meta">
+                                            <span class="source-tag">启信宝</span>
+                                            <span>永久有效</span>
+                                        </div>
+                                    </div>
+                                    <el-link type="primary" :underline="false" style="font-size: 12px;">查看PDF</el-link>
+                                </div>
+                                <div class="cert-item">
+                                    <el-icon class="cert-icon"><Stamp /></el-icon>
+                                    <div class="cert-info">
+                                        <div class="cert-name">ISO 14001</div>
+                                        <div class="cert-meta">
+                                            <span class="source-tag">连接器</span>
+                                            <span style="color: #F56C6C;">剩 30 天</span>
+                                        </div>
+                                    </div>
+                                    <el-link type="primary" :underline="false" style="font-size: 12px;">查看PDF</el-link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+
+<script>
+    const { menuConfig, currentUser } = SharedLayout.setup();
+
+    const app = Vue.createApp({
+        setup() {
+            const activeTab = Vue.ref('products');
+            
+            // 数据源更新：完整 18 位社会信用代码
+            const partner = Vue.reactive({
+                name: 'XX 耐火材料有限公司', abbr: 'XX', did: 'did:xin:org:ref...882',
+                creditCode: '91370600MA3T8K9L1B', // 修复为18位
+                location: '山东省 · 烟台市', addressDetail: '芝罘区工业园一路88号',
+                mallUser: 'xc_refractory_01', mallId: '100882',
+                industry: '非金属矿物制品业', capital: '5000 万人民币', website: 'www.xx-ref.com'
+            });
+
+            const productList = Vue.ref([
+                { skuName: '超高功率石墨电极 (Φ600)', specs: 'UHP-600', pcr: '钢铁行业PCR 2.0', lastResult: '2.15' },
+                { skuName: '普通功率石墨电极 (Φ400)', specs: 'RP-400', pcr: '钢铁行业PCR 2.0', lastResult: '1.88' },
+                { skuName: '煅烧焦 (待核算)', specs: 'S-01', pcr: '通用原材料PCR', lastResult: null }
+            ]);
+
+            const businessList = Vue.ref([
+                { orderNo: 'XC-20251114-001', product: '镁碳砖 (M97)', taskNo: 'TSK-202511-34', status: '核查中', reportId: null, time: '2025-11-15' },
+                { orderNo: 'XC-20251010-009', product: '高铝砖', taskNo: 'TSK-202510-12', status: '已发证', reportId: 'RPT-882', time: '2025-10-25' }
+            ]);
+
+            const refreshStatus = () => { ElementPlus.ElMessage.success('TDS 节点状态已同步'); };
+            const goBack = () => { window.location.href = 'supplier_mgt.html'; };
+            const openPage = (path) => window.location.href = path;
+            const copyText = (text) => { ElementPlus.ElMessage.success('已复制: ' + text); };
+            
+            const handleCreateTask = (row) => {
+                ElementPlus.ElMessage.success(`正在跳转至任务配置页，自动填充产品：${row.skuName}`);
+                setTimeout(() => { window.location.href = 'task_detail.html?mode=create&sku=' + encodeURIComponent(row.skuName); }, 500);
+            };
+            const viewOrder = (id) => { window.location.href = 'order.html'; }; 
+            const viewTask = (id) => { window.location.href = 'task_detail.html'; };
+            
+            const jumpToList = (type) => {
+                if(type === 'order') window.location.href = 'order.html?filter=completed';
+                if(type === 'api') ElementPlus.ElMessage.info('跳转至 API 审计日志页 (Mock)');
+                if(type === 'contract') ElementPlus.ElMessage.info('跳转至智能合约浏览器 (Mock)');
+            };
+
+            Vue.onMounted(() => {
+                const ctx = document.getElementById('scoreRadar');
+                if (ctx) {
+                    new Chart(ctx, {
+                        type: 'radar',
+                        data: {
+                            labels: ['完整性', '配合度', '时效性', '信用', '通过率'],
+                            datasets: [{ label: '评分', data: [85, 90, 75, 95, 80], backgroundColor: 'rgba(64, 158, 255, 0.2)', borderColor: '#409EFF', borderWidth: 2 }]
+                        },
+                        options: { scale: { ticks: { display: false, max: 100 } }, plugins: { legend: { display: false } } }
+                    });
+                }
+            });
+
+            return {
+                menuConfig, currentUser, activeTab, partner, productList, businessList,
+                refreshStatus, goBack, handleCreateTask, openPage, viewOrder, viewTask, jumpToList, copyText
+            };
+        }
+    });
+
+    initApp(app).mount("#app");
+</script>
+</body>
+</html>
