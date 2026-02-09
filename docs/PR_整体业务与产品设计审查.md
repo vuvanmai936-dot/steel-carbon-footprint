@@ -147,7 +147,13 @@ flowchart LR
 
 ---
 
-## 六、涉及文件与可执行后续
+## 六、后续迭代与已移除页面
+
+当前版本（MVP）已移除以下占位/后续迭代页面，以与有入口且实际使用的功能保持一致：**治理与合规**（原 `operator/governance.html`）、**模板高级配置**（原 `template_detail_advanced.html`）、**模板表单模式**（原 `template_detail_form_mode.html`）。上述能力规划为后续迭代，若需参考可从版本历史恢复。
+
+---
+
+## 七、涉及文件与可执行后续
 
 - **文档**：`docs/00_全局数据字典与枚举.md`、`docs/01_订单管理逻辑.md`、`docs/02_任务调度与状态机.md`、`docs/03_模板引擎解析逻辑.md`  
 - **原型**：`index.html`、`operator/order.html`、`operator/self_operated_task_list.html`、`operator/task_detail_*.html`、`operator/task_workspace.html`、`supplier/*`、`certifier/*`  

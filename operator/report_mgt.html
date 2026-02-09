@@ -142,6 +142,21 @@
             <el-main style="padding: 20px; overflow: hidden; background: #f0f2f5;">
                 <div class="main-flex-wrapper">
                     
+                    <div v-if="appealList.length" class="search-card" style="margin-bottom: 15px; border-color: #E6A23C;">
+                        <div style="font-weight: 600; color: #E6A23C; margin-bottom: 12px;">待处理申诉（演示）</div>
+                        <el-table :data="appealList" border size="small" style="width: 100%;" :header-cell-style="{background:'#fdf6ec', color:'#606266'}">
+                            <el-table-column prop="taskNo" label="任务编号" width="160" />
+                            <el-table-column prop="productName" label="产品" min-width="140" />
+                            <el-table-column prop="reason" label="申诉原因" min-width="200" show-overflow-tooltip />
+                            <el-table-column label="操作" width="180" align="center" fixed="right">
+                                <template #default="scope">
+                                    <el-button link type="danger" size="small" @click="rejectAppeal(scope.row)">驳回申诉</el-button>
+                                    <el-button link type="primary" size="small" @click="acceptAppeal(scope.row)">接受申诉</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+
                     <div class="search-card">
                         <el-form :inline="true" :model="query" style="margin-bottom: -18px;">
                             <el-form-item label="任务/订单">
@@ -238,6 +253,7 @@
                                     </template>
                                 </el-table-column>
                             </el-table>
+                            <el-empty v-if="!reportList.length" description="暂无报告" class="list-empty-wrap"></el-empty>
                         </div>
 
                         <div class="pagination-footer">
@@ -420,6 +436,9 @@
     runOperatorApp({
         setup() {
             const query = Vue.reactive({ taskNo: '', supplier: '', verifier: '', status: '', dateRange: [] });
+            const appealList = Vue.ref([
+                { taskNo: 'TSK-2026-888', productName: '超高功率石墨电极', reason: '核算边界与合同约定不一致，申请重新核查。' }
+            ]);
             const drawerVisible = Vue.ref(false);
             const previewVisible = Vue.ref(false);
             const currentRecord = Vue.ref(null);
@@ -440,7 +459,7 @@
                         cert: { name: '核查声明.jpg', ver: 'V1', expire: '2027-02-06' }
                     },
                     history: [
-                        { title: '归档上链成功', desc: '操作人: Admin', timestamp: '2026-02-06 14:05', type: 'success' },
+                        { title: '归档上链成功', desc: '操作人: 管理员', timestamp: '2026-02-06 14:05', type: 'success' },
                         { title: '证书已同步', desc: '来源: SGS 业务接口', timestamp: '2026-02-06 14:00', type: 'primary' },
                         { title: '核查通过', desc: '核查报告已生成', timestamp: '2026-02-06 13:55', type: 'primary' },
                         { title: '核算报告定稿', desc: '版本 V2', timestamp: '2026-02-05 16:30', type: 'info' }
@@ -539,11 +558,20 @@
             const openPage = (path) => window.location.href = path;
             const goBack = () => window.history.back();
 
+            const rejectAppeal = (item) => {
+                appealList.value = appealList.value.filter(x => x.taskNo !== item.taskNo);
+                ElementPlus.ElMessage.warning('已驳回申诉，维持原报告');
+            };
+            const acceptAppeal = (item) => {
+                appealList.value = appealList.value.filter(x => x.taskNo !== item.taskNo);
+                ElementPlus.ElMessage.success('已接受申诉，待重新核查');
+            };
+
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
-                query, reportList, drawerVisible, previewVisible, currentRecord, previewDoc, previewType, archiving,
+                query, reportList, appealList, drawerVisible, previewVisible, currentRecord, previewDoc, previewType, archiving,
                 handleSearch, handleReset, viewDetail, openPreview, downloadPackage, getDocStatusText, isAllReady,
-                manualSync, executeArchive, revokeArchive, goToTask, goBack
+                manualSync, executeArchive, revokeArchive, goToTask, goBack, rejectAppeal, acceptAppeal
             };
         }
     });

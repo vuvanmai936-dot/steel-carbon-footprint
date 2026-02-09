@@ -9,6 +9,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
     <script src="../js/layout.js"></script>
     
     <style>
@@ -174,7 +176,7 @@
                                         </div>
                                     </el-form-item>
                                     <el-form-item label="核算边界">
-                                        <el-input type="textarea" :rows="3" v-model="config.boundary" placeholder="Cradle-to-Gate"></el-input>
+                                        <el-input type="textarea" :rows="3" v-model="config.boundary" placeholder="摇篮到大门"></el-input>
                                     </el-form-item>
                                 </el-form>
                             </div>
@@ -344,7 +346,7 @@
             const calcPercentage = Vue.ref(0);
 
             // 数据对象
-            const taskInfo = Vue.reactive({ taskId: 'TSK-2026-888', productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '南通碳素有限公司' });
+            const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-888'));
             const config = Vue.reactive({ standard: 'ISO 14067', templateId: '', boundary: 'Cradle-to-Gate' });
             const selectedTemplate = Vue.ref(null);
             
@@ -422,7 +424,7 @@
             const openRejectDialog = () => { rejectVisible.value = true; };
             const goToTemplates = () => { window.location.href = 'templates.html'; };
             const previewFile = (f) => ElementPlus.ElMessage.info(`预览: ${f}`);
-            const goBack = () => { window.location.href = 'self_operated_task_list.html'; };
+            const goBack = () => { window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html'; };
             const viewOrder = () => { window.location.href = 'order.html'; };
             const openPage = (path) => window.location.href = path;
 

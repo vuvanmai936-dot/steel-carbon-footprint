@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>我的报告 - 供应商工作台</title>
+    <title>待办任务 - 供应商工作台</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/operator.css">
@@ -41,7 +41,7 @@
             <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
                 <el-breadcrumb separator="/">
                     <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
-                    <el-breadcrumb-item>我的报告</el-breadcrumb-item>
+                    <el-breadcrumb-item>待办任务</el-breadcrumb-item>
                 </el-breadcrumb>
                 <div style="display: flex; align-items: center;">
                     <el-avatar :size="32" style="background: #059669;">供</el-avatar>
@@ -53,77 +53,56 @@
             <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
                 <div class="main-flex-wrapper">
                     <div class="card">
-                        <p style="color: #606266; font-size: 13px; margin: 0 0 16px 0;">已出具的报告与证书；若对报告结论有异议，可发起申诉。</p>
-                        <el-table :data="reportList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
+                        <p style="color: #606266; font-size: 13px; margin: 0 0 16px 0;">请完成以下任务的数据填报与凭证上传；若为待澄清/待整改，请按说明补充数据或回复澄清。</p>
+                        <el-table :data="taskList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
                             <el-table-column prop="taskId" label="任务编号" width="160" />
-                            <el-table-column prop="productName" label="产品" min-width="140" />
-                            <el-table-column prop="reportStatus" label="报告状态" width="120">
+                            <el-table-column prop="orderNo" label="关联订单" width="160" />
+                            <el-table-column prop="productName" label="产品名称" min-width="140" />
+                            <el-table-column prop="specs" label="规格" width="100" />
+                            <el-table-column label="类型/状态" width="130">
                                 <template #default="scope">
-                                    <el-tag size="small" :type="scope.row.reportStatus === '已发证' ? 'success' : 'primary'" effect="plain">{{ scope.row.reportStatus }}</el-tag>
+                                    <el-tag size="small" :type="getStatusTagType(scope.row.taskType)" effect="plain">{{ getStatusLabel(scope.row.taskType) }}</el-tag>
                                 </template>
                             </el-table-column>
-                            <el-table-column prop="reportDate" label="报告日期" width="120" />
-                            <el-table-column label="操作" width="200" align="center" fixed="right">
+                            <el-table-column label="最新通知" min-width="180" show-overflow-tooltip>
                                 <template #default="scope">
-                                    <el-button link type="primary" size="small" @click="viewReport(scope.row)">查看</el-button>
-                                    <el-divider direction="vertical"></el-divider>
-                                    <el-button link type="warning" size="small" @click="openAppeal(scope.row)">对报告有异议</el-button>
+                                    <span style="font-size: 12px; color: #606266;">{{ scope.row.rejectReason || scope.row.clarificationText || '—' }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作" width="100" align="center" fixed="right">
+                                <template #default="scope">
+                                    <el-button link type="primary" size="small" @click="goHandle(scope.row)">{{ scope.row.taskType === 'clarification' ? '处理' : '填报' }}</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
-                        <el-empty v-if="!reportList.length" description="暂无报告" style="padding: 40px 0;"></el-empty>
+                        <el-empty v-if="!taskList.length" description="暂无待办任务" style="padding: 40px 0;" />
                     </div>
                 </div>
             </el-main>
         </el-container>
     </el-container>
-
-    <el-dialog v-model="appealDialogVisible" title="报告异议/申诉" width="520px" destroy-on-close @close="appealForm.reason = ''">
-        <el-form label-position="top">
-            <el-form-item label="任务/报告">
-                <div style="background: #f5f7fa; padding: 8px 12px; border-radius: 4px; font-size: 13px;">{{ currentReport?.taskId }} - {{ currentReport?.productName }}</div>
-            </el-form-item>
-            <el-form-item label="申诉原因" required>
-                <el-input type="textarea" v-model="appealForm.reason" :rows="4" placeholder="请填写对报告结论的异议原因..."></el-input>
-            </el-form-item>
-            <el-form-item label="附件（可选）">
-                <el-upload action="#" :auto-upload="false" :show-file-list="true" :limit="2">
-                    <el-button size="small" type="primary" plain>上传</el-button>
-                </el-upload>
-            </el-form-item>
-        </el-form>
-        <template #footer>
-            <el-button @click="appealDialogVisible = false">取消</el-button>
-            <el-button type="primary" :disabled="!appealForm.reason.trim()" @click="submitAppeal">提交申诉</el-button>
-        </template>
-    </el-dialog>
 </div>
 <script>
     const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = SupplierLayout.setup();
     runSupplierApp({
         setup() {
-            const reportList = Vue.ref([
-                { taskId: 'TSK-2025-101', productName: '热轧卷板', reportStatus: '已发证', reportDate: '2025-04-10' },
-                { taskId: 'TSK-2026-888', productName: '超高功率石墨电极', reportStatus: '已出报告', reportDate: '2026-02-06' }
+            const taskList = Vue.ref([
+                { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', productName: '普通功率石墨电极', specs: 'Φ400mm', taskType: 'rejected_collect', rejectReason: 'M焙烧工序天然气凭证不清晰，请上传清晰扫描件并核对数值与月度总量。' },
+                { taskId: 'TSK-2026-890', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极接头', specs: 'T4L', taskType: 'pending_fill' },
+                { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极', specs: 'Φ600mm', taskType: 'clarification', clarificationText: 'SGS 核查组：请补充「电力采购结算单」与核算报告中的电量数据对应说明。' }
             ]);
-            const appealDialogVisible = Vue.ref(false);
-            const currentReport = Vue.ref(null);
-            const appealForm = Vue.reactive({ reason: '' });
-
-            const viewReport = (row) => { ElementPlus.ElMessage.info('查看报告：' + row.taskId + '（演示）'); };
-            const openAppeal = (row) => {
-                currentReport.value = row;
-                appealForm.reason = '';
-                appealDialogVisible.value = true;
-            };
-            const submitAppeal = () => {
-                if (!appealForm.reason.trim()) return;
-                ElementPlus.ElMessage.success('申诉已提交，等待处理');
-                appealDialogVisible.value = false;
+            const getStatusTagType = (t) => ({ pending_fill: 'warning', rejected_collect: 'danger', clarification: 'warning' }[t] || 'info');
+            const getStatusLabel = (t) => ({ pending_fill: '待填报', rejected_collect: '采集已驳回', clarification: '待澄清/待整改' }[t] || t);
+            const goHandle = (row) => {
+                if (row.taskType === 'clarification') {
+                    window.location.href = 'task_clarify.html?taskId=' + encodeURIComponent(row.taskId);
+                } else {
+                    window.location.href = 'task_fill.html?taskId=' + encodeURIComponent(row.taskId) + (row.rejectReason ? '&rejected=1' : '');
+                }
             };
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
-                reportList, viewReport, openAppeal, appealDialogVisible, currentReport, appealForm, submitAppeal
+                taskList, getStatusTagType, getStatusLabel, goHandle
             };
         }
     });

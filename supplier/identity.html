@@ -1,1 +1,76 @@
-<h1>Identity</h1>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>身份认证 - 供应商工作台</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/supplier.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/supplierLayout.js"></script>
+    <style>
+        .placeholder-in-main { display: flex; align-items: center; justify-content: center; min-height: 360px; padding: 40px; }
+        .placeholder-card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 40px; max-width: 480px; text-align: center; }
+        .placeholder-card h1 { margin: 0 0 16px 0; font-size: 22px; color: #303133; }
+        .placeholder-card p { color: #606266; font-size: 14px; margin: 0 0 24px 0; line-height: 1.6; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">供应商工作台</div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#059669" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-menu-item :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item>身份认证</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #059669;">供</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                    <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
+                <div class="placeholder-in-main">
+                    <div class="placeholder-card">
+                        <h1>身份认证</h1>
+                        <p>演示占位，功能开发中。企业/联系人信息维护后续开放。</p>
+                        <el-button type="primary" @click="goPortal">返回门户</el-button>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+<script>
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = SupplierLayout.setup();
+    runSupplierApp({
+        setup() {
+            return { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal };
+        }
+    });
+</script>
+</body>
+</html>

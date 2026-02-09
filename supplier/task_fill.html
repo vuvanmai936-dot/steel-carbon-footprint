@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>任务填报 - 供应商工作台</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/supplier.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
+    <script src="../js/supplierLayout.js"></script>
+    <style>
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .card { background: #fff; border-radius: 4px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; max-width: 900px; }
+        .section-title { font-size: 14px; font-weight: 600; color: #303133; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #ebeef5; }
+        .readonly-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .readonly-table th, .readonly-table td { border: 1px solid #ebeef5; padding: 8px 12px; text-align: left; }
+        .readonly-table th { background: #f5f7fa; color: #606266; }
+        .readonly-table input { width: 100%; border: 1px solid #dcdfe6; padding: 6px 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">供应商工作台</div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#059669" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-menu-item :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item><a href="task_list.html" style="color: inherit; text-decoration: none;">待办任务</a></el-breadcrumb-item>
+                    <el-breadcrumb-item>任务填报</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #059669;">供</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                    <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    <div class="card" v-if="rejectReason" style="border-color: #F56C6C; background: #fef0f0;">
+                        <div class="section-title" style="color: #F56C6C;">驳回原因（请按以下说明修改后重新提交）</div>
+                        <p style="margin: 0; color: #606266; line-height: 1.6;">{{ rejectReason }}</p>
+                    </div>
+                    <div class="card">
+                        <div class="section-title">产品与订单</div>
+                        <p><strong>任务编号：</strong>{{ taskInfo.taskId }} &nbsp; <strong>关联订单：</strong>{{ taskInfo.orderNo }}</p>
+                        <p><strong>产品：</strong>{{ taskInfo.productName }} &nbsp; <strong>规格：</strong>{{ taskInfo.specs }}</p>
+                    </div>
+                    <div class="card">
+                        <div class="section-title">工序数据（请填写数值并上传凭证）</div>
+                        <table class="readonly-table">
+                            <thead>
+                                <tr><th>工序</th><th>数据项</th><th>单位</th><th>填报值</th><th>凭证</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(row, idx) in dataRows" :key="idx">
+                                    <td>{{ row.sheet }}</td>
+                                    <td>{{ row.item }}</td>
+                                    <td>{{ row.unit }}</td>
+                                    <td><input v-model="row.value" placeholder="请输入" /></td>
+                                    <td><el-upload action="#" :auto-upload="false" :show-file-list="true"><el-button size="small" type="primary" plain>上传</el-button></el-upload></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card">
+                        <el-button type="primary" @click="submit">提交填报</el-button>
+                        <el-button @click="() => window.location.href='task_list.html'">返回列表</el-button>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+<script>
+    (function () {
+        var taskInfo = typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl('TSK-2026-889') : { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '' };
+        var params = new URLSearchParams(window.location.search);
+        var rejected = params.get('rejected') === '1';
+        var rejectReasonMap = { 'TSK-2026-889': 'M焙烧工序天然气凭证不清晰，请上传清晰扫描件并核对数值与月度总量。' };
+        var rejectReason = rejected && rejectReasonMap[taskInfo.taskId] ? rejectReasonMap[taskInfo.taskId] : '';
+
+        var layout = SupplierLayout.setup();
+        runSupplierApp({
+            setup() {
+                const taskInfoRef = Vue.ref(taskInfo);
+                const rejectReasonRef = Vue.ref(rejectReason);
+                const dataRows = Vue.ref([
+                    { sheet: 'M配料', item: '电力消耗', unit: 'kWh', value: '' },
+                    { sheet: 'M配料', item: '针状焦投入', unit: '吨', value: '' },
+                    { sheet: 'M焙烧', item: '天然气', unit: 'm³', value: '' }
+                ]);
+                const submit = () => {
+                    ElementPlus.ElMessage.success('提交成功，请等待运营审核');
+                    setTimeout(() => { window.location.href = 'task_list.html'; }, 1000);
+                };
+                return {
+                    ...layout,
+                    taskInfo: taskInfoRef,
+                    rejectReason: rejectReasonRef,
+                    dataRows,
+                    submit
+                };
+            }
+        });
+    })();
+</script>
+</body>
+</html>

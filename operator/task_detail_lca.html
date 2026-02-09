@@ -11,6 +11,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
     <script src="../js/layout.js"></script>
     
     <style>
@@ -116,7 +118,7 @@
                 </div>
                 <div style="display: flex; align-items: center;">
                     <el-tooltip content="SLA 剩余时间" placement="bottom"><div class="sla-capsule"><el-icon><Timer /></el-icon> 18:05:22</div></el-tooltip>
-                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">Op</el-avatar>
+                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">运营</el-avatar>
                     <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
@@ -125,7 +127,7 @@
                 
                 <div class="task-info-dashboard">
                     <div class="dash-block" style="flex: 1.5;">
-                        <div class="dash-title">Product & Task</div>
+                        <div class="dash-title">产品与任务</div>
                         <div class="dash-content">
                             <div class="prod-main">
                                 <span class="prod-name">{{ taskInfo.productName }}</span>
@@ -140,7 +142,7 @@
                     </div>
 
                     <div class="dash-block" style="flex: 1.2;">
-                        <div class="dash-title">Target Supplier</div>
+                        <div class="dash-title">目标供应商</div>
                         <div class="dash-content">
                             <div style="display:flex; align-items:center;">
                                 <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
@@ -151,7 +153,7 @@
                     </div>
 
                     <div class="dash-block" style="flex: 1;">
-                        <div class="dash-title">Status</div>
+                        <div class="dash-title">状态</div>
                         <div class="dash-content">
                             <div style="display:flex; align-items:center; gap:8px">
                                 <el-tag v-if="lcaState === 'uploaded'" type="primary" effect="dark">草稿待提交</el-tag>
@@ -167,7 +169,7 @@
                     </div>
 
                     <div class="dash-block">
-                        <div class="dash-title">Result</div>
+                        <div class="dash-title">结果</div>
                         <div class="data-stats">
                             <div class="stat-item">
                                 <div class="stat-num" style="color:#67C23A">{{ lcaResult }}</div>
@@ -197,7 +199,7 @@
                             <div class="pdf-page">
                                 <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
                                     <h2>产品碳足迹 (PCF) 核算报告</h2>
-                                    <div style="color: #666; margin-top: 10px;">Product Carbon Footprint Report</div>
+                                    <div style="color: #666; margin-top: 10px;">产品碳足迹报告</div>
                                 </div>
                                 <div style="font-size: 14px; line-height: 1.8;">
                                     <p><strong>报告版本：</strong> v{{ reportVersion.toFixed(1) }}</p>
@@ -378,7 +380,7 @@
     runOperatorApp({
         setup() {
             // State
-            const taskInfo = Vue.reactive({ taskId: 'TSK-2026-889', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '南通碳素有限公司', orderNo: 'ORD-20260203' });
+            const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-889'));
             const lcaState = Vue.ref('waiting_upload'); 
             const reportVersion = Vue.ref(0);
             const lcaResult = Vue.ref(null);
@@ -410,7 +412,7 @@
                 if(role === 'certifier') evtType = 'rej';
                 if(role === 'supplier') evtType = 'sub';
                 
-                let userLabel = 'System';
+                let userLabel = '系统';
                 if(role === 'me') userLabel = '我';
                 if(role === 'certifier') userLabel = 'SGS';
                 if(role === 'supplier') userLabel = '供应商';
@@ -486,6 +488,7 @@
                 if(currentLog.value) currentLog.value.handled = true;
                 
                 pushLog('me', `转派给供应商: ${forwardNote.value}`, 'supplier');
+                pushLog('sys', '已通知供应商，供应商端将显示为「待澄清/待整改」', 'supplier');
                 lcaState.value = 'waiting_supplier';
             };
 
@@ -509,13 +512,14 @@
                 return map[lcaState.value];
             };
 
-            const goBack = () => window.location.href = 'self_operated_task_list.html';
+            const goBack = () => { window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html'; };
             const openPage = (p) => window.location.href = p;
             const viewOrder = () => window.location.href='order.html';
+            const q = () => { const tid = taskInfo.taskId || getTaskIdFromUrl(); const from = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? '&from=order' : ''; return '?taskId=' + tid + from; };
             const navigateTo = (p) => { 
-                if(p==='config') window.location.href='task_detail_config.html';
-                if(p==='collect') window.location.href='task_detail_collect.html';
-                if(p==='verify' && lcaState.value==='verified') window.location.href='task_detail_verify.html';
+                if(p==='config') window.location.href='task_detail_config.html' + q();
+                if(p==='collect') window.location.href='task_detail_collect.html' + q();
+                if(p==='verify' && lcaState.value==='verified') window.location.href='task_detail_verify.html' + q();
             };
 
             return {

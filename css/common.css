@@ -66,6 +66,15 @@ html, body, #app {
     display: flex; justify-content: space-between; align-items: center; 
 }
 
+/* 4. 列表空状态统一（与 el-empty 搭配） */
+.list-empty-wrap { padding: 40px 0; }
+
+/* 5. 占位页通用布局（供应商/认证端占位页可复用） */
+.placeholder-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f0f2f5; padding: 40px; }
+.placeholder-card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 40px; max-width: 480px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.placeholder-card h1 { margin: 0 0 16px 0; font-size: 22px; color: #303133; }
+.placeholder-card p { color: #606266; font-size: 14px; margin: 0 0 24px 0; line-height: 1.6; }
+
 /* Element Plus 样式微调 */
 .el-drawer__header { margin-bottom: 0 !important; padding-bottom: 15px; border-bottom: 1px solid #f0f0f0; }
 .el-menu { border-right: none !important; }

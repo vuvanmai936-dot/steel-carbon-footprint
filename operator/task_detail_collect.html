@@ -11,6 +11,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
     <script src="../js/layout.js"></script>
     
     <style>
@@ -106,7 +108,7 @@
                     <el-tooltip content="SLA 剩余时间" placement="bottom">
                         <div class="sla-capsule"><el-icon><Timer /></el-icon> 21:10:05</div>
                     </el-tooltip>
-                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">Op</el-avatar>
+                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">运营</el-avatar>
                     <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
@@ -116,7 +118,7 @@
                 <div class="task-info-dashboard">
                     
                     <div class="dash-block" style="flex: 1.5;">
-                        <div class="dash-title">Product & Task</div>
+                        <div class="dash-title">产品与任务</div>
                         <div class="dash-content">
                             <div class="prod-main">
                                 <span class="prod-name">{{ taskInfo.productName }}</span>
@@ -133,7 +135,7 @@
                     </div>
 
                     <div class="dash-block" style="flex: 1.2;">
-                        <div class="dash-title">Source Supplier</div>
+                        <div class="dash-title">来源供应商</div>
                         <div class="dash-content">
                             <div style="display:flex; align-items:center;">
                                 <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
@@ -147,7 +149,7 @@
                     </div>
 
                     <div class="dash-block" style="flex: 1;">
-                        <div class="dash-title">Collection Status</div>
+                        <div class="dash-title">采集状态</div>
                         <div class="dash-content">
                             <div style="display:flex; align-items:center; gap:8px">
                                 <el-tag v-if="collectionState === 'waiting_submit'" type="info">待提交</el-tag>
@@ -162,15 +164,15 @@
                     </div>
 
                     <div class="dash-block">
-                        <div class="dash-title">Data / Proof</div>
+                        <div class="dash-title">数据/凭证</div>
                         <div class="data-stats">
                             <div class="stat-item">
                                 <div class="stat-num" style="color:#409EFF">{{ totalItems }}</div>
-                                <div class="stat-label">Items</div>
+                                <div class="stat-label">数据项</div>
                             </div>
                             <div class="stat-item">
                                 <div class="stat-num" style="color:#67C23A">{{ uploadedFiles.length }}</div>
-                                <div class="stat-label">Files</div>
+                                <div class="stat-label">文件</div>
                             </div>
                         </div>
                     </div>
@@ -391,13 +393,7 @@
     runOperatorApp({
         setup() {
             // State
-            const taskInfo = Vue.reactive({ 
-                taskId: 'TSK-2026-889', 
-                productName: '普通功率石墨电极', 
-                specs: 'Φ400mm', 
-                supplier: '南通碳素有限公司',
-                orderNo: 'ORD-20260203'
-            });
+            const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-889'));
             const collectionState = Vue.ref('waiting_submit'); 
             const dataVersion = Vue.ref(0);
             const activeSheet = Vue.ref('M配料');
@@ -407,7 +403,7 @@
             // Data Models
             const supplierData = Vue.reactive({});
             const uploadedFiles = Vue.ref([]);
-            const events = Vue.ref([{ type: 'sys', user: 'System', time: '09:30', content: '配置下发' }]);
+            const events = Vue.ref([{ type: 'sys', user: '系统', time: '09:30', content: '配置下发' }]);
 
             // Issue Dialog State
             const issueDialogVisible = Vue.ref(false);
@@ -442,13 +438,14 @@
                 issueDialogVisible.value = false;
                 collectionState.value = 'waiting_update';
                 events.value.push({ type: 'rej', user: '我', time: 'Now', content: `驳回整改: ${issueForm.desc}` });
+                events.value.push({ type: 'sys', user: '系统', time: 'Now', content: '已通知供应商' });
                 isReverseFlow.value = false; // Reset if needed
             };
 
             const passAudit = () => {
                 ElementPlus.ElMessageBox.confirm('确认数据无误？').then(() => {
                     collectionState.value = 'passed';
-                    events.value.push({ type: 'sys', user: 'System', time: 'Now', content: '审核通过' });
+                    events.value.push({ type: 'sys', user: '系统', time: 'Now', content: '审核通过' });
                 });
             };
 
@@ -462,15 +459,16 @@
             };
 
             const recalculateLCA = () => {
-                window.location.href = 'task_detail_lca.html?recalc=true';
+                window.location.href = 'task_detail_lca.html?taskId=' + (taskInfo.taskId || getTaskIdFromUrl()) + '&recalc=true' + ((typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? '&from=order' : '');
             };
 
             const downloadPackage = () => ElementPlus.ElMessage.success('打包下载任务已开始');
-            const goBack = () => window.location.href = 'self_operated_task_list.html';
+            const goBack = () => { window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html'; };
             const openPage = (path) => window.location.href = path;
+            const q = () => { const tid = taskInfo.taskId || getTaskIdFromUrl(); const from = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? '&from=order' : ''; return '?taskId=' + tid + from; };
             const navigateTo = (p) => { 
-                if(p==='config') window.location.href='task_detail_config.html';
-                if(p==='lca' && collectionState.value==='passed') window.location.href='task_detail_lca.html';
+                if(p==='config') window.location.href='task_detail_config.html' + q();
+                if(p==='lca' && collectionState.value==='passed') window.location.href='task_detail_lca.html' + q();
             };
             const getStatusDesc = () => {
                 if(collectionState.value==='waiting_submit') return '等待供应商提交';

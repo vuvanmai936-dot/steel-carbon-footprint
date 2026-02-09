@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>待澄清/待整改 - 供应商工作台</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/supplier.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
+    <script src="../js/supplierLayout.js"></script>
+    <style>
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .card { background: #fff; border-radius: 4px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; max-width: 900px; }
+        .section-title { font-size: 14px; font-weight: 600; color: #303133; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #ebeef5; }
+        .clarify-block { background: #fdf6ec; border: 1px solid #e6a23c; border-radius: 4px; padding: 16px; color: #606266; line-height: 1.6; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">供应商工作台</div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#059669" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-menu-item :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item><a href="task_list.html" style="color: inherit; text-decoration: none;">待办任务</a></el-breadcrumb-item>
+                    <el-breadcrumb-item>待澄清处理</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #059669;">供</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                    <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    <div class="card">
+                        <div class="section-title">任务与产品</div>
+                        <p><strong>任务编号：</strong>{{ taskInfo.taskId }} &nbsp; <strong>关联订单：</strong>{{ taskInfo.orderNo }}</p>
+                        <p><strong>产品：</strong>{{ taskInfo.productName }} &nbsp; <strong>规格：</strong>{{ taskInfo.specs }}</p>
+                    </div>
+                    <div class="card" style="border-color: #E6A23C;">
+                        <div class="section-title" style="color: #E6A23C;">澄清/驳回说明（请按说明补充并提交）</div>
+                        <div class="clarify-block">{{ clarificationText }}</div>
+                    </div>
+                    <div class="card">
+                        <div class="section-title">回复与佐证</div>
+                        <el-form label-position="top">
+                            <el-form-item label="回复说明">
+                                <el-input type="textarea" v-model="replyText" :rows="4" placeholder="请填写对澄清问题的说明或整改措施..."></el-input>
+                            </el-form-item>
+                            <el-form-item label="上传新版报告或佐证材料">
+                                <el-upload action="#" :auto-upload="false" :show-file-list="true" :limit="3">
+                                    <el-button size="small" type="primary" plain>选择文件</el-button>
+                                </el-upload>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+                    <div class="card">
+                        <el-button type="primary" @click="submit">提交回复</el-button>
+                        <el-button @click="() => window.location.href='task_list.html'">返回列表</el-button>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+<script>
+    (function () {
+        var taskInfo = typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl('TSK-2026-888') : { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '' };
+        var clarificationMap = {
+            'TSK-2026-888': 'SGS 核查组：请补充「电力采购结算单」与核算报告中的电量数据对应说明。',
+            'TSK-2026-889': '运营转派：请重新核对 M焙烧 工序天然气数值，并上传燃气发票原件。',
+            'TSK-2026-890': '认证机构要求：请提供针状焦投入与产出对应关系的说明文档。'
+        };
+        var clarificationText = clarificationMap[taskInfo.taskId] || '请根据运营/认证机构要求补充数据或说明并提交。';
+
+        var layout = SupplierLayout.setup();
+        runSupplierApp({
+            setup() {
+                const taskInfoRef = Vue.ref(taskInfo);
+                const clarificationTextRef = Vue.ref(clarificationText);
+                const replyText = Vue.ref('');
+                const submit = () => {
+                    ElementPlus.ElMessage.success('已提交，等待运营/认证机构确认');
+                    setTimeout(() => { window.location.href = 'task_list.html'; }, 1200);
+                };
+                return {
+                    ...layout,
+                    taskInfo: taskInfoRef,
+                    clarificationText: clarificationTextRef,
+                    replyText,
+                    submit
+                };
+            }
+        });
+    })();
+</script>
+</body>
+</html>

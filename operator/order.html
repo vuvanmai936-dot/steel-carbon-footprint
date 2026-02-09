@@ -10,6 +10,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="https://unpkg.com/dayjs/dayjs.min.js"></script>
     <script src="../js/layout.js"></script>
     
@@ -102,7 +103,7 @@
                     <el-breadcrumb-item>订单管理</el-breadcrumb-item>
                 </el-breadcrumb>
                 <div style="display: flex; align-items: center;">
-                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <el-avatar :size="32" style="background: #409EFF;">管理员</el-avatar>
                     <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
@@ -265,6 +266,7 @@
                                     </template>
                                 </el-table-column>
                             </el-table>
+                            <el-empty v-if="!processedOrderList.length" description="暂无订单" class="list-empty-wrap"></el-empty>
                         </div>
 
                         <div class="pagination-footer">
@@ -318,7 +320,7 @@
                                     <el-table-column prop="name" label="产品名称"></el-table-column>
                                     <el-table-column prop="specs" label="规格型号"></el-table-column>
                                     <el-table-column prop="quantity" label="核算数量" width="100"></el-table-column>
-                                    <el-table-column prop="skuId" label="SKU ID" width="140">
+                                    <el-table-column prop="skuId" label="SKU 编号" width="140">
                                         <template #default="scope"><span style="font-family: monospace; color: #666;">{{ scope.row.skuId }}</span></template>
                                     </el-table-column>
                                 </el-table>
@@ -573,8 +575,8 @@
                 else if (task.status === 'LCA计算') targetPage = 'task_detail_lca.html';
                 else if (task.status === '核查认证') targetPage = 'task_detail_verify.html';
                 else if (task.status === '完成') targetPage = 'task_detail.html';
-                
-                window.location.href = targetPage + `?taskId=${task.taskId}`;
+                const q = `?taskId=${task.taskId}&from=order`;
+                window.location.href = targetPage + q;
             };
 
             const goToTaskList = () => window.location.href = 'self_operated_task_list.html';

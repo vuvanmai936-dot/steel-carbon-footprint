@@ -11,6 +11,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
     <script src="../js/layout.js"></script>
     
     <style>
@@ -57,7 +59,7 @@
         /* 归档水印 */
         .archived-watermark {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999;
-            background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='200px' width='200px'><text transform='translate(20, 100) rotate(-30)' fill='rgba(200,200,200,0.2)' font-size='30'>TASK COMPLETED</text></svg>");
+            background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='200px' width='200px'><text transform='translate(20, 100) rotate(-30)' fill='rgba(200,200,200,0.2)' font-size='30'>%E4%BB%BB%E5%8A%A1%E5%AE%8C%E6%88%90</text></svg>");
         }
         
         .panel-footer { padding: 15px; border-top: 1px solid #e4e7ed; background: #fff; display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
@@ -121,7 +123,7 @@
                 </div>
                 <div style="display: flex; align-items: center;">
                     <el-tag type="success" effect="dark" round style="margin-right: 10px;">已上链</el-tag>
-                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">Op</el-avatar>
+                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">运营</el-avatar>
                     <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
@@ -130,7 +132,7 @@
                 
                 <div class="task-info-dashboard">
                     <div class="dash-block" style="flex: 1.5;">
-                        <div class="dash-title">Product & Task</div>
+                        <div class="dash-title">产品与任务</div>
                         <div class="dash-content">
                             <div class="prod-main">
                                 <span class="prod-name">{{ taskInfo.productName }}</span>
@@ -145,7 +147,7 @@
                     </div>
 
                     <div class="dash-block" style="flex: 1.2;">
-                        <div class="dash-title">Source Supplier</div>
+                        <div class="dash-title">来源供应商</div>
                         <div class="dash-content">
                             <div style="display:flex; align-items:center;">
                                 <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
@@ -156,19 +158,19 @@
                     </div>
 
                     <div class="dash-block" style="flex: 1;">
-                        <div class="dash-title">Issuance Status</div>
+                        <div class="dash-title">下发状态</div>
                         <div class="dash-content">
                             <div style="display:flex; align-items:center; gap:8px">
                                 <el-tag v-if="certifyState === 'pending'" type="primary">待下发</el-tag>
                                 <el-tag v-else-if="certifyState === 'waiting'" type="warning" effect="dark">等待签收</el-tag>
-                                <el-tag v-else type="success" effect="dark">任务完成 (Completed)</el-tag>
+                                <el-tag v-else type="success" effect="dark">任务完成</el-tag>
                             </div>
                             <div style="font-size:12px; color:#999; margin-top:4px;">{{ getStatusDesc() }}</div>
                         </div>
                     </div>
 
                     <div class="dash-block">
-                        <div class="dash-title">Verified Result</div>
+                        <div class="dash-title">核查结果</div>
                         <div class="data-stats">
                             <div class="stat-item">
                                 <div class="stat-num" style="color:#67C23A">2.45</div>
@@ -183,9 +185,9 @@
                     <el-col :span="16" style="height: 100%; border-right: 1px solid #dcdfe6; display: flex; flex-direction: column;">
                         <div style="background: #fff; padding: 0 20px; border-bottom: 1px solid #dcdfe6;">
                             <el-tabs v-model="activeTab">
-                                <el-tab-pane label="核算报告 (Calculation)" name="calc"></el-tab-pane>
-                                <el-tab-pane label="核查报告 (Verification)" name="verify"></el-tab-pane>
-                                <el-tab-pane label="核查声明 (Declaration)" name="decl"></el-tab-pane>
+                                <el-tab-pane label="核算报告" name="calc"></el-tab-pane>
+                                <el-tab-pane label="核查报告" name="verify"></el-tab-pane>
+                                <el-tab-pane label="核查声明" name="decl"></el-tab-pane>
                             </el-tabs>
                         </div>
                         
@@ -193,7 +195,7 @@
                             <div v-if="activeTab === 'calc'" class="pdf-sheet">
                                 <div style="text-align:center; margin-bottom:40px;"><h2>产品碳足迹核算报告</h2></div>
                                 <p><strong>报告编号：</strong> RPT-2026-001</p>
-                                <p><strong>编制方：</strong> 碳足迹管理平台 (System)</p>
+                                <p><strong>编制方：</strong> 碳足迹管理平台（系统）</p>
                                 <p><strong>核算结果：</strong> 2.45 kgCO₂e/kg</p>
                                 <div style="margin-top:20px; padding:15px; border:1px solid #eee;">
                                     (此处展示详细的 LCA 建模数据与计算过程...)
@@ -203,14 +205,14 @@
                             <div v-if="activeTab === 'verify'" class="pdf-sheet">
                                 <div style="text-align:center; margin-bottom:40px;"><h2>SGS 核查报告</h2></div>
                                 <p><strong>核查机构：</strong> SGS 通标标准技术服务有限公司</p>
-                                <p><strong>核查结论：</strong> <span style="color:#67C23A; font-weight:bold;">符合 (Compliant)</span></p>
+                                <p><strong>核查结论：</strong> <span style="color:#67C23A; font-weight:bold;">符合</span></p>
                                 <div class="stamp-seal"><div class="stamp-inner">SGS<br>VERIFIED</div></div>
                             </div>
 
                             <div v-if="activeTab === 'decl'" class="pdf-sheet" style="background:#fdfcf8;">
                                 <div style="text-align:center; margin-bottom:30px; border-bottom: 3px double #333; padding-bottom: 20px;">
                                     <h1>核 查 声 明</h1>
-                                    <div style="font-family:serif; font-style:italic;">Verification Statement</div>
+                                    <div style="font-family:serif; font-style:italic;">核查声明</div>
                                 </div>
                                 <div style="line-height: 2; font-family: serif; font-size: 16px;">
                                     <p>兹证明：<strong>{{ taskInfo.supplier }}</strong> 生产的 <strong>{{ taskInfo.productName }}</strong></p>
@@ -232,17 +234,17 @@
 
                         <div style="flex: 1; overflow-y: auto; padding: 15px;">
                             
-                            <div style="font-size: 12px; color: #909399; margin-bottom: 10px;">BLOCKCHAIN EVIDENCE</div>
+                            <div style="font-size: 12px; color: #909399; margin-bottom: 10px;">区块链存证</div>
                             <div class="blockchain-card">
                                 <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                                     <span style="font-weight:bold; color:#303133;">Hyperledger Fabric</span>
-                                    <el-tag size="small" type="success" effect="dark">Verified</el-tag>
+                                    <el-tag size="small" type="success" effect="dark">已核验</el-tag>
                                 </div>
                                 <div style="font-size: 12px; color: #666;">TxHash:</div>
                                 <div class="hash-text">0x71c9...3f2a</div>
                             </div>
 
-                            <div style="font-size: 12px; color: #909399; margin-bottom: 10px; margin-top: 20px;">SELECT DOCUMENTS TO ISSUE</div>
+                            <div style="font-size: 12px; color: #909399; margin-bottom: 10px; margin-top: 20px;">选择要下发的文件</div>
                             <el-checkbox-group v-model="selectedFiles" :disabled="certifyState !== 'pending'">
                                 <div v-for="file in filesToIssue" :key="file.id" class="file-select-item">
                                     <div style="display:flex; align-items:center;">
@@ -257,7 +259,7 @@
                             </el-checkbox-group>
 
                             <div v-if="logs.length > 0" style="margin-top: 25px;">
-                                <div style="font-size: 12px; color: #909399; margin-bottom: 10px;">ACTIVITY LOG</div>
+                                <div style="font-size: 12px; color: #909399; margin-bottom: 10px;">活动日志</div>
                                 <el-timeline>
                                     <el-timeline-item v-for="(log, i) in logs" :key="i" :timestamp="log.time" placement="top" :color="i===0?'#409EFF':''">
                                         <div style="font-size: 12px;">{{ log.content }}</div>
@@ -343,7 +345,7 @@
     runOperatorApp({
         setup() {
             // State
-            const taskInfo = Vue.reactive({ taskId: 'TSK-2026-889', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '南通碳素有限公司', orderNo: 'ORD-20260203' });
+            const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-889'));
             const certifyState = Vue.ref('pending'); // pending -> waiting -> completed
             const activeTab = Vue.ref('decl'); // 默认展示声明
             const isExpanded = Vue.ref(true);
@@ -357,7 +359,7 @@
             const selectedFiles = Vue.ref([1, 2, 3]); // 默认全选
 
             const events = Vue.ref([
-                { type: 'sys', user: 'System', time: '10:00', content: '核查已通过，区块链存证完成' }
+                { type: 'sys', user: '系统', time: '10:00', content: '核查已通过，区块链存证完成' }
             ]);
             const logs = Vue.ref([]);
 
@@ -380,7 +382,7 @@
             const simulateSupplierAccept = () => {
                 certifyState.value = 'completed';
                 pushEvent('sub', '供应商', '确认接收证书');
-                pushEvent('sys', 'System', '任务流程结束，已归档');
+                pushEvent('sys', '系统', '任务流程结束，已归档');
                 addLog('供应商已确认，任务结束');
             };
 
@@ -399,14 +401,15 @@
                 return '任务已归档';
             };
 
-            const goBack = () => window.location.href = 'self_operated_task_list.html';
+            const goBack = () => { window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html'; };
             const openPage = (p) => window.location.href = p;
             const viewOrder = () => window.location.href='order.html';
+            const q = () => { const tid = taskInfo.taskId || getTaskIdFromUrl(); const from = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? '&from=order' : ''; return '?taskId=' + tid + from; };
             const navigateTo = (p) => { 
-                if(p==='config') window.location.href='task_detail_config.html';
-                if(p==='collect') window.location.href='task_detail_collect.html';
-                if(p==='lca') window.location.href='task_detail_lca.html';
-                if(p==='verify') window.location.href='task_detail_verify.html';
+                if(p==='config') window.location.href='task_detail_config.html' + q();
+                if(p==='collect') window.location.href='task_detail_collect.html' + q();
+                if(p==='lca') window.location.href='task_detail_lca.html' + q();
+                if(p==='verify') window.location.href='task_detail_verify.html' + q();
             };
 
             return {

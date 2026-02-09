@@ -11,6 +11,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
     <script src="../js/layout.js"></script>
     
     <style>
@@ -111,7 +113,7 @@
                 </div>
                 <div style="display: flex; align-items: center;">
                     <el-tooltip content="SLA 剩余时间" placement="bottom"><div class="sla-capsule"><el-icon><Timer /></el-icon> 12:30:05</div></el-tooltip>
-                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">Op</el-avatar>
+                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">运营</el-avatar>
                     <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
@@ -120,7 +122,7 @@
                 
                 <div class="task-info-dashboard">
                     <div class="dash-block" style="flex: 1.5;">
-                        <div class="dash-title">Product & Task</div>
+                        <div class="dash-title">产品与任务</div>
                         <div class="dash-content">
                             <div class="prod-main">
                                 <span class="prod-name">{{ taskInfo.productName }}</span>
@@ -135,7 +137,7 @@
                     </div>
 
                     <div class="dash-block" style="flex: 1.2;">
-                        <div class="dash-title">Source Supplier</div>
+                        <div class="dash-title">来源供应商</div>
                         <div class="dash-content">
                             <div style="display:flex; align-items:center;">
                                 <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
@@ -146,7 +148,7 @@
                     </div>
 
                     <div class="dash-block" style="flex: 1;">
-                        <div class="dash-title">Verify Status</div>
+                        <div class="dash-title">核查状态</div>
                         <div class="dash-content">
                             <div style="display:flex; align-items:center; gap:8px">
                                 <el-tag v-if="verifyState === 'pending_review'" type="warning" effect="dark">待运营验收</el-tag>
@@ -158,11 +160,11 @@
                     </div>
 
                     <div class="dash-block">
-                        <div class="dash-title">Documents</div>
+                        <div class="dash-title">文档</div>
                         <div class="data-stats">
                             <div class="stat-item">
                                 <div class="stat-num" style="color:#409EFF">3</div>
-                                <div class="stat-label">Files</div>
+                                <div class="stat-label">文件</div>
                             </div>
                         </div>
                     </div>
@@ -183,7 +185,7 @@
                             <div v-if="activeTab === 'calc'" class="pdf-sheet">
                                 <div style="text-align:center; margin-bottom:40px;"><h2>产品碳足迹核算报告</h2></div>
                                 <p><strong>报告编号：</strong> RPT-2026-001</p>
-                                <p><strong>编制方：</strong> 碳足迹管理平台 (System)</p>
+                                <p><strong>编制方：</strong> 碳足迹管理平台（系统）</p>
                                 <p><strong>核算结果：</strong> 2.45 kgCO₂e/kg</p>
                                 <div style="margin-top:20px; padding:15px; border:1px solid #eee;">
                                     (此处展示详细的 LCA 建模数据与计算过程...)
@@ -202,7 +204,7 @@
                             <div v-if="activeTab === 'decl'" class="pdf-sheet" style="background:#fdfcf8;">
                                 <div style="text-align:center; margin-bottom:30px; border-bottom: 3px double #333; padding-bottom: 20px;">
                                     <h1>核 查 声 明</h1>
-                                    <div style="font-family:serif; font-style:italic;">Verification Statement</div>
+                                    <div style="font-family:serif; font-style:italic;">核查声明</div>
                                 </div>
                                 <div style="line-height: 2; font-family: serif; font-size: 16px;">
                                     <p>兹证明：</p>
@@ -229,7 +231,7 @@
                         </div>
 
                         <div style="flex: 1; overflow-y: auto; padding: 15px;">
-                            <div style="font-size: 12px; color: #909399; margin-bottom: 10px;">交付物列表 (Documents)</div>
+                            <div style="font-size: 12px; color: #909399; margin-bottom: 10px;">交付物列表</div>
                             
                             <div class="file-list-item">
                                 <el-icon class="file-icon"><Document /></el-icon>
@@ -352,12 +354,12 @@
     runOperatorApp({
         setup() {
             // State
-            const taskInfo = Vue.reactive({ taskId: 'TSK-2026-889', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '南通碳素有限公司', orderNo: 'ORD-20260203' });
+            const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-889'));
             const verifyState = Vue.ref('pending_review'); 
             const activeTab = Vue.ref('decl'); // 默认看声明
             const isExpanded = Vue.ref(true);
             const events = Vue.ref([
-                { type: 'sys', user: 'System', time: '10:00', content: 'LCA 计算完成，SGS 已上传核查文档' }
+                { type: 'sys', user: '系统', time: '10:00', content: 'LCA 计算完成，SGS 已上传核查文档' }
             ]);
 
             // Actions
@@ -367,7 +369,7 @@
                     loading.close();
                     verifyState.value = 'verified';
                     pushEvent('sub', '我', '确认接收文档，并完成区块链上链存证');
-                    pushEvent('sys', 'System', '证书生成条件已满足');
+                    pushEvent('sys', '系统', '证书生成条件已满足');
                 }, 1500);
             };
 
@@ -402,14 +404,15 @@
                 return '已上链，准备发证';
             };
 
-            const goBack = () => window.location.href = 'self_operated_task_list.html';
+            const goBack = () => { window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html'; };
             const openPage = (p) => window.location.href = p;
             const viewOrder = () => window.location.href='order.html';
+            const q = () => { const tid = taskInfo.taskId || getTaskIdFromUrl(); const from = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? '&from=order' : ''; return '?taskId=' + tid + from; };
             const navigateTo = (p) => { 
-                if(p==='config') window.location.href='task_detail_config.html';
-                if(p==='collect') window.location.href='task_detail_collect.html';
-                if(p==='lca') window.location.href='task_detail_lca.html';
-                if(p==='certify' && verifyState.value==='verified') window.location.href='task_detail_certify.html';
+                if(p==='config') window.location.href='task_detail_config.html' + q();
+                if(p==='collect') window.location.href='task_detail_collect.html' + q();
+                if(p==='lca') window.location.href='task_detail_lca.html' + q();
+                if(p==='certify' && verifyState.value==='verified') window.location.href='task_detail_certify.html' + q();
             };
 
             return {

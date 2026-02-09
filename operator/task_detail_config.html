@@ -11,6 +11,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
     <script src="../js/layout.js"></script>
     
     <style>
@@ -104,7 +106,7 @@
                     <el-tooltip content="SLA 剩余时间 (截止: 2026-02-10)" placement="bottom">
                         <div class="sla-capsule"><el-icon><Timer /></el-icon> 23:45:12</div>
                     </el-tooltip>
-                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">Op</el-avatar>
+                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">运营</el-avatar>
                     <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
@@ -114,7 +116,7 @@
                 <div class="task-info-dashboard">
                     
                     <div class="dash-block" style="flex: 1.5;">
-                        <div class="dash-title">Product & Task</div>
+                        <div class="dash-title">产品与任务</div>
                         <div class="dash-content">
                             <div class="prod-main">
                                 <span class="prod-name">{{ taskInfo.productName }}</span>
@@ -131,7 +133,7 @@
                     </div>
 
                     <div class="dash-block" style="flex: 1.2;">
-                        <div class="dash-title">Target Supplier</div>
+                        <div class="dash-title">目标供应商</div>
                         <div class="dash-content">
                             <div style="display:flex; align-items:center;">
                                 <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
@@ -145,7 +147,7 @@
                     </div>
 
                     <div class="dash-block" style="flex: 1;">
-                        <div class="dash-title">Configuration Status</div>
+                        <div class="dash-title">配置状态</div>
                         <div class="dash-content">
                             <div style="display:flex; align-items:center; gap:8px">
                                 <el-tag v-if="!snapshotGenerated" type="info">Step 1: 待初始化</el-tag>
@@ -159,15 +161,15 @@
                     </div>
 
                     <div class="dash-block">
-                        <div class="dash-title">Rules Definition</div>
+                        <div class="dash-title">规则定义</div>
                         <div class="data-stats">
                             <div class="stat-item">
                                 <div class="stat-num" style="color:#409EFF">{{ totalItems }}</div>
-                                <div class="stat-label">Items</div>
+                                <div class="stat-label">数据项</div>
                             </div>
                             <div class="stat-item">
                                 <div class="stat-num" style="color:#E6A23C">{{ evidenceRequirements.length }}</div>
-                                <div class="stat-label">Rules</div>
+                                <div class="stat-label">规则</div>
                             </div>
                         </div>
                     </div>
@@ -197,8 +199,8 @@
                                         <el-option label="电池行业_动力电池_V1.0" value="tpl_02"></el-option>
                                     </el-select>
                                 </el-form-item>
-                                <el-form-item label="3. 核算边界 (System Boundary)">
-                                    <el-input v-model="wizard.boundary" placeholder="例如：Cradle-to-Gate"></el-input>
+                                <el-form-item label="3. 核算边界（系统边界）">
+                                    <el-input v-model="wizard.boundary" placeholder="例如：摇篮到大门"></el-input>
                                 </el-form-item>
                                 <el-button type="primary" size="large" style="width: 100%; margin-top: 15px;" 
                                     :disabled="!wizard.templateId" @click="generateSnapshot" icon="MagicStick">
@@ -216,7 +218,7 @@
                                     <el-icon style="vertical-align: -2px; margin-right: 5px;"><Grid /></el-icon> 
                                     Excel 采集结构实例化 (Instance)
                                 </span>
-                                <el-tag v-if="!isLocked" size="small" type="warning">Editable</el-tag>
+                                <el-tag v-if="!isLocked" size="small" type="warning">可编辑</el-tag>
                                 <el-tag v-else size="small" type="info"><el-icon><Lock /></el-icon> Read-only</el-tag>
                             </div>
                             
@@ -338,7 +340,7 @@
                             <div v-if="snapshotGenerated" class="event-node sys">
                                 <div class="event-dot"></div>
                                 <div class="event-box">
-                                    <div class="evt-head"><span class="evt-user">System</span> <span class="evt-time">09:10</span></div>
+                                    <div class="evt-head"><span class="evt-user">系统</span> <span class="evt-time">09:10</span></div>
                                     <div class="evt-body">模版 [石墨电极_V2.0] 已实例化，版本号 v1.0-draft</div>
                                 </div>
                             </div>
@@ -417,13 +419,7 @@
     runOperatorApp({
         setup() {
             // === 状态管理 ===
-            const taskInfo = Vue.reactive({ 
-                taskId: 'TSK-2026-889', 
-                productName: '普通功率石墨电极', 
-                specs: 'Φ400mm', 
-                supplier: '南通碳素有限公司', 
-                orderNo: 'ORD-20260203' 
-            });
+            const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-889'));
             
             const snapshotGenerated = Vue.ref(false); // Step 1 -> Step 2
             const isLocked = Vue.ref(false); // Step 2 -> Step 3
@@ -483,7 +479,7 @@
 
             const navigateToCollect = () => {
                 if (supplierConfirmed.value) {
-                    window.location.href = 'task_detail_collect.html';
+                    window.location.href = 'task_detail_collect.html?taskId=' + (taskInfo.taskId || getTaskIdFromUrl()) + ((typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? '&from=order' : '');
                 } else {
                     if(!isLocked.value) ElementPlus.ElMessage.warning('请先完成配置并下发');
                     else ElementPlus.ElMessage.warning('需等待供应商提交数据后方可进入');
@@ -499,7 +495,7 @@
             const removeRequirement = (idx) => evidenceRequirements.value.splice(idx, 1);
             const resetConfig = () => { snapshotGenerated.value = false; isLocked.value = false; supplierConfirmed.value = false; };
             const totalItems = Vue.computed(() => { let count = 0; for(let k in excelSheets) count += excelSheets[k].length; return count; });
-            const goBack = () => window.location.href = 'self_operated_task_list.html';
+            const goBack = () => { window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html'; };
             const openPage = (path) => window.location.href = path;
 
             return {

@@ -57,7 +57,7 @@
                     <el-breadcrumb-item>委托任务</el-breadcrumb-item>
                 </el-breadcrumb>
                 <div style="display: flex; align-items: center;">
-                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <el-avatar :size="32" style="background: #409EFF;">管理员</el-avatar>
                     <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
@@ -87,7 +87,12 @@
                                 <el-table-column prop="orderNo" label="订单号" width="160" />
                                 <el-table-column prop="entrustedParty" label="委托方" width="120" />
                                 <el-table-column prop="productName" label="产品" min-width="140" />
-                                <el-table-column prop="status" label="状态" width="100" />
+                                <el-table-column prop="status" label="状态" width="100" show-overflow-tooltip />
+                                <el-table-column label="操作" width="100" align="center" fixed="right">
+                                    <template #default="scope">
+                                        <el-button link type="primary" size="small" @click="goToTask(scope.row)">处理</el-button>
+                                    </template>
+                                </el-table-column>
                             </el-table>
                             <el-empty v-if="!taskList.length" description="暂无委托任务数据，后续对接真实接口" style="padding: 40px 0;" />
                         </div>
@@ -104,15 +109,28 @@
     runOperatorApp({
         setup() {
             const query = Vue.reactive({ entrustedParty: '' });
+            // Mock：与 MOCK_TASK_MAP、订单号规则 ORD-YYYYMMDD-XXX 一致，便于跳转任务详情时内容一致
             const taskList = Vue.ref([
-                { taskId: 'ET-2026-001', orderNo: 'ORD-260208-001', entrustedParty: '擎工互联', productName: '某产品碳足迹', status: '进行中' },
-                { taskId: 'ET-2026-002', orderNo: 'ORD-260208-002', entrustedParty: '易碳数科', productName: '某产品碳足迹', status: '待开始' }
+                { taskId: 'TSK-2026-892', orderNo: 'ORD-20260205-002', entrustedParty: '擎工互联', productName: 'HRB400E 螺纹钢', status: '待配置', stageIndex: 0 },
+                { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', entrustedParty: '易碳数科', productName: '普通功率石墨电极', status: '数据采集', stageIndex: 1 },
+                { taskId: 'TSK-2026-870', orderNo: 'ORD-20260110-008', entrustedParty: '擎工互联', productName: '中厚板', status: 'LCA计算', stageIndex: 2 }
             ]);
             const handleSearch = () => {};
             const handleReset = () => { query.entrustedParty = ''; };
+            // 跳转至对应阶段任务详情页，与自营任务列表行为一致
+            const goToTask = (row) => {
+                const stageIndex = row.stageIndex != null ? row.stageIndex : 0;
+                if (stageIndex === 4 || stageIndex === 5) {
+                    window.location.href = 'report_mgt.html?taskNo=' + encodeURIComponent(row.taskId);
+                    return;
+                }
+                const pageMap = { 0: 'task_detail_config.html', 1: 'task_detail_collect.html', 2: 'task_detail_lca.html', 3: 'task_detail_verify.html' };
+                const targetPage = pageMap[stageIndex] || 'task_workspace.html';
+                window.location.href = targetPage + '?taskId=' + encodeURIComponent(row.taskId);
+            };
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
-                query, taskList, handleSearch, handleReset
+                query, taskList, handleSearch, handleReset, goToTask
             };
         }
     });

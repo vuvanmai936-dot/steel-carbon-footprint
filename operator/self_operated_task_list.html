@@ -97,7 +97,7 @@
                     <el-breadcrumb-item>自营任务</el-breadcrumb-item>
                 </el-breadcrumb>
                 <div style="display: flex; align-items: center;">
-                    <el-avatar :size="32" style="background: #409EFF;">Admin</el-avatar>
+                    <el-avatar :size="32" style="background: #409EFF;">管理员</el-avatar>
                     <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
@@ -110,7 +110,7 @@
                             <div class="stat-card" @click="quickFilter('all')">
                                 <div class="stat-info">
                                     <div class="label">任务总数</div>
-                                    <div class="num">129</div>
+                                    <div class="num">{{ statTotal }}</div>
                                 </div>
                                 <div class="stat-icon" style="background: #ecf5ff; color: #409EFF;"><el-icon><component :is="'List'"></component></el-icon></div>
                             </div>
@@ -119,7 +119,7 @@
                             <div class="stat-card" @click="quickFilter('pending')">
                                 <div class="stat-info">
                                     <div class="label">待配置模板</div>
-                                    <div class="num" style="color: #E6A23C;">8</div>
+                                    <div class="num" style="color: #E6A23C;">{{ statPending }}</div>
                                 </div>
                                 <div class="stat-icon" style="background: #fdf6ec; color: #E6A23C;"><el-icon><component :is="'Timer'"></component></el-icon></div>
                             </div>
@@ -128,7 +128,7 @@
                             <div class="stat-card" @click="quickFilter('verifying')">
                                 <div class="stat-info">
                                     <div class="label">核查认证中</div>
-                                    <div class="num" style="color: #409EFF;">42</div>
+                                    <div class="num" style="color: #409EFF;">{{ statVerifying }}</div>
                                 </div>
                                 <div class="stat-icon" style="background: #e1f3d8; color: #67C23A;"><el-icon><component :is="'Stamp'"></component></el-icon></div>
                             </div>
@@ -137,7 +137,7 @@
                             <div class="stat-card" @click="quickFilter('to_archive')">
                                 <div class="stat-info">
                                     <div class="label">待归档确认</div>
-                                    <div class="num" style="color: #F56C6C;">5</div>
+                                    <div class="num" style="color: #F56C6C;">{{ statToArchive }}</div>
                                 </div>
                                 <div class="stat-icon" style="background: #fef0f0; color: #F56C6C;"><el-icon><component :is="'FolderChecked'"></component></el-icon></div>
                             </div>
@@ -260,7 +260,7 @@
                         </div>
     
                         <div class="pagination-footer">
-                            <el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="129" :page-sizes="[10, 20, 50]" :current-page="1"></el-pagination>
+                            <el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="taskList.length" :page-sizes="[10, 20, 50]" :current-page="1"></el-pagination>
                         </div>
                     </div>
                 </div>
@@ -279,47 +279,21 @@
                 stage: '', verifier: '', dateRange: []
             });
             
-            // Mock Data
+            // Mock Data：与订单 Mock、js/mockTasks.js 的 taskId/orderNo 一致
             const taskList = Vue.ref([
-                {
-                    taskId: 'TSK-2026-892', orderNo: 'ORD-260204-005', createTime: '2026-02-04',
-                    productName: 'HRB400E 螺纹钢', specs: 'Φ22mm', supplier: '沙钢集团',
-                    stageIndex: 0, 
-                    deadline: '2026-02-05', isOverdue: true
-                },
-                {
-                    taskId: 'TSK-2026-889', orderNo: 'ORD-260203-001', createTime: '2026-02-03',
-                    productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '南通碳素',
-                    stageIndex: 1, 
-                    deadline: '2026-02-15', isOverdue: false
-                },
-                {
-                    taskId: 'TSK-2026-880', orderNo: 'ORD-260128-099', createTime: '2026-01-28',
-                    productName: '热轧卷板', specs: 'Q235B 5.0mm', supplier: '马钢股份',
-                    stageIndex: 2, 
-                    deadline: '2026-02-12', isOverdue: false
-                },
-                {
-                    taskId: 'TSK-2026-888', orderNo: 'ORD-260125-012', createTime: '2026-01-25',
-                    productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '南通碳素',
-                    stageIndex: 3, 
-                    deadline: '2026-02-10', isOverdue: false
-                },
-                // 拆分出的新状态：待归档 (Stage 4)
-                {
-                    taskId: 'TSK-2026-875', orderNo: 'ORD-260120-011', createTime: '2026-01-20',
-                    productName: '中厚板', specs: 'Q235B', supplier: '南钢股份',
-                    stageIndex: 4, 
-                    deadline: '2026-01-30', isOverdue: false
-                },
-                // 拆分出的新状态：已归档 (Stage 5)
-                {
-                    taskId: 'TSK-2026-872', orderNo: 'ORD-260118-033', createTime: '2026-01-18',
-                    productName: 'H型钢', specs: 'HW200*200', supplier: '马钢股份',
-                    stageIndex: 5, 
-                    deadline: '-', isOverdue: false
-                }
+                { taskId: 'TSK-2026-892', orderNo: 'ORD-20260205-002', createTime: '2026-02-05', productName: 'HRB400E 螺纹钢', specs: 'Φ22mm', supplier: '沙钢集团', stageIndex: 0, deadline: '2026-02-20', isOverdue: false },
+                { taskId: 'TSK-2026-890', orderNo: 'ORD-20260203-001', createTime: '2026-02-03', productName: '超高功率石墨电极接头', specs: 'T4L', supplier: '南通碳素有限公司', stageIndex: 0, deadline: '2026-02-15', isOverdue: false },
+                { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', createTime: '2026-02-03', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '南通碳素有限公司', stageIndex: 1, deadline: '2026-02-15', isOverdue: false },
+                { taskId: 'TSK-2026-870', orderNo: 'ORD-20260110-008', createTime: '2026-01-10', productName: '中厚板', specs: 'Q345B 20mm', supplier: '宝钢股份', stageIndex: 2, deadline: '2026-02-12', isOverdue: false },
+                { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', createTime: '2026-02-03', productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '南通碳素有限公司', stageIndex: 3, deadline: '2026-02-10', isOverdue: false },
+                { taskId: 'TSK-2025-999', orderNo: 'ORD-20251212-015', createTime: '2025-12-12', productName: '汽车结构钢', specs: 'SAPH440', supplier: '马钢股份', stageIndex: 4, deadline: '2026-01-15', isOverdue: false },
+                { taskId: 'TSK-2025-101', orderNo: 'ORD-20250315-099', createTime: '2025-03-15', productName: '热轧卷板', specs: 'Q235B 5.0mm', supplier: '南京钢铁集团', stageIndex: 5, deadline: '-', isOverdue: false }
             ]);
+
+            const statTotal = Vue.computed(() => taskList.value.length);
+            const statPending = Vue.computed(() => taskList.value.filter(r => r.stageIndex === 0).length);
+            const statVerifying = Vue.computed(() => taskList.value.filter(r => r.stageIndex === 3).length);
+            const statToArchive = Vue.computed(() => taskList.value.filter(r => r.stageIndex === 4).length);
 
             const getStepClass = (current, step) => {
                 if (current > step) return 'done';
@@ -373,6 +347,7 @@
 
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, query, taskList,
+                statTotal, statPending, statVerifying, statToArchive,
                 getStepClass, getLabelClass, getActionButtonText,
                 handleSearch, handleReset, quickFilter,
                 goToDetail, handleRowClick, openPage

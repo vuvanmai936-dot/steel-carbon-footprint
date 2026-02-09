@@ -8,6 +8,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
     <script src="../js/layout.js"></script>
     
     <style>
@@ -281,14 +283,15 @@
             const clarifyVisible = Vue.ref(false);
             const clarifyForm = Vue.reactive({ type: '', content: '' });
 
-            // 订单元数据
+            // 订单元数据：优先从 URL taskId 加载（与 mockTasks.js 一致）
+            const taskInfoFromUrl = typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl('TSK-2026-888') : {};
             const orderInfo = Vue.reactive({
-                orderNo: 'ORD-20260203-001',
-                taskNo: 'TSK-2026-888',
-                supplier: '南通碳素有限公司',
+                orderNo: taskInfoFromUrl.orderNo || 'ORD-20260203-001',
+                taskNo: taskInfoFromUrl.taskId || 'TSK-2026-888',
+                supplier: taskInfoFromUrl.supplier || '南通碳素有限公司',
                 supplierBound: true,
-                product: '超高功率石墨电极',
-                specs: 'Φ600mm',
+                product: taskInfoFromUrl.productName || '超高功率石墨电极',
+                specs: taskInfoFromUrl.specs || 'Φ600mm',
                 certifier: 'SGS 通标标准'
             });
 
@@ -332,7 +335,7 @@
             };
 
             const goBack = () => {
-                window.location.href = 'order.html';
+                window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html';
             };
             
             const viewLog = () => {

@@ -1,1 +1,121 @@
-<h1>Supplier Dashboard</h1>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>工作台 - 供应商工作台</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/supplier.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/supplierLayout.js"></script>
+    <style>
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .stat-card {
+            background: #fff; border-radius: 6px; padding: 15px;
+            display: flex; align-items: center; justify-content: space-between;
+            border: 1px solid #ebeef5; box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+            transition: all 0.3s; cursor: pointer; height: 80px; box-sizing: border-box;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #059669; }
+        .stat-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .stat-info .label { color: #909399; font-size: 12px; margin-bottom: 4px; }
+        .stat-info .num { font-size: 22px; font-weight: bold; color: #303133; font-family: 'DIN Alternate', sans-serif; }
+        .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                供应商工作台
+            </div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#059669" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-menu-item :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item>工作台</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #059669;">供</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                    <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    <el-row :gutter="15" style="margin-bottom: 20px; flex-shrink: 0;">
+                        <el-col :span="8">
+                            <div class="stat-card" @click="openPage('task_list.html')">
+                                <div class="stat-info">
+                                    <div class="label">待办任务</div>
+                                    <div class="num">{{ statTodo }}</div>
+                                </div>
+                                <div class="stat-icon" style="background: #ecfdf5; color: #059669;"><el-icon><component :is="'List'" /></el-icon></div>
+                            </div>
+                        </el-col>
+                        <el-col :span="8">
+                            <div class="stat-card" @click="openPage('task_list.html')">
+                                <div class="stat-info">
+                                    <div class="label">待澄清/待整改</div>
+                                    <div class="num" style="color: #E6A23C;">{{ statClarify }}</div>
+                                </div>
+                                <div class="stat-icon" style="background: #fdf6ec; color: #E6A23C;"><el-icon><component :is="'ChatDotRound'" /></el-icon></div>
+                            </div>
+                        </el-col>
+                        <el-col :span="8">
+                            <div class="stat-card" @click="openPage('reports.html')">
+                                <div class="stat-info">
+                                    <div class="label">我的报告</div>
+                                    <div class="num" style="color: #409EFF;">{{ statReports }}</div>
+                                </div>
+                                <div class="stat-icon" style="background: #ecf5ff; color: #409EFF;"><el-icon><component :is="'DocumentChecked'" /></el-icon></div>
+                            </div>
+                        </el-col>
+                    </el-row>
+                    <div class="quick-actions">
+                        <el-button type="primary" icon="List" @click="openPage('task_list.html')">待办任务</el-button>
+                        <el-button type="success" icon="DocumentChecked" @click="openPage('reports.html')">我的报告</el-button>
+                        <el-button icon="HomeFilled" @click="goPortal">返回门户</el-button>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+<script>
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = SupplierLayout.setup();
+    runSupplierApp({
+        setup() {
+            const statTodo = Vue.ref(3);
+            const statClarify = Vue.ref(1);
+            const statReports = Vue.ref(2);
+            return {
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
+                statTodo, statClarify, statReports
+            };
+        }
+    });
+</script>
+</body>
+</html>
