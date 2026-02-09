@@ -12,6 +12,8 @@
             supplierName: '南京钢铁集团',
             verifier: 'SGS 通标',
             status: 'archived',
+            reportVersion: 'sealed',
+            releasedToSupplier: true,
             archiveTime: '2026-02-06 14:05:22',
             appeal: { reason: '核算边界与合同约定不一致，申请重新核查。', submitTime: '2026-02-08 10:00' },
             docs: {
@@ -33,6 +35,8 @@
             supplierName: '马钢股份',
             verifier: 'DNV',
             status: 'process',
+            reportVersion: 'draft',
+            releasedToSupplier: false,
             docs: {
                 calc: { name: '汽车结构钢核算报告_V1.pdf', ver: 'V1', date: '2026-02-05' },
                 verify: null,
@@ -49,6 +53,8 @@
             supplierName: '南通碳素有限公司',
             verifier: 'TUV 莱茵',
             status: 'revoked',
+            reportVersion: 'sealed',
+            releasedToSupplier: false,
             docs: {
                 calc: { name: 'Report.pdf', ver: 'V1', date: '2025-12-12' },
                 verify: null,
