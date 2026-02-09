@@ -53,21 +53,27 @@
             <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
                 <div class="main-flex-wrapper">
                     <div class="card">
-                        <p style="color: #606266; font-size: 13px; margin: 0 0 16px 0;">已出具的报告与证书；若对报告结论有异议，可发起申诉。</p>
+                        <p style="color: #606266; font-size: 13px; margin: 0 0 16px 0;">仅展示运营已下发的报告。请先预览，再选择「确认接收」或「对报告有异议」提交申诉；确认接收后不可再申诉。</p>
                         <el-table :data="reportList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
                             <el-table-column prop="taskId" label="任务编号" width="160" />
                             <el-table-column prop="productName" label="产品" min-width="140" />
                             <el-table-column prop="reportStatus" label="报告状态" width="120">
                                 <template #default="scope">
                                     <el-tag size="small" :type="scope.row.reportStatus === '已发证' ? 'success' : 'primary'" effect="plain">{{ scope.row.reportStatus }}</el-tag>
+                                    <span v-if="scope.row.received" style="margin-left: 6px; font-size: 12px; color: #67C23A;">已确认接收</span>
                                 </template>
                             </el-table-column>
                             <el-table-column prop="reportDate" label="报告日期" width="120" />
-                            <el-table-column label="操作" width="200" align="center" fixed="right">
+                            <el-table-column label="操作" width="280" align="center" fixed="right">
                                 <template #default="scope">
-                                    <el-button link type="primary" size="small" @click="viewReport(scope.row)">查看</el-button>
+                                    <el-button link type="primary" size="small" @click="viewReport(scope.row)">预览</el-button>
                                     <el-divider direction="vertical"></el-divider>
-                                    <el-button link type="warning" size="small" @click="openAppeal(scope.row)">对报告有异议</el-button>
+                                    <el-button v-if="!scope.row.received" link type="success" size="small" @click="confirmReceive(scope.row)">确认接收</el-button>
+                                    <template v-if="!scope.row.received">
+                                        <el-divider direction="vertical"></el-divider>
+                                        <el-button link type="warning" size="small" @click="openAppeal(scope.row)">对报告有异议</el-button>
+                                    </template>
+                                    <span v-else style="font-size: 12px; color: #909399;">已确认接收，不可申诉</span>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -103,14 +109,18 @@
     runSupplierApp({
         setup() {
             const reportList = Vue.ref([
-                { taskId: 'TSK-2025-101', productName: '热轧卷板', reportStatus: '已发证', reportDate: '2025-04-10' },
-                { taskId: 'TSK-2026-888', productName: '超高功率石墨电极', reportStatus: '已出报告', reportDate: '2026-02-06' }
+                { taskId: 'TSK-2025-101', productName: '热轧卷板', reportStatus: '已发证', reportDate: '2025-04-10', received: true },
+                { taskId: 'TSK-2026-888', productName: '超高功率石墨电极', reportStatus: '已出报告', reportDate: '2026-02-06', received: false }
             ]);
             const appealDialogVisible = Vue.ref(false);
             const currentReport = Vue.ref(null);
             const appealForm = Vue.reactive({ reason: '' });
 
-            const viewReport = (row) => { ElementPlus.ElMessage.info('查看报告：' + row.taskId + '（演示）'); };
+            const viewReport = (row) => { ElementPlus.ElMessage.info('预览报告：' + row.taskId + '（演示）'); };
+            const confirmReceive = (row) => {
+                row.received = true;
+                ElementPlus.ElMessage.success('已确认接收报告，不可再申诉');
+            };
             const openAppeal = (row) => {
                 currentReport.value = row;
                 appealForm.reason = '';
@@ -123,7 +133,7 @@
             };
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
-                reportList, viewReport, openAppeal, appealDialogVisible, currentReport, appealForm, submitAppeal
+                reportList, viewReport, confirmReceive, openAppeal, appealDialogVisible, currentReport, appealForm, submitAppeal
             };
         }
     });

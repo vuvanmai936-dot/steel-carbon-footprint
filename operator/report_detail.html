@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>档案详情 - 报告管理 - 中心运营端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/layout.js"></script>
+    <script src="../js/mockOperator.js"></script>
+    <style>
+        .detail-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .detail-content { flex: 1; display: flex; gap: 20px; min-height: 0; overflow: hidden; background: #f0f2f5; padding: 20px; box-sizing: border-box; }
+        .detail-left { flex: 1; overflow-y: auto; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; padding: 20px; }
+        .detail-right { width: 320px; flex-shrink: 0; overflow-y: auto; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; padding: 20px; }
+        .doc-section-card { border: 1px solid #ebeef5; border-radius: 6px; margin-bottom: 15px; overflow: hidden; position: relative; }
+        .doc-card-header { background: #fafafa; padding: 10px 15px; border-bottom: 1px solid #ebeef5; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; }
+        .doc-card-body { padding: 15px; display: flex; align-items: center; gap: 15px; min-height: 60px; }
+        .doc-file-icon { font-size: 36px; color: #909399; }
+        .doc-file-icon.active { color: #409EFF; }
+        .doc-file-icon.cert { color: #E6A23C; }
+        .api-sync-box { flex: 1; border: 1px dashed #dcdfe6; border-radius: 4px; height: 40px; background: #fdfdfd; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; font-size: 12px; color: #909399; }
+        .chain-hash { font-family: 'Courier New', monospace; font-size: 12px; color: #909399; background: #f4f4f5; padding: 4px 8px; border-radius: 4px; display: block; margin-top: 10px; word-break: break-all; }
+        .stamp-archived { position: absolute; right: 20px; top: 10px; width: 80px; height: 80px; border: 3px solid #67C23A; border-radius: 50%; color: #67C23A; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; transform: rotate(-30deg); opacity: 0.2; pointer-events: none; z-index: 0; }
+        .status-badge { display: inline-flex; align-items: center; padding: 0 10px; border-radius: 12px; font-size: 12px; height: 24px; box-sizing: border-box; white-space: nowrap; border: 1px solid transparent; margin-left: 12px; }
+        .status-process { background: #e6f7ff; color: #1890ff; border-color: #91d5ff; }
+        .status-archived { background: #f6ffed; color: #52c41a; border-color: #b7eb8f; }
+        .status-revoked { background: #fff1f0; color: #f5222d; border-color: #ffa39e; }
+        .status-appeal { background: #fdf6ec; color: #E6A23C; border-color: #f5dab1; margin-left: 4px; }
+        .appeal-block { border: 1px solid #f5dab1; border-radius: 6px; background: #fdf6ec; padding: 16px; margin-bottom: 20px; }
+        .preview-container { background: #525659; padding: 30px; display: flex; justify-content: center; min-height: 600px; overflow: auto; }
+        .a4-paper { width: 794px; min-height: 1123px; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); padding: 50px; box-sizing: border-box; position: relative; color: #333; font-family: 'Times New Roman', serif; }
+        .sgs-header { border-bottom: 2px solid #e60000; padding-bottom: 10px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .sgs-logo { font-size: 32px; font-weight: bold; color: #e60000; font-style: italic; }
+        .report-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 40px; font-family: 'SimHei', sans-serif; }
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        .info-table td { border: 1px solid #000; padding: 8px; font-size: 14px; }
+        .info-label { background: #f0f0f0; font-weight: bold; width: 150px; }
+        .calc-header { text-align: center; margin-bottom: 30px; border-bottom: 1px solid #ccc; padding-bottom: 20px; }
+        .calc-data-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">碳足迹数据服务</div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-sub-menu v-if="item.children" :index="item.id">
+                        <template #title><el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span></template>
+                        <el-menu-item v-for="child in item.children" :key="child.id" :index="child.id" @click="openPage(child.path)">{{ child.title }}</el-menu-item>
+                    </el-sub-menu>
+                    <el-menu-item v-else :index="item.id" @click="openPage(item.path)"><el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span></el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar"><el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon></el-button>
+            </div>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <div style="display: flex; align-items: center;">
+                    <el-breadcrumb separator="/">
+                        <el-breadcrumb-item><a href="report_mgt.html" style="color: inherit;">报告管理</a></el-breadcrumb-item>
+                        <el-breadcrumb-item>档案详情 {{ record?.taskNo || taskNoFromUrl }}</el-breadcrumb-item>
+                    </el-breadcrumb>
+                    <span v-if="record" :class="['status-badge', record.status === 'process' ? 'status-process' : record.status === 'archived' ? 'status-archived' : 'status-revoked']">
+                        {{ record.status === 'process' ? '流转中' : record.status === 'archived' ? '已归档' : '已作废' }}
+                    </span>
+                    <span v-if="record?.appeal" class="status-badge status-appeal">申诉中</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <el-button v-if="record?.taskNo" link type="primary" @click="goToTask">前往任务</el-button>
+                    <el-button @click="goBack">返回列表</el-button>
+                    <el-avatar :size="32" style="background: #409EFF;">管</el-avatar>
+                    <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+                <div v-if="!record" style="padding: 40px; text-align: center; color: #909399;">未找到该档案，请检查任务编号或 <a href="report_mgt.html">返回列表</a>。</div>
+                <div v-else class="detail-flex-wrapper">
+                    <div class="detail-content">
+                        <div class="detail-left">
+                            <div v-if="record.appeal && record.status !== 'process' && record.status !== 'archived'" class="appeal-block">
+                                <div style="font-weight: bold; margin-bottom: 8px; color: #E6A23C;">待处理申诉</div>
+                                <div style="font-size: 13px; color: #606266; margin-bottom: 8px;">{{ record.appeal.reason }}</div>
+                                <div v-if="record.appeal.submitTime" style="font-size: 12px; color: #909399; margin-bottom: 12px;">提交时间：{{ record.appeal.submitTime }}</div>
+                                <div>
+                                    <el-button type="danger" size="small" @click="rejectAppeal">驳回申诉</el-button>
+                                    <el-button type="primary" size="small" @click="acceptAppeal">接受申诉</el-button>
+                                </div>
+                            </div>
+                            <div style="font-weight: bold; margin-bottom: 15px; font-size: 15px;">交付物三件套 (Standard Set)</div>
+                            <div class="doc-section-card">
+                                <div v-if="record.status === 'archived'" class="stamp-archived">已上链</div>
+                                <div class="doc-card-header"><span>1. 产品碳足迹核算报告</span><el-tag size="small" type="info">系统生成</el-tag></div>
+                                <div class="doc-card-body">
+                                    <template v-if="record.docs.calc">
+                                        <el-icon class="doc-file-icon active"><component :is="'Document'"></component></el-icon>
+                                        <div style="flex: 1;"><div style="font-weight: 500;">{{ record.docs.calc.name }}</div><div style="font-size: 12px; color: #999;">版本: {{ record.docs.calc.ver }}</div></div>
+                                        <el-button link type="primary" @click="openPreview(record.docs.calc, 'calc')">预览</el-button>
+                                    </template>
+                                    <div v-else style="color:#ccc; font-size:12px;">生成中...</div>
+                                </div>
+                            </div>
+                            <div class="doc-section-card">
+                                <div class="doc-card-header"><span>2. 产品碳足迹核查报告</span><el-tag size="small" type="warning">{{ record.verifier }}</el-tag></div>
+                                <div class="doc-card-body">
+                                    <template v-if="record.docs.verify">
+                                        <el-icon class="doc-file-icon active"><component :is="'DocumentChecked'"></component></el-icon>
+                                        <div style="flex: 1;"><div style="font-weight: 500;">{{ record.docs.verify.name }}</div><div style="font-size: 12px; color: #999;">版本: {{ record.docs.verify.ver }} | 来源: 机构API推送</div></div>
+                                        <el-button link type="primary" @click="openPreview(record.docs.verify, 'verify')">预览</el-button>
+                                    </template>
+                                    <div v-else class="api-sync-box">
+                                        <span><el-icon class="is-loading" style="margin-right:5px"><component :is="'Loading'"></component></el-icon> 等待机构接口推送...</span>
+                                        <el-button link type="primary" size="small" @click="manualSync('verify')">手动拉取</el-button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="doc-section-card">
+                                <div class="doc-card-header"><span>3. 碳足迹核查声明证书</span><el-tag size="small" type="success">证书</el-tag></div>
+                                <div class="doc-card-body">
+                                    <template v-if="record.docs.cert">
+                                        <el-icon class="doc-file-icon cert"><component :is="'Picture'"></component></el-icon>
+                                        <div style="flex: 1;"><div style="font-weight: 500;">{{ record.docs.cert.name }}</div><div style="font-size: 12px; color: #999;">有效期: {{ record.docs.cert.expire }}</div></div>
+                                        <el-button link type="primary" @click="openPreview(record.docs.cert, 'cert')">预览</el-button>
+                                    </template>
+                                    <div v-else class="api-sync-box">
+                                        <span><el-icon class="is-loading" style="margin-right:5px"><component :is="'Loading'"></component></el-icon> 等待机构接口推送...</span>
+                                        <el-button link type="primary" size="small" @click="manualSync('cert')">手动拉取</el-button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="record.status === 'archived'" style="margin-top: 20px; padding-top: 20px; border-top: 1px dashed #eee;">
+                                <div style="font-weight: bold; margin-bottom: 5px;">区块链存证信息 (Immutable)</div>
+                                <div class="chain-hash">TxID: 0x8a9f...b3c2 ({{ record.archiveTime }})</div>
+                            </div>
+                        </div>
+                        <div class="detail-right">
+                            <div style="font-weight: bold; margin-bottom: 20px; font-size: 15px;">版本与流转记录</div>
+                            <el-timeline>
+                                <el-timeline-item v-for="(log, index) in record.history" :key="index" :type="log.type" :timestamp="log.timestamp" placement="top">
+                                    <div style="font-size: 13px;"><div style="font-weight: bold;">{{ log.title }}</div><div style="color: #666; margin-top: 4px;">{{ log.desc }}</div></div>
+                                </el-timeline-item>
+                            </el-timeline>
+                        </div>
+                    </div>
+                    <div style="flex-shrink: 0; padding: 16px 20px; background: #fff; border-top: 1px solid #ebeef5; display: flex; justify-content: flex-end; gap: 12px;">
+                        <el-button @click="goBack">返回列表</el-button>
+                        <el-button v-if="record.status === 'process'" type="primary" :loading="archiving" :disabled="!isAllReady(record)" @click="executeArchive">{{ archiving ? '正在上链...' : '确认归档 & 上链' }}</el-button>
+                        <el-button v-if="record.status === 'archived'" type="danger" plain @click="revokeArchive">撤销归档</el-button>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+
+    <el-dialog v-model="previewVisible" :title="`文件预览: ${previewDoc?.name}`" width="900px" top="5vh" class="no-padding-dialog">
+        <div class="preview-container">
+            <div class="a4-paper">
+                <div v-if="previewType === 'verify'">
+                    <div class="sgs-header"><div class="sgs-logo">SGS</div><div style="text-align: right; font-size: 12px;">报告编号: SGS/RSTS/2025/1209</div></div>
+                    <div class="report-title">产品碳足迹核查报告</div>
+                    <table class="info-table">
+                        <tr><td class="info-label">组织名称</td><td>{{ record?.supplierName }}</td></tr>
+                        <tr><td class="info-label">核查依据</td><td>ISO 14067:2018 温室气体 产品碳足迹量化要求和指南</td></tr>
+                        <tr><td class="info-label">功能单位</td><td>1套 {{ record?.productName }}</td></tr>
+                        <tr><td class="info-label">核查结论</td><td style="font-weight: bold;">无保留意见。数据符合 PAS 2050:2011 规范。</td></tr>
+                    </table>
+                    <div style="font-size: 14px; line-height: 1.8;">
+                        <p>我们对 {{ record?.supplierName }} 提供的产品生命周期评价数据进行了独立核查。核查范围涵盖了原材料获取、生产制造、运输分销等阶段（Cradle-to-Gate）。</p>
+                        <p><b>核查发现：</b> 未发现实质性错报或漏报。</p>
+                        <div style="margin-top: 50px; text-align: right;"><p>签发日期：{{ previewDoc?.date }}</p><p style="font-family: 'Brush Script MT', cursive; font-size: 24px;">Signature</p></div>
+                    </div>
+                </div>
+                <div v-else-if="previewType === 'calc'">
+                    <div class="calc-header"><h2>产品碳足迹核算报告</h2><p>核算编号: NGYZL-PCF-2025-F012</p></div>
+                    <div style="margin-bottom: 20px;">
+                        <div class="calc-data-row"><span>产品名称</span><b>{{ record?.productName }}</b></div>
+                        <div class="calc-data-row"><span>核算边界</span><b>Cradle-to-Gate</b></div>
+                    </div>
+                    <div style="border: 1px solid #333; padding: 10px; margin-bottom: 20px;">
+                        <h3>核算结果汇总</h3>
+                        <div class="calc-data-row"><span>1. 原材料获取 (A1)</span><span>1.45E+00 kgCO2e</span></div>
+                        <div class="calc-data-row"><span>2. 运输 (A2)</span><span>2.10E-01 kgCO2e</span></div>
+                        <div class="calc-data-row"><span>3. 生产制造 (A3)</span><span>5.50E-01 kgCO2e</span></div>
+                        <div class="calc-data-row" style="font-weight: bold; border-top: 2px solid #333; margin-top: 10px; padding-top: 10px;"><span>合计 (Total)</span><span>1.66E+00 kgCO2e</span></div>
+                    </div>
+                </div>
+                <div v-else style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                    <div style="border: 10px double #409EFF; padding: 50px; text-align: center;">
+                        <h1>CERTIFICATE</h1><p>OF CARBON FOOTPRINT VERIFICATION</p>
+                        <h2 style="margin: 40px 0;">{{ record?.productName }}</h2>
+                        <p>Holder: {{ record?.supplierName }}</p><p>Standard: ISO 14067:2018</p>
+                        <div style="margin-top: 50px; color: #E6A23C; font-size: 60px;">★</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </el-dialog>
+</div>
+
+<script>
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
+
+    runOperatorApp({
+        setup() {
+            const taskNoFromUrl = Vue.ref('');
+            try {
+                const params = new URLSearchParams(window.location.search);
+                taskNoFromUrl.value = params.get('taskNo') || '';
+            } catch (e) {}
+
+            const listRef = Vue.ref(JSON.parse(JSON.stringify(MOCK_REPORTS)));
+
+            const record = Vue.computed(() => {
+                if (!taskNoFromUrl.value) return listRef.value[0] || null;
+                const found = listRef.value.find(r => r.taskNo === taskNoFromUrl.value);
+                return found || null;
+            });
+
+            const previewVisible = Vue.ref(false);
+            const previewDoc = Vue.ref(null);
+            const previewType = Vue.ref('');
+            const archiving = Vue.ref(false);
+
+            const isAllReady = (row) => row && row.docs && row.docs.calc && row.docs.verify && row.docs.cert;
+
+            const goBack = () => { window.location.href = 'report_mgt.html'; };
+            const goToTask = () => { if (record.value?.taskNo) window.location.href = `task_detail_verify.html?taskId=${record.value.taskNo}`; };
+
+            const openPreview = (doc, type) => { previewDoc.value = doc; previewType.value = type; previewVisible.value = true; };
+
+            const manualSync = (type) => {
+                const loading = ElementPlus.ElLoading.service({ text: '正在调用机构接口拉取文件...' });
+                setTimeout(() => {
+                    loading.close();
+                    if (type === 'verify') {
+                        record.value.docs.verify = { name: '核查报告_Final.pdf', ver: 'V1', date: new Date().toLocaleDateString() };
+                        record.value.history.unshift({ title: '核查报告已同步', desc: '接口自动拉取', timestamp: new Date().toLocaleString(), type: 'primary' });
+                    } else if (type === 'cert') {
+                        record.value.docs.cert = { name: '核查声明.jpg', ver: 'V1', expire: '2027-12-31' };
+                        record.value.history.unshift({ title: '证书已同步', desc: '接口自动拉取', timestamp: new Date().toLocaleString(), type: 'primary' });
+                    }
+                    ElementPlus.ElMessage.success('同步成功');
+                }, 1500);
+            };
+
+            const executeArchive = () => {
+                ElementPlus.ElMessageBox.confirm('归档操作将对文件进行哈希计算并上链存证，不可撤销。是否继续？', '归档确认', { confirmButtonText: '确认归档', type: 'success' }).then(() => {
+                    archiving.value = true;
+                    setTimeout(() => {
+                        archiving.value = false;
+                        record.value.status = 'archived';
+                        record.value.archiveTime = new Date().toLocaleString();
+                        record.value.history.unshift({ title: '归档上链成功', desc: 'TxID: 0x8a9... (模拟)', timestamp: new Date().toLocaleString(), type: 'success' });
+                        ElementPlus.ElMessage.success('归档成功！数据已上链存证。');
+                    }, 2000);
+                });
+            };
+
+            const revokeArchive = () => {
+                ElementPlus.ElMessageBox.confirm('作废后客户将无法查看证书。确认作废？', '警告', { type: 'warning' }).then(() => {
+                    record.value.status = 'revoked';
+                    record.value.history.unshift({ title: '档案已作废', desc: '人工强制操作', timestamp: new Date().toLocaleString(), type: 'danger' });
+                });
+            };
+
+            const rejectAppeal = () => {
+                if (!record.value?.appeal) return;
+                delete record.value.appeal;
+                ElementPlus.ElMessage.warning('已驳回申诉，维持原报告');
+            };
+            const acceptAppeal = () => {
+                if (!record.value?.appeal) return;
+                delete record.value.appeal;
+                ElementPlus.ElMessage.success('已接受申诉，待重新核查');
+            };
+
+            return { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, taskNoFromUrl, record, previewVisible, previewDoc, previewType, archiving, isAllReady, goBack, goToTask, openPreview, manualSync, executeArchive, revokeArchive, rejectAppeal, acceptAppeal };
+        }
+    });
+</script>
+</body>
+</html>

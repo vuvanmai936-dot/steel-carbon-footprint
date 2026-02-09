@@ -46,7 +46,7 @@
         .info-main-text { font-weight: 600; color: #303133; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .info-sub-text { font-family: monospace; color: #909399; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* === 4. 阶段微型进度条 (5段式) === */
+        /* === 4. 阶段微型进度条 (7段式: 配置/采集/计算/核查/下发/待归档/已归档) === */
         .mini-steps { display: flex; align-items: center; width: 100%; }
         .step-item { flex: 1; height: 4px; background: #EBEEF5; margin-right: 2px; position: relative; border-radius: 2px; }
         .step-item:last-child { margin-right: 0; }
@@ -56,6 +56,7 @@
         .step-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: #C0C4CC; }
         .step-label-active { color: #409EFF; font-weight: bold; }
         .step-label-done { color: #67C23A; }
+        .report-status-tag { font-size: 11px; margin-left: 6px; padding: 0 6px; border-radius: 10px; background: #fdf6ec; color: #E6A23C; border: 1px solid #f5dab1; }
     </style>
 </head>
 <body>
@@ -167,8 +168,9 @@
                                     <el-option label="数据采集" value="1"></el-option>
                                     <el-option label="LCA计算" value="2"></el-option>
                                     <el-option label="核查认证" value="3"></el-option>
-                                    <el-option label="待归档" value="4" style="color: #E6A23C;"></el-option>
-                                    <el-option label="已完成(归档)" value="5" style="color: #67C23A;"></el-option>
+                                    <el-option label="下发" value="4" style="color: #909399;"></el-option>
+                                    <el-option label="待归档" value="5" style="color: #E6A23C;"></el-option>
+                                    <el-option label="已完成(归档)" value="6" style="color: #67C23A;"></el-option>
                                 </el-select>
                             </el-form-item>
                             <el-form-item>
@@ -209,7 +211,7 @@
     
                                 <el-table-column label="供应商" prop="supplier" width="160" show-overflow-tooltip></el-table-column>
     
-                                <el-table-column label="当前阶段 / 进度" width="340">
+                                <el-table-column label="当前阶段 / 进度" width="420">
                                     <template #default="scope">
                                         <div class="mini-steps">
                                             <div class="step-item" :class="getStepClass(scope.row.stageIndex, 0)"></div>
@@ -217,14 +219,20 @@
                                             <div class="step-item" :class="getStepClass(scope.row.stageIndex, 2)"></div>
                                             <div class="step-item" :class="getStepClass(scope.row.stageIndex, 3)"></div>
                                             <div class="step-item" :class="getStepClass(scope.row.stageIndex, 4)"></div>
+                                            <div class="step-item" :class="getStepClass(scope.row.stageIndex, 5)"></div>
                                         </div>
                                         <div class="step-labels">
                                             <span :class="getLabelClass(scope.row.stageIndex, 0)">配置</span>
                                             <span :class="getLabelClass(scope.row.stageIndex, 1)">采集</span>
                                             <span :class="getLabelClass(scope.row.stageIndex, 2)">计算</span>
                                             <span :class="getLabelClass(scope.row.stageIndex, 3)">核查</span>
-                                            <span :class="getLabelClass(scope.row.stageIndex, 4)">待归档</span>
-                                            <span :class="getLabelClass(scope.row.stageIndex, 5)">已归档</span>
+                                            <span :class="getLabelClass(scope.row.stageIndex, 4)">下发</span>
+                                            <span :class="getLabelClass(scope.row.stageIndex, 5)">待归档</span>
+                                            <span :class="getLabelClass(scope.row.stageIndex, 6)">已归档</span>
+                                        </div>
+                                        <div v-if="scope.row.stageIndex >= 4" style="margin-top: 6px; font-size: 11px; color: #606266;">
+                                            <span>报告：{{ scope.row.stageIndex === 4 ? '已下发，待供应商确认' : scope.row.stageIndex === 5 ? '流转中' : '已归档' }}</span>
+                                            <span v-if="scope.row.hasAppeal" class="report-status-tag">申诉中</span>
                                         </div>
                                     </template>
                                 </el-table-column>
@@ -235,7 +243,8 @@
                                         <el-tag v-else-if="scope.row.stageIndex === 1" type="info" effect="plain">供应商</el-tag>
                                         <el-tag v-else-if="scope.row.stageIndex === 2" type="primary" effect="plain">平台运营方</el-tag>
                                         <el-tag v-else-if="scope.row.stageIndex === 3" type="success" effect="plain">核查机构</el-tag>
-                                        <el-tag v-else-if="scope.row.stageIndex === 4" type="warning" effect="plain">平台运营方</el-tag>
+                                        <el-tag v-else-if="scope.row.stageIndex === 4" type="warning" effect="plain">待供应商确认</el-tag>
+                                        <el-tag v-else-if="scope.row.stageIndex === 5" type="warning" effect="plain">平台运营方</el-tag>
                                         <span v-else style="color: #ccc;">-</span>
                                     </template>
                                 </el-table-column>
@@ -249,10 +258,10 @@
                                     </template>
                                 </el-table-column>
     
-                                <el-table-column label="操作" fixed="right" width="100" align="center">
+                                <el-table-column label="操作" fixed="right" width="110" align="center">
                                     <template #default="scope">
                                         <el-button link type="primary" @click.stop="goToDetail(scope.row)">
-                                            {{ getActionButtonText(scope.row.stageIndex) }}
+                                            {{ getActionButtonText(scope.row) }}
                                         </el-button>
                                     </template>
                                 </el-table-column>
@@ -279,7 +288,7 @@
                 stage: '', verifier: '', dateRange: []
             });
             
-            // Mock Data：与订单 Mock、js/mockTasks.js 的 taskId/orderNo 一致
+            // Mock Data：与订单 Mock、js/mockTasks.js 的 taskId/orderNo 一致；阶段 0-6：配置/采集/计算/核查/下发/待归档/已归档
             const taskList = Vue.ref([
                 { taskId: 'TSK-2026-892', orderNo: 'ORD-20260205-002', createTime: '2026-02-05', productName: 'HRB400E 螺纹钢', specs: 'Φ22mm', supplier: '沙钢集团', stageIndex: 0, deadline: '2026-02-20', isOverdue: false },
                 { taskId: 'TSK-2026-890', orderNo: 'ORD-20260203-001', createTime: '2026-02-03', productName: '超高功率石墨电极接头', specs: 'T4L', supplier: '南通碳素有限公司', stageIndex: 0, deadline: '2026-02-15', isOverdue: false },
@@ -287,13 +296,14 @@
                 { taskId: 'TSK-2026-870', orderNo: 'ORD-20260110-008', createTime: '2026-01-10', productName: '中厚板', specs: 'Q345B 20mm', supplier: '宝钢股份', stageIndex: 2, deadline: '2026-02-12', isOverdue: false },
                 { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', createTime: '2026-02-03', productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '南通碳素有限公司', stageIndex: 3, deadline: '2026-02-10', isOverdue: false },
                 { taskId: 'TSK-2025-999', orderNo: 'ORD-20251212-015', createTime: '2025-12-12', productName: '汽车结构钢', specs: 'SAPH440', supplier: '马钢股份', stageIndex: 4, deadline: '2026-01-15', isOverdue: false },
-                { taskId: 'TSK-2025-101', orderNo: 'ORD-20250315-099', createTime: '2025-03-15', productName: '热轧卷板', specs: 'Q235B 5.0mm', supplier: '南京钢铁集团', stageIndex: 5, deadline: '-', isOverdue: false }
+                { taskId: 'TSK-2025-101', orderNo: 'ORD-20250315-099', createTime: '2025-03-15', productName: '热轧卷板', specs: 'Q235B 5.0mm', supplier: '南京钢铁集团', stageIndex: 5, deadline: '-', isOverdue: false },
+                { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', createTime: '2026-02-03', productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '南通碳素有限公司', stageIndex: 6, deadline: '-', isOverdue: false, hasAppeal: false }
             ]);
 
             const statTotal = Vue.computed(() => taskList.value.length);
             const statPending = Vue.computed(() => taskList.value.filter(r => r.stageIndex === 0).length);
             const statVerifying = Vue.computed(() => taskList.value.filter(r => r.stageIndex === 3).length);
-            const statToArchive = Vue.computed(() => taskList.value.filter(r => r.stageIndex === 4).length);
+            const statToArchive = Vue.computed(() => taskList.value.filter(r => r.stageIndex === 5).length);
 
             const getStepClass = (current, step) => {
                 if (current > step) return 'done';
@@ -307,9 +317,11 @@
                 return '';
             };
 
-            const getActionButtonText = (stage) => {
-                if (stage === 4) return '归档'; 
-                if (stage === 5) return '查看档案'; 
+            const getActionButtonText = (row) => {
+                const stage = row.stageIndex;
+                if (stage === 4) return '查看报告';
+                if (stage === 5) return '归档';
+                if (stage === 6) return (row.hasAppeal ? '处理申诉' : '查看档案');
                 return '处理';
             };
 
@@ -322,17 +334,15 @@
                 handleReset();
                 if(type === 'pending') query.stage = '0';
                 if(type === 'verifying') query.stage = '3';
-                if(type === 'to_archive') query.stage = '4';
+                if(type === 'to_archive') query.stage = '5';
             };
 
-            // 核心路由分流逻辑
+            // 核心路由分流逻辑：阶段 4(下发)/5(待归档)/6(已归档) -> 报告管理
             const goToDetail = (row) => {
-                // 阶段 4 (待归档) 和 5 (已归档) -> Report Mgt
-                if (row.stageIndex === 4 || row.stageIndex === 5) {
-                    window.location.href = `report_mgt.html?taskNo=${row.taskId}`;
+                if (row.stageIndex === 4 || row.stageIndex === 5 || row.stageIndex === 6) {
+                    window.location.href = `report_detail.html?taskNo=${row.taskId}`;
                     return;
                 }
-                
                 const pageMap = {
                     0: 'task_detail_config.html',
                     1: 'task_detail_collect.html',

@@ -16,6 +16,7 @@
         .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
         .table-wrapper { flex: 1; overflow: hidden; padding: 10px 15px 50px 15px; position: relative; }
         .search-card { padding: 18px 20px; background: #fff; border: 1px solid #ebeef5; border-radius: 4px; margin-bottom: 15px; flex-shrink: 0; }
+        .report-status-tag { font-size: 11px; margin-left: 4px; padding: 0 6px; border-radius: 10px; background: #fdf6ec; color: #E6A23C; border: 1px solid #f5dab1; }
     </style>
 </head>
 <body>
@@ -88,9 +89,18 @@
                                 <el-table-column prop="entrustedParty" label="委托方" width="120" />
                                 <el-table-column prop="productName" label="产品" min-width="140" />
                                 <el-table-column prop="status" label="状态" width="100" show-overflow-tooltip />
-                                <el-table-column label="操作" width="100" align="center" fixed="right">
+                                <el-table-column label="报告状态" width="120" align="center">
                                     <template #default="scope">
-                                        <el-button link type="primary" size="small" @click="goToTask(scope.row)">处理</el-button>
+                                        <span v-if="scope.row.stageIndex === 4">已下发</span>
+                                        <span v-else-if="scope.row.stageIndex === 5">流转中</span>
+                                        <span v-else-if="scope.row.stageIndex === 6">已归档</span>
+                                        <span v-else>-</span>
+                                        <span v-if="scope.row.hasAppeal" class="report-status-tag">申诉中</span>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="操作" width="110" align="center" fixed="right">
+                                    <template #default="scope">
+                                        <el-button link type="primary" size="small" @click="goToTask(scope.row)">{{ getActionButtonText(scope.row) }}</el-button>
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -110,18 +120,29 @@
         setup() {
             const query = Vue.reactive({ entrustedParty: '' });
             // Mock：与 MOCK_TASK_MAP、订单号规则 ORD-YYYYMMDD-XXX 一致，便于跳转任务详情时内容一致
+            // 阶段 0-6：配置/采集/计算/核查/下发/待归档/已归档，与自营任务一致
             const taskList = Vue.ref([
                 { taskId: 'TSK-2026-892', orderNo: 'ORD-20260205-002', entrustedParty: '擎工互联', productName: 'HRB400E 螺纹钢', status: '待配置', stageIndex: 0 },
                 { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', entrustedParty: '易碳数科', productName: '普通功率石墨电极', status: '数据采集', stageIndex: 1 },
-                { taskId: 'TSK-2026-870', orderNo: 'ORD-20260110-008', entrustedParty: '擎工互联', productName: '中厚板', status: 'LCA计算', stageIndex: 2 }
+                { taskId: 'TSK-2026-870', orderNo: 'ORD-20260110-008', entrustedParty: '擎工互联', productName: '中厚板', status: 'LCA计算', stageIndex: 2 },
+                { taskId: 'TSK-2025-999', orderNo: 'ORD-20251212-015', entrustedParty: '擎工互联', productName: '汽车结构钢', status: '已下发', stageIndex: 4 },
+                { taskId: 'TSK-2025-101', orderNo: 'ORD-20250315-099', entrustedParty: '擎工互联', productName: '热轧卷板', status: '待归档', stageIndex: 5 },
+                { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', entrustedParty: '易碳数科', productName: '超高功率石墨电极', status: '已归档', stageIndex: 6, hasAppeal: false }
             ]);
             const handleSearch = () => {};
             const handleReset = () => { query.entrustedParty = ''; };
-            // 跳转至对应阶段任务详情页，与自营任务列表行为一致
+            const getActionButtonText = (row) => {
+                const stage = row.stageIndex != null ? row.stageIndex : 0;
+                if (stage === 4) return '查看报告';
+                if (stage === 5) return '归档';
+                if (stage === 6) return (row.hasAppeal ? '处理申诉' : '查看档案');
+                return '处理';
+            };
+            // 跳转至对应阶段任务详情页；阶段 4/5/6 跳报告详情，与自营任务一致
             const goToTask = (row) => {
                 const stageIndex = row.stageIndex != null ? row.stageIndex : 0;
-                if (stageIndex === 4 || stageIndex === 5) {
-                    window.location.href = 'report_mgt.html?taskNo=' + encodeURIComponent(row.taskId);
+                if (stageIndex === 4 || stageIndex === 5 || stageIndex === 6) {
+                    window.location.href = 'report_detail.html?taskNo=' + encodeURIComponent(row.taskId);
                     return;
                 }
                 const pageMap = { 0: 'task_detail_config.html', 1: 'task_detail_collect.html', 2: 'task_detail_lca.html', 3: 'task_detail_verify.html' };
@@ -130,7 +151,7 @@
             };
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
-                query, taskList, handleSearch, handleReset, goToTask
+                query, taskList, handleSearch, handleReset, getActionButtonText, goToTask
             };
         }
     });
