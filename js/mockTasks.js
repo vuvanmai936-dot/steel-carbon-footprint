@@ -35,8 +35,40 @@
         return Object.assign({}, MOCK_TASK_MAP['TSK-2026-889']);
     }
 
+    var DEFAULT_SHEET_DATA = {
+        'M配料': [['类别', '名称', '单位', '填报指引', '数值', '备注'], ['能源', '电力消耗', 'kWh', '请提供含峰谷平分项的电费单', '', ''], ['原材料', '针状焦投入', '吨', '', '', ''], ['原材料', '煤沥青', '吨', '', '', '']],
+        'M焙烧': [['类别', '名称', '单位', '填报指引', '数值', '备注'], ['能源', '天然气', 'm³', '', '', ''], ['排放', '废气排放量', 'm³', '需第三方监测报告', '', '']]
+    };
+
+    /**
+     * 获取模板 Snapshot（用于任务配置选模板后加载）
+     * @param {string} templateId
+     * @returns {Object} Snapshot { version, templateId, sheetData, evidenceRequirements }
+     */
+    function getTemplateSnapshot(templateId) {
+        return {
+            version: '1.0',
+            templateId: templateId || 'tpl_01',
+            sheetData: JSON.parse(JSON.stringify(DEFAULT_SHEET_DATA)),
+            evidenceRequirements: [{ id: 'req_001', name: '电力采购结算单', desc: '需体现用电量及结算周期。' }]
+        };
+    }
+
+    /**
+     * 获取任务实例 Snapshot（用于供应商填报、运营采集审核）
+     * @param {string} taskId
+     * @returns {Object} Snapshot
+     */
+    function getTaskSnapshot(taskId) {
+        var base = getTemplateSnapshot('tpl_01');
+        base.taskId = taskId;
+        return base;
+    }
+
     global.MOCK_TASK_MAP = MOCK_TASK_MAP;
     global.getTaskIdFromUrl = getTaskIdFromUrl;
     global.getTaskInfoFromUrl = getTaskInfoFromUrl;
     global.getFromParam = getFromParam;
+    global.getTemplateSnapshot = getTemplateSnapshot;
+    global.getTaskSnapshot = getTaskSnapshot;
 })(typeof window !== 'undefined' ? window : this);

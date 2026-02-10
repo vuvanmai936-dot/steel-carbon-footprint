@@ -14,6 +14,9 @@
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/mockTasks.js"></script>
     <script src="../js/layout.js"></script>
+    <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.16.0.0.css">
+    <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/gc.spread.sheets.all.16.0.0.min.js"></script>
+    <script src="../js/spreadUtils.js"></script>
     
     <style>
         /* === Excel 只读视图 === */
@@ -23,6 +26,7 @@
         .spreadsheet-table th { background: #f5f7fa; color: #606266; font-weight: bold; padding: 5px; border-right: 1px solid #dcdfe6; border-bottom: 1px solid #dcdfe6; text-align: center; font-size: 12px; }
         .spreadsheet-table td { padding: 0; border-right: 1px solid #dcdfe6; border-bottom: 1px solid #dcdfe6; height: 32px; font-size: 12px;}
         .cell-readonly { background: #fff; color: #303133; display: flex; align-items: center; padding: 0 8px; height: 100%; font-family: monospace; }
+        .spread-host { width: 100%; flex: 1; min-height: 300px; }
         
         /* 凭证卡片 */
         .evidence-card { 
@@ -200,29 +204,7 @@
                             </div>
                             
                             <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                                <el-tabs v-model="activeSheet" type="card" class="excel-tabs-header">
-                                    <el-tab-pane v-for="(sheetData, sheetName) in supplierData" :key="sheetName" :label="sheetName" :name="sheetName"></el-tab-pane>
-                                </el-tabs>
-                                <div style="flex: 1; overflow-y: auto; background: #fff;">
-                                    <table class="spreadsheet-table">
-                                        <thead>
-                                            <tr>
-                                                <th style="width: 40px;">#</th>
-                                                <th style="width: 150px;">数据项</th>
-                                                <th style="width: 80px;">单位</th>
-                                                <th style="width: 120px;">填报值</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="(row, idx) in supplierData[activeSheet]" :key="idx">
-                                                <td style="text-align: center; background: #f5f7fa; color: #999;">{{ idx + 1 }}</td>
-                                                <td><div class="cell-readonly">{{ row.item }}</div></td>
-                                                <td style="text-align: center;"><div class="cell-readonly" style="justify-content: center;">{{ row.unit }}</div></td>
-                                                <td><div class="cell-readonly" style="font-weight: bold;">{{ row.value }}</div></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <div ref="spreadHostRef" class="spread-host"></div>
                             </div>
                         </el-col>
 
@@ -235,9 +217,6 @@
                             <div style="flex: 1; overflow-y: auto; padding: 15px;">
                                 <div v-for="(file, idx) in uploadedFiles" :key="idx" class="evidence-card">
                                     <div style="font-weight: bold; font-size: 13px; margin-bottom: 5px;">{{ file.name }}</div>
-                                    <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
-                                        关联项: <span v-for="tag in file.related" :key="tag" style="background:#f4f4f5; padding:2px 4px; margin-right:4px; border-radius:2px;">{{ tag }}</span>
-                                    </div>
                                     <div style="display: flex; gap: 10px; font-size: 12px; align-items: center;">
                                         <el-icon color="#409EFF"><Document /></el-icon>
                                         <span style="color: #409EFF; cursor: pointer; text-decoration: underline;">{{ file.fileName }}</span>
@@ -404,10 +383,47 @@
             const supplierData = Vue.reactive({});
             const uploadedFiles = Vue.ref([]);
             const events = Vue.ref([{ type: 'sys', user: '系统', time: '09:30', content: '配置下发' }]);
+            const spreadHostRef = Vue.ref(null);
+            const spreadInstance = Vue.ref(null);
 
             // Issue Dialog State
             const issueDialogVisible = Vue.ref(false);
             const issueForm = Vue.reactive({ targetType: 'data', targetItem: '', desc: '' });
+
+            function toSnapshotFromSupplierData(data) {
+                var sheetData = {};
+                for (var sheetName in data) {
+                    var rows = data[sheetName];
+                    if (!Array.isArray(rows) || rows.length === 0) continue;
+                    var arr = [['类别', '名称', '单位', '填报指引', '数值', '备注']];
+                    for (var i = 0; i < rows.length; i++) {
+                        var r = rows[i];
+                        arr.push([
+                            r.category || '',
+                            r.item || '',
+                            r.unit || '',
+                            r.guide || '',
+                            r.value !== undefined && r.value !== null ? String(r.value) : '',
+                            r.remark || ''
+                        ]);
+                    }
+                    sheetData[sheetName] = arr;
+                }
+                return { version: '1.0', sheetData: sheetData };
+            }
+
+            function initCollectSpread() {
+                var host = spreadHostRef.value;
+                if (!host || typeof SpreadUtils === 'undefined') return;
+                if (spreadInstance.value && spreadInstance.value.destroy) {
+                    spreadInstance.value.destroy();
+                    spreadInstance.value = null;
+                }
+                host.innerHTML = '';
+                var snapshot = toSnapshotFromSupplierData(supplierData);
+                if (Object.keys(snapshot.sheetData).length === 0) return;
+                spreadInstance.value = SpreadUtils.createSpreadFromSnapshot(host, snapshot, { readOnly: true });
+            }
 
             // Actions
             const simulateSupplierSubmit = (type) => {
@@ -417,18 +433,18 @@
                     if (type === 'initial') {
                         dataVersion.value = 1.0;
                         Object.assign(supplierData, {
-                            'M配料': [{ item: '电力消耗', unit: 'kWh', value: '27200.32' }, { item: '针状焦投入', unit: '吨', value: '500.00' }],
-                            'M焙烧': [{ item: '天然气', unit: 'm³', value: '6046.00' }]
+                            'M配料': [{ category: '能源', item: '电力消耗', unit: 'kWh', guide: '请提供含峰谷平分项的电费单', value: '27200.32', remark: '' }, { category: '原材料', item: '针状焦投入', unit: '吨', guide: '', value: '500.00', remark: '' }, { category: '原材料', item: '煤沥青', unit: '吨', guide: '', value: '', remark: '' }],
+                            'M焙烧': [{ category: '能源', item: '天然气', unit: 'm³', guide: '', value: '6046.00', remark: '' }, { category: '排放', item: '废气排放量', unit: 'm³', guide: '需第三方监测报告', value: '', remark: '' }]
                         });
-                        uploadedFiles.value = [{ name: '电力采购结算单', fileName: '2025Q4_Power_Bill.pdf', related: ['M配料-电力消耗'] }];
+                        uploadedFiles.value = [{ name: '电力采购结算单', fileName: '2025Q4_Power_Bill.pdf' }];
                         events.value.push({ type: 'sub', user: '供应商', time: 'Now', content: '提交数据 v1.0' });
                     } else {
-                        // Update
                         dataVersion.value = parseFloat((dataVersion.value + 0.1).toFixed(1));
-                        supplierData['M配料'][0].value = '28000.00'; // Change value
-                        events.value.push({ type: 'sub', user: '供应商', time: 'Now', content: `更新数据至 v${dataVersion.value}` });
+                        if (supplierData['M配料'] && supplierData['M配料'][0]) supplierData['M配料'][0].value = '28000.00';
+                        events.value.push({ type: 'sub', user: '供应商', time: 'Now', content: '更新数据至 v' + dataVersion.value });
                     }
                     collectionState.value = 'auditing';
+                    Vue.nextTick(initCollectSpread);
                 }, 800);
             };
 
@@ -487,7 +503,7 @@
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
                 taskInfo, collectionState, dataVersion, supplierData, uploadedFiles, events,
-                activeSheet, isExpanded, isReverseFlow,
+                spreadHostRef, activeSheet, isExpanded, isReverseFlow,
                 issueDialogVisible, issueForm,
                 simulateSupplierSubmit, openIssueDialog, submitIssue, passAudit, simulateVerifierReject, recalculateLCA,
                 downloadPackage, goBack, navigateTo, getStatusDesc, totalItems, viewOrder, viewSupplier

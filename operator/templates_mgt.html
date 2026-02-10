@@ -335,15 +335,17 @@
                     }, 500);
                 } else {
                     const loading = ElementPlus.ElLoading.service({ text: '正在解析 Excel 结构...' });
+                    const newCode = 'TPL-' + Date.now();
                     setTimeout(() => {
                         loading.close();
                         tableData.value.unshift({
-                            code: 'TPL-' + Date.now(), name: createForm.name, version: '1.0',
+                            code: newCode, name: createForm.name, version: '1.0',
                             productCategory: createForm.productCategory, standard: createForm.standard,
                             boundary: createForm.boundary, updateTime: new Date().toLocaleString(), status: '草稿'
                         });
                         createDialogVisible.value = false;
                         ElementPlus.ElMessage.success('模版导入成功，已生成草稿');
+                        window.location.href = 'template_detail.html?id=' + newCode + '&mode=edit&source=import';
                     }, 1000);
                 }
             };

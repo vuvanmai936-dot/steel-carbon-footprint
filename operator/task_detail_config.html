@@ -14,6 +14,9 @@
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/mockTasks.js"></script>
     <script src="../js/layout.js"></script>
+    <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.16.0.0.css">
+    <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/gc.spread.sheets.all.16.0.0.min.js"></script>
+    <script src="../js/spreadUtils.js"></script>
     
     <style>
         /* === Excel 仿真样式 === */
@@ -25,6 +28,7 @@
         .cell-input { width: 100%; height: 100%; border: none; outline: none; padding: 0 8px; font-size: 12px; color: #333; background: transparent; }
         .cell-input:focus { border: 2px solid #409EFF; background: #fff; }
         .cell-readonly { background: #fafafa; color: #909399; display: flex; align-items: center; padding: 0 8px; height: 100%; }
+        .spread-host { width: 100%; flex: 1; min-height: 300px; }
         
         /* 凭证卡片 */
         .evidence-card { 
@@ -223,38 +227,7 @@
                             </div>
                             
                             <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                                <el-tabs v-model="activeSheet" type="card" class="excel-tabs-header">
-                                    <el-tab-pane v-for="(sheetData, sheetName) in excelSheets" :key="sheetName" :label="sheetName" :name="sheetName"></el-tab-pane>
-                                </el-tabs>
-                                
-                                <div style="flex: 1; overflow-y: auto; background: #fff;">
-                                    <table class="spreadsheet-table">
-                                        <thead>
-                                            <tr>
-                                                <th style="width: 40px;">#</th>
-                                                <th style="width: 100px;">A 类别</th>
-                                                <th style="width: 200px;">B 数据项名称</th>
-                                                <th style="width: 80px;">C 单位</th>
-                                                <th>D 填报指引 (仅对本次任务有效)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="(row, idx) in excelSheets[activeSheet]" :key="idx">
-                                                <td style="text-align: center; background: #f5f7fa; color: #999;">{{ idx + 1 }}</td>
-                                                <td><div class="cell-readonly">{{ row.category }}</div></td>
-                                                <td>
-                                                    <input v-if="!isLocked" v-model="row.item" class="cell-input" placeholder="项目名">
-                                                    <div v-else class="cell-readonly">{{ row.item }}</div>
-                                                </td>
-                                                <td style="text-align: center;"><div class="cell-readonly" style="justify-content: center;">{{ row.unit }}</div></td>
-                                                <td>
-                                                    <input v-if="!isLocked" v-model="row.guide" class="cell-input" placeholder="输入针对此订单的特殊指引..." style="background: #fdf6ec;">
-                                                    <div v-else class="cell-readonly" style="color: #e6a23c;">{{ row.guide }}</div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <div ref="spreadHostRef" class="spread-host"></div>
                             </div>
                         </el-col>
 
@@ -277,13 +250,6 @@
                                         <el-form label-position="top" size="small">
                                             <el-form-item label="凭证名称">
                                                 <el-input v-model="req.name" :disabled="isLocked" placeholder="凭证名称"></el-input>
-                                            </el-form-item>
-                                            <el-form-item label="关联数据行 (绑定后供应商必填)">
-                                                <el-select v-model="req.relatedItems" multiple placeholder="选择关联行" style="width: 100%;" :disabled="isLocked">
-                                                    <el-option-group v-for="(items, sheetName) in excelSheets" :key="sheetName" :label="sheetName">
-                                                        <el-option v-for="(row, rIdx) in items" :key="rIdx" :label="row.item" :value="sheetName + '-' + row.item"></el-option>
-                                                    </el-option-group>
-                                                </el-select>
                                             </el-form-item>
                                             <el-form-item label="特殊说明">
                                                 <el-input type="textarea" v-model="req.desc" :rows="2" :disabled="isLocked"></el-input>
@@ -421,16 +387,17 @@
             // === 状态管理 ===
             const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-889'));
             
-            const snapshotGenerated = Vue.ref(false); // Step 1 -> Step 2
-            const isLocked = Vue.ref(false); // Step 2 -> Step 3
-            const supplierConfirmed = Vue.ref(false); // Step 3 -> Jump Condition
+            const snapshotGenerated = Vue.ref(false);
+            const isLocked = Vue.ref(false);
+            const supplierConfirmed = Vue.ref(false);
 
             const wizard = Vue.reactive({ standard: 'iso', templateId: 'tpl_01', boundary: 'Cradle-to-Gate' });
-            const activeSheet = Vue.ref('M配料');
-            const isExpanded = Vue.ref(true); // Timeline 展开状态
+            const isExpanded = Vue.ref(true);
+            const spreadHostRef = Vue.ref(null);
+            const spreadInstance = Vue.ref(null);
+            const spreadReady = Vue.ref(false);
+            const currentSnapshot = Vue.ref(null);
 
-            // Data
-            const excelSheets = Vue.reactive({}); 
             const evidenceRequirements = Vue.ref([]);
 
             // === Actions ===
@@ -438,13 +405,17 @@
                 const loading = ElementPlus.ElLoading.service({ text: '正在实例化模版数据...', background: 'rgba(255,255,255,0.8)' });
                 setTimeout(() => {
                     loading.close();
-                    snapshotGenerated.value = true;
-                    // Mock Data
-                    Object.assign(excelSheets, {
-                        'M配料': [{ category: '能源', item: '电力消耗', unit: 'kWh', guide: '请提供含峰谷平分项的电费单' }, { category: '原料', item: '针状焦投入', unit: '吨', guide: '' }, { category: '原料', item: '煤沥青', unit: '吨', guide: '' }],
-                        'M焙烧': [{ category: '能源', item: '天然气', unit: 'm³', guide: '' }, { category: '排放', item: '废气排放量', unit: 'm³', guide: '需第三方监测报告' }]
+                    const snapshot = typeof getTemplateSnapshot === 'function' ? getTemplateSnapshot(wizard.templateId) : { sheetData: { M配料: [['类别','名称','单位','填报指引','数值','备注'], ['能源','电力消耗','kWh','请提供含峰谷平分项的电费单','','']], M焙烧: [['类别','名称','单位','填报指引','数值','备注'], ['能源','天然气','m³','','','']] }, evidenceRequirements: [] };
+                    currentSnapshot.value = snapshot;
+                    evidenceRequirements.value = (snapshot.evidenceRequirements || []).map(function(r){ return { name: r.name, desc: r.desc || '' }; });
+                    snapshotGenerated.value = true;  // 先置 true，使 v-else 渲染出 spread-host，nextTick 内才能拿到 host
+                    Vue.nextTick(() => {
+                        const host = spreadHostRef.value;
+                        if (host && typeof SpreadUtils !== 'undefined') {
+                            spreadInstance.value = SpreadUtils.createSpreadFromSnapshot(host, snapshot, { editableCols: [1, 3] });
+                            spreadReady.value = true;
+                        }
                     });
-                    evidenceRequirements.value = [{ name: '电力采购结算单', relatedItems: ['M配料-电力消耗'], desc: '需体现用电量及结算周期。' }];
                 }, 600);
             };
 
@@ -454,6 +425,16 @@
                     '确认下发',
                     { confirmButtonText: '确认下发', cancelButtonText: '取消', type: 'warning' }
                 ).then(() => {
+                    if (spreadInstance.value && typeof SpreadUtils !== 'undefined') {
+                        const snapshot = SpreadUtils.getSnapshotFromSpread(spreadInstance.value, {
+                            templateId: wizard.templateId,
+                            evidenceRequirements: evidenceRequirements.value.map(function(r, i){ return { id: 'req_' + (i+1), name: r.name, desc: r.desc || '' }; })
+                        });
+                        currentSnapshot.value = snapshot;
+                        for (var i = 0; i < spreadInstance.value.getSheetCount(); i++) {
+                            spreadInstance.value.getSheet(i).options.isProtected = true;
+                        }
+                    }
                     const loading = ElementPlus.ElLoading.service({ text: '正在同步配置到供应商门户...' });
                     setTimeout(() => {
                         loading.close();
@@ -491,18 +472,24 @@
             const viewSupplier = () => window.location.href='supplier_mgt_detail.html';
 
             // Helpers
-            const addRequirement = () => evidenceRequirements.value.push({ name: '', relatedItems: [], desc: '' });
+            const addRequirement = () => evidenceRequirements.value.push({ name: '', desc: '' });
             const removeRequirement = (idx) => evidenceRequirements.value.splice(idx, 1);
-            const resetConfig = () => { snapshotGenerated.value = false; isLocked.value = false; supplierConfirmed.value = false; };
-            const totalItems = Vue.computed(() => { let count = 0; for(let k in excelSheets) count += excelSheets[k].length; return count; });
+            const resetConfig = () => { snapshotGenerated.value = false; isLocked.value = false; supplierConfirmed.value = false; spreadReady.value = false; spreadInstance.value = null; currentSnapshot.value = null; };
+            const totalItems = Vue.computed(() => {
+                var s = currentSnapshot.value && currentSnapshot.value.sheetData;
+                if (!s) return 0;
+                var count = 0;
+                for (var k in s) count += (s[k].length > 0 ? s[k].length - 1 : 0);
+                return count;
+            });
             const goBack = () => { window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html'; };
             const openPage = (path) => window.location.href = path;
 
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
                 taskInfo, 
-                snapshotGenerated, isLocked, supplierConfirmed, wizard, activeSheet, isExpanded,
-                excelSheets, evidenceRequirements,
+                snapshotGenerated, isLocked, supplierConfirmed, wizard, isExpanded,
+                spreadHostRef, spreadReady, evidenceRequirements,
                 generateSnapshot, issueTask, simulateSupplierSubmit, navigateToCollect, toggleExpand,
                 addRequirement, removeRequirement, resetConfig,
                 totalItems, goBack, viewOrder, viewSupplier

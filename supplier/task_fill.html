@@ -13,6 +13,9 @@
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/mockTasks.js"></script>
     <script src="../js/supplierLayout.js"></script>
+    <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.16.0.0.css">
+    <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/gc.spread.sheets.all.16.0.0.min.js"></script>
+    <script src="../js/spreadUtils.js"></script>
     <style>
         .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
         .card { background: #fff; border-radius: 4px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; max-width: 900px; }
@@ -21,6 +24,7 @@
         .readonly-table th, .readonly-table td { border: 1px solid #ebeef5; padding: 8px 12px; text-align: left; }
         .readonly-table th { background: #f5f7fa; color: #606266; }
         .readonly-table input { width: 100%; border: 1px solid #dcdfe6; padding: 6px 10px; border-radius: 4px; }
+        .spread-host { width: 100%; height: 420px; border: 1px solid #dcdfe6; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -69,21 +73,14 @@
                         <p><strong>产品：</strong>{{ taskInfo.productName }} &nbsp; <strong>规格：</strong>{{ taskInfo.specs }}</p>
                     </div>
                     <div class="card">
-                        <div class="section-title">工序数据（请填写数值并上传凭证）</div>
-                        <table class="readonly-table">
-                            <thead>
-                                <tr><th>工序</th><th>数据项</th><th>单位</th><th>填报值</th><th>凭证</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(row, idx) in dataRows" :key="idx">
-                                    <td>{{ row.sheet }}</td>
-                                    <td>{{ row.item }}</td>
-                                    <td>{{ row.unit }}</td>
-                                    <td><input v-model="row.value" placeholder="请输入" /></td>
-                                    <td><el-upload action="#" :auto-upload="false" :show-file-list="true"><el-button size="small" type="primary" plain>上传</el-button></el-upload></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="section-title">工序数据（请填写数值和备注列）</div>
+                        <div ref="spreadHostRef" class="spread-host"></div>
+                    </div>
+                    <div class="card">
+                        <div class="section-title">凭证上传（与工作簿绑定）</div>
+                        <el-upload action="#" :auto-upload="false" :show-file-list="true" :on-change="onEvidenceChange" :file-list="evidenceFiles">
+                            <el-button type="primary" plain icon="Upload">上传凭证</el-button>
+                        </el-upload>
                     </div>
                     <div class="card">
                         <el-button type="primary" @click="submit">提交填报</el-button>
@@ -97,32 +94,52 @@
 <script>
     (function () {
         var taskInfo = typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl('TSK-2026-889') : { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '' };
+        var taskId = taskInfo.taskId || 'TSK-2026-889';
         var params = new URLSearchParams(window.location.search);
         var rejected = params.get('rejected') === '1';
         var rejectReasonMap = { 'TSK-2026-889': 'M焙烧工序天然气凭证不清晰，请上传清晰扫描件并核对数值与月度总量。' };
-        var rejectReason = rejected && rejectReasonMap[taskInfo.taskId] ? rejectReasonMap[taskInfo.taskId] : '';
+        var rejectReason = rejected && rejectReasonMap[taskId] ? rejectReasonMap[taskId] : '';
 
         var layout = SupplierLayout.setup();
         runSupplierApp({
             setup() {
                 const taskInfoRef = Vue.ref(taskInfo);
                 const rejectReasonRef = Vue.ref(rejectReason);
-                const dataRows = Vue.ref([
-                    { sheet: 'M配料', item: '电力消耗', unit: 'kWh', value: '' },
-                    { sheet: 'M配料', item: '针状焦投入', unit: '吨', value: '' },
-                    { sheet: 'M焙烧', item: '天然气', unit: 'm³', value: '' }
-                ]);
-                const submit = () => {
-                    ElementPlus.ElMessage.success('提交成功，请等待运营审核');
-                    setTimeout(() => { window.location.href = 'task_list.html'; }, 1000);
+                const spreadHostRef = Vue.ref(null);
+                const spreadInstance = Vue.ref(null);
+                const evidenceFiles = Vue.ref([]);
+
+                Vue.onMounted(function () {
+                    Vue.nextTick(function () {
+                        var host = spreadHostRef.value;
+                        var snapshot = typeof getTaskSnapshot === 'function' ? getTaskSnapshot(taskId) : null;
+                        if (host && snapshot && typeof SpreadUtils !== 'undefined') {
+                            spreadInstance.value = SpreadUtils.createSpreadFromSnapshot(host, snapshot, { editableCols: [4, 5] });
+                        }
+                    });
+                });
+
+                const onEvidenceChange = function (file, list) {
+                    evidenceFiles.value = list;
                 };
-                return {
-                    ...layout,
+
+                const submit = function () {
+                    var snapshot = null;
+                    if (spreadInstance.value && typeof SpreadUtils !== 'undefined') {
+                        snapshot = SpreadUtils.getSnapshotFromSpread(spreadInstance.value, { taskId: taskId });
+                    }
+                    ElementPlus.ElMessage.success('提交成功，请等待运营审核');
+                    setTimeout(function () { window.location.href = 'task_list.html'; }, 1000);
+                };
+
+                return Object.assign({}, layout, {
                     taskInfo: taskInfoRef,
                     rejectReason: rejectReasonRef,
-                    dataRows,
+                    spreadHostRef,
+                    evidenceFiles,
+                    onEvidenceChange,
                     submit
-                };
+                });
             }
         });
     })();

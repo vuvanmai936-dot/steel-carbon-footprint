@@ -12,9 +12,10 @@
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/layout.js"></script>
 
-    <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.15.1.0.css">
-    <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/gc.spread.sheets.all.15.1.0.min.js"></script>
-    <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/resources/zh/gc.spread.sheets.resources.zh.15.1.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.16.0.0.css">
+    <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/gc.spread.sheets.all.16.0.0.min.js"></script>
+    <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/resources/zh/gc.spread.sheets.resources.zh.16.0.0.min.js"></script>
+    <script src="../js/spreadUtils.js"></script>
     
     <style>
         /* === 布局核心样式 === */
@@ -356,23 +357,26 @@
             const initSpread = () => {
                 const host = document.getElementById('ss');
                 if (!host) return;
-                
-                GC.Spread.Common.CultureManager.culture("zh-cn");
-                const sheetNames = Object.keys(REAL_SHEET_DATA);
-                const spread = new GC.Spread.Sheets.Workbook(host, { sheetCount: sheetNames.length });
-                spreadInstance.value = spread;
-                
-                sheetNames.forEach((name, index) => {
-                    const sheet = spread.getSheet(index);
-                    sheet.name(name);
-                    const data = REAL_SHEET_DATA[name];
-                    sheet.setArray(0, 0, data);
-                    const style = new GC.Spread.Sheets.Style();
-                    style.backColor = "#f0f2f5"; style.font = "bold 12px sans-serif";
-                    style.hAlign = GC.Spread.Sheets.HorizontalAlign.center;
-                    sheet.getRange(0, 0, 1, 5).setStyle(style);
-                    sheet.setColumnWidth(1, 140);
-                });
+                const snapshot = { sheetData: REAL_SHEET_DATA };
+                if (typeof SpreadUtils !== 'undefined') {
+                    spreadInstance.value = SpreadUtils.createSpreadFromSnapshot(host, snapshot, { readOnly: isReadOnly.value });
+                } else {
+                    GC.Spread.Common.CultureManager.culture("zh-cn");
+                    const sheetNames = Object.keys(REAL_SHEET_DATA);
+                    const spread = new GC.Spread.Sheets.Workbook(host, { sheetCount: sheetNames.length });
+                    spreadInstance.value = spread;
+                    sheetNames.forEach((name, index) => {
+                        const sheet = spread.getSheet(index);
+                        sheet.name(name);
+                        const data = REAL_SHEET_DATA[name];
+                        sheet.setArray(0, 0, data);
+                        const style = new GC.Spread.Sheets.Style();
+                        style.backColor = "#f0f2f5"; style.font = "bold 12px sans-serif";
+                        style.hAlign = GC.Spread.Sheets.HorizontalAlign.center;
+                        sheet.getRange(0, 0, 1, 5).setStyle(style);
+                        sheet.setColumnWidth(1, 140);
+                    });
+                }
                 updateSpreadLockState();
             };
 
@@ -401,6 +405,9 @@
             };
 
             const handleSaveDraft = () => {
+                if (spreadInstance.value && typeof SpreadUtils !== 'undefined') {
+                    const snapshot = SpreadUtils.getSnapshotFromSpread(spreadInstance.value, { evidenceRequirements: requirements.value });
+                }
                 templateData.value.lastUpdated = new Date().toLocaleString();
                 ElementPlus.ElMessage.success('草稿保存成功');
             };
