@@ -60,7 +60,24 @@
 
 上述 taskNo 与 `MOCK_TASK_MAP`、订单子任务、自营/委托任务列表中的 taskId 一致，保证 **订单详情 → 任务列表 → 报告管理 → 报告详情** 全链路可串联验证。
 
-## 6. 后续对接说明
+## 6. 模板与任务 Snapshot Mock
+
+任务配置、供应商填报、采集审核等页使用 **SpreadJS** 展示模板/采集表，数据来自 Snapshot。`js/mockTasks.js` 提供以下 Mock 函数：
+
+| 函数 | 说明 | 使用页面 |
+|------|------|----------|
+| `getTemplateSnapshot(templateId)` | 返回模板 Snapshot（version、templateId、sheetData、evidenceRequirements） | task_detail_config（选模板后实例化） |
+| `getTaskSnapshot(taskId)` | 返回任务实例 Snapshot（含 taskId，基于模板） | task_fill、task_detail_collect |
+
+Snapshot 格式参见 `docs/05_模板引擎解析逻辑.md` 第四节。后续对接时需替换为：
+
+* `getTemplateSnapshot(templateId)` → `GET /api/templates/{id}/snapshot`
+* `getTaskSnapshot(taskId)` → `GET /api/tasks/{id}/snapshot`
+* `saveTaskSnapshot(taskId, snapshot)` → `PUT /api/tasks/{id}/snapshot`（任务配置保存/下发）
+* `submitTaskData(taskId, snapshot, evidenceFiles)` → `POST /api/tasks/{id}/submit`（供应商提交）
+
+## 7. 后续对接说明
 
 * 将 `MOCK_TASK_MAP`、`MOCK_REPORTS` 与订单/任务/报告列表的 Mock 数组替换为 API 请求即可。
 * 保持「订单号 / 任务号」规则与后端约定一致，便于联调。
+* Snapshot 可存为 JSON/SSJSON，凭证文件单独存储，通过 taskId 关联。

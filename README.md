@@ -19,6 +19,7 @@
 
 - **前端框架**：Vue 3（全局构建版本，CDN 引入）
 - **UI 组件库**：Element Plus（CDN 引入）
+- **表格引擎**：SpreadJS 16.x（模板与填报表统一方案，见 `docs/05_模板引擎解析逻辑.md`）
 - **构建与开发服务器**：Vite
 - **语言**：原型阶段使用原生 JavaScript 与 HTML/CSS
 
@@ -34,7 +35,7 @@
 | `supplier/` | 供应商工作台：任务列表、填报、澄清、**我的报告**（预览、确认接收、申诉）等 |
 | `certifier/` | 认证机构工作台：任务列表、任务详情、证书等 |
 | `css/` | 全局与按角色样式：`common.css`、`operator.css`、`supplier.css`、`certifier.css`、`task_detail.css` 等 |
-| `js/` | 根目录脚本：`layout.js`（通用布局）、`mockOperator.js`（运营端 Mock 数据）、`mockTasks.js` 等 |
+| `js/` | 根目录脚本：`layout.js`（通用布局）、`mockOperator.js`（运营端 Mock）、`mockTasks.js`（任务与 Snapshot Mock）、`spreadUtils.js`（SpreadJS 公共工具） |
 | `public/` | 构建时原样拷贝到 `dist/`：`js/layout.js`、`js/utils.js`，以及图片、字体等静态资源（引用时不加 `public/` 前缀，如 `/logo.png`） |
 | `docs/` | 业务与设计文档（见下表） |
 | `vite.config.js` | Vite 多页面配置（根目录 + operator / supplier / certifier 下 HTML 均为入口） |
@@ -68,9 +69,9 @@
 | `02_全局数据字典与枚举.md` | 订单/任务状态、计算类型、主状态与申诉叠加等 |
 | `03_订单管理逻辑.md` | 订单与任务关系、发证至归档链路说明 |
 | `04_任务调度与状态机.md` | 任务阶段、工作台、下发/待归档/已归档与申诉规则 |
-| `05_模板引擎解析逻辑.md` | Excel 解析、凭证配置等 |
+| `05_模板引擎解析逻辑.md` | Excel 解析、凭证配置、Snapshot 格式、SpreadUtils 与各页 Spread 行为 |
 | `06_供应商工作台功能清单与信息结构.md` | 供应商端功能与信息结构 |
-| `07_Mock数据说明.md` | Mock 订单号/任务号规则及对应关系 |
+| `07_Mock数据说明.md` | Mock 订单号/任务号/Snapshot 接口及对应关系 |
 | `08_PR_任务与报告边界设计方案.md` | 任务管理=核查任务、报告管理=报告全流程的详细 PR 设计 |
 
 ---
@@ -115,9 +116,10 @@ npm run preview
 ## 当前实现要点
 
 - **统一布局与 Vue 启动**：运营端通过 `runOperatorApp(component)`（`public/js/layout.js`）统一完成 `createApp`、Element Plus + 图标、`mount('#app')`；公共基础样式在 `css/common.css`（全高布局、`[v-cloak]` 等），各页脚本精简。
+- **SpreadJS 模板与填报表**：模板详情、任务配置、供应商填报、采集审核等页统一使用 SpreadJS 16.x 展示模板/采集表；`js/spreadUtils.js` 提供 Snapshot 加载/导出、可编辑列、只读控制；凭证与工作簿绑定，无行级关联。详见 `docs/05_模板引擎解析逻辑.md`。
 - **任务 7 段与下发**：自营/委托任务列表展示 配置 / 采集 / 计算 / 核查 / **下发** / 待归档 / 已归档；报告管理支持勾选报告/证书执行「下发」至供应商。
 - **报告详情与申诉**：运营端 `report_detail.html` 查看报告；待归档/已归档不展示申诉按钮。供应商端「我的报告」支持预览、**确认接收**与**申诉**窗口（仅下发后、确认接收前可申诉）。
-- **Mock 数据**：`js/mockOperator.js`、`mockTasks.js` 及 `docs/07_Mock数据说明.md` 约定订单号/任务号规则，便于与后端接口对接时替换。
+- **Mock 数据**：`js/mockOperator.js`、`mockTasks.js` 及 `docs/07_Mock数据说明.md` 约定订单号/任务号/Snapshot Mock 规则，便于与后端接口对接时替换。
 
 ---
 
