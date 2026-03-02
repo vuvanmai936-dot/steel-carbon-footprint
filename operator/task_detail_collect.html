@@ -39,11 +39,14 @@
         }
         .evidence-card:hover { border-color: #409EFF; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-        /* 右侧面板底部操作栏 (固定底部) */
+        /* 右侧面板底部操作栏 (固定底部，紧凑布局) */
         .panel-footer {
-            padding: 15px 20px; background: #fff; border-top: 1px solid #e4e7ed;
-            display: flex; flex-direction: column; gap: 10px; margin-top: auto; /* 确保沉底 */
+            padding: 12px 16px; background: #fff; border-top: 1px solid #e4e7ed;
+            display: flex; flex-direction: column; gap: 8px; margin-top: auto;
         }
+        .panel-footer .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .panel-footer .btn-row .el-button { flex: 1; min-width: 0; }
+        .panel-footer-hint { font-size: 12px; color: #909399; margin-bottom: 6px; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -153,9 +156,6 @@
                             </el-tooltip>
                         </div>
                         <div class="dash-sep">
-                            <el-button type="primary" link size="small" icon="Download" @click="downloadPackage">打包下载</el-button>
-                        </div>
-                        <div class="dash-sep">
                             <el-badge v-if="hasClarifyBadge" is-dot class="msg-badge">
                                 <el-button type="primary" link size="small" icon="ChatLineSquare" @click="taskMessageDrawerVisible = true">消息与澄清</el-button>
                             </el-badge>
@@ -182,9 +182,6 @@
                                     <el-icon style="vertical-align: -2px; margin-right: 5px;"><Grid /></el-icon> 
                                     数据详情 (只读)
                                 </span>
-                                <div v-if="collectionState === 'passed' && !isReverseFlow" style="display: flex; align-items: center; gap: 8px;">
-                                    <el-button type="primary" size="default" icon="ArrowRight" @click="navigateTo('lca')">前往 LCA 计算</el-button>
-                                </div>
                             </div>
                             
                             <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
@@ -220,29 +217,37 @@
                             </div>
 
                             <div v-if="collectionState === 'auditing'" class="panel-footer">
-                                <el-button type="success" size="large" style="width: 100%;" icon="CircleCheck" @click="passAudit">
-                                    审核通过，进入 LCA 计算
-                                </el-button>
-                                <el-button type="primary" plain style="width: 100%; margin-left: 0;" icon="QuestionFilled" @click="openClarifyIssueDialog">
-                                    提出疑点
-                                </el-button>
-                                <el-button type="danger" plain style="width: 100%; margin-left: 0;" icon="Warning" @click="openRejectDialog">
-                                    驳回
-                                </el-button>
+                                <el-button type="success" size="default" icon="CircleCheck" @click="passAudit" style="width: 100%;">审核通过，进入 LCA 计算</el-button>
+                                <div class="panel-footer-hint">有疑问只需说明 → 提出疑点；需修改数据或凭证后重提交 → 驳回</div>
+                                <div class="btn-row">
+                                    <el-button size="default" icon="Download" @click="downloadPackage">打包下载</el-button>
+                                    <el-tooltip content="对数据/凭证有疑问、只需供应商说明时使用。不改变采集状态，供应商在消息与澄清中回复即可。" placement="top">
+                                        <el-button type="primary" plain size="default" icon="QuestionFilled" @click="openClarifyIssueDialog">提出疑点</el-button>
+                                    </el-tooltip>
+                                    <el-tooltip content="需要供应商修改数据或凭证并重新提交时使用。任务变为整改中，供应商需进入填报页重填。" placement="top">
+                                        <el-button type="danger" plain size="default" icon="Warning" @click="openRejectDialog">驳回</el-button>
+                                    </el-tooltip>
+                                </div>
                             </div>
 
                             <div v-if="collectionState === 'passed' && !isReverseFlow" class="panel-footer">
-                                <el-button type="primary" size="large" style="width: 100%;" icon="ArrowRight" @click="navigateTo('lca')">
-                                    前往 LCA 计算
-                                </el-button>
+                                <div class="btn-row">
+                                    <el-button type="primary" size="default" icon="ArrowRight" @click="navigateTo('lca')">前往 LCA 计算</el-button>
+                                    <el-button size="default" icon="Download" @click="downloadPackage">打包下载</el-button>
+                                </div>
                             </div>
 
-                             <div v-if="collectionState === 'passed' && isReverseFlow" class="panel-footer">
-                                <el-alert title="源数据已变更" type="warning" show-icon :closable="false" style="margin-bottom: 10px;"></el-alert>
-                                <el-button type="primary" size="large" style="width: 100%;" icon="Refresh" @click="recalculateLCA">
-                                    重新计算 LCA
-                                </el-button>
-                             </div>
+                            <div v-if="collectionState === 'passed' && isReverseFlow" class="panel-footer">
+                                <el-alert title="源数据已变更" type="warning" show-icon :closable="false" style="margin-bottom: 8px;"></el-alert>
+                                <div class="btn-row">
+                                    <el-button type="primary" size="default" icon="Refresh" @click="recalculateLCA">重新计算 LCA</el-button>
+                                    <el-button size="default" icon="Download" @click="downloadPackage">打包下载</el-button>
+                                </div>
+                            </div>
+
+                            <div v-if="collectionState === 'waiting_update'" class="panel-footer">
+                                <el-button size="default" icon="Download" @click="downloadPackage" style="width: 100%;">打包下载</el-button>
+                            </div>
                         </el-col>
                     </el-row>
                 </div>
@@ -252,6 +257,10 @@
     </el-container>
 
     <el-dialog v-model="rejectDialogVisible" title="驳回" width="500px">
+        <div style="font-size: 12px; color: #606266; margin-bottom: 12px; padding: 8px 10px; background: #f5f7fa; border-radius: 4px;">
+            <strong>驳回 = 退回重填</strong>（供应商需进入填报页修改并重新提交）<br>
+            <strong>提出疑点 = 仅需说明</strong>（供应商在消息与澄清中回复即可，无需重填）
+        </div>
         <el-alert title="提交后任务将退回给供应商，且状态变更为“整改中”" type="warning" :closable="false" show-icon style="margin-bottom: 12px;"></el-alert>
         <div style="font-size: 12px; color: #909399; margin-bottom: 16px;">需退回重填时使用本操作；仅沟通说明请使用「提出疑点」或「消息与澄清」。</div>
         <el-form label-position="top">
