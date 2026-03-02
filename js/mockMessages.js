@@ -1,5 +1,5 @@
 /**
- * 用户级消息 Mock（与 docs/15_消息功能规划 一致）
+ * 用户级消息 Mock（与 docs/04_澄清与消息/15_消息功能规划.md 一致）
  * 提供 getMyMessages、markRead、markAllRead；消息类型：任务分配、SLA预警、澄清、驳回/整改、报告/证书、系统通知
  */
 (function (global) {

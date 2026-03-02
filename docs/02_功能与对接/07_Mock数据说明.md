@@ -74,7 +74,7 @@
 | `submitTaskData(taskId, snapshot, evidenceFiles)` | 供应商提交数据（写入 Mock，供采集审核页读取） | task_fill |
 | `getTaskSubmittedSnapshot(taskId)` | 返回供应商已提交的 Snapshot（采集审核只读展示） | task_detail_collect |
 
-Snapshot 格式参见 `docs/05_模板引擎解析逻辑.md`。后续对接时需替换为：
+Snapshot 格式参见 [05_模板引擎解析逻辑](05_模板引擎解析逻辑.md)。后续对接时需替换为：
 
 * `getTemplateSnapshot(templateId)` → `GET /api/templates/{id}/snapshot`
 * `saveTemplateSnapshot(templateId, snapshot)` → `PUT /api/templates/{id}/snapshot`
