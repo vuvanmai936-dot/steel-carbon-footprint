@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockMessages.js"></script>
     <script src="../js/layout.js"></script>
     
     <style>
@@ -104,10 +105,25 @@
                     </el-breadcrumb>
                 </div>
                 <div style="display: flex; align-items: center;">
+                    <el-badge :value="messageUnreadCount" :hidden="messageUnreadCount === 0" class="msg-badge">
+                        <el-button link type="primary" @click="messageCenterVisible = true" style="padding: 8px;">
+                            <el-icon :size="20"><component :is="'Bell'"></component></el-icon>
+                        </el-button>
+                    </el-badge>
                     <el-avatar :size="32" style="background: #409EFF;">管理员</el-avatar>
                     <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
+            <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
+                <div class="message-center-list">
+                    <div v-for="m in messageList" :key="m.messageId" class="message-item" :class="{ unread: !m.read }" @click="goMessage(m)">
+                        <div class="msg-item-title">{{ m.title }}</div>
+                        <div class="msg-item-desc">{{ m.body }}</div>
+                        <div class="msg-item-time">{{ formatMessageTime(m.createdAt) }}</div>
+                    </div>
+                    <el-empty v-if="!messageList.length" description="暂无消息" :image-size="60"></el-empty>
+                </div>
+            </el-drawer>
 
             <el-main class="scrolling-main">
                 
@@ -317,7 +333,7 @@
 </div>
 
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
 
     runOperatorApp({
         setup() {
@@ -397,7 +413,8 @@
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
                 activeTab, certInfo, form, taskList, settleList,
                 platformProfit, profitMargin,
-                handleSync, saveConfig, toggleBizStatus, goBack, goToOrder, goToTask, openBillDetail
+                handleSync, saveConfig, toggleBizStatus, goBack, goToOrder, goToTask, openBillDetail,
+                messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime
             };
         }
     });

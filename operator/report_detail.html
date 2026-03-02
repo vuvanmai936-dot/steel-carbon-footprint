@@ -10,7 +10,9 @@
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockMessages.js"></script>
     <script src="../js/layout.js"></script>
+    <script src="../js/mockTasks.js"></script>
     <script src="../js/mockOperator.js"></script>
     <style>
         .detail-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
@@ -76,12 +78,27 @@
                     <span v-if="record?.appeal && record?.status === 'process' && record?.releasedToSupplier" class="status-badge status-appeal">申诉中</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
+                    <el-badge :value="messageUnreadCount" :hidden="messageUnreadCount === 0" class="msg-badge">
+                        <el-button link type="primary" @click="messageCenterVisible = true" style="padding: 8px;">
+                            <el-icon :size="20"><component :is="'Bell'"></component></el-icon>
+                        </el-button>
+                    </el-badge>
                     <el-button v-if="record?.taskNo" link type="primary" @click="goToTask">前往任务</el-button>
                     <el-button @click="goBack">返回列表</el-button>
                     <el-avatar :size="32" style="background: #409EFF;">管</el-avatar>
                     <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
+            <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
+                <div class="message-center-list">
+                    <div v-for="m in messageList" :key="m.messageId" class="message-item" :class="{ unread: !m.read }" @click="goMessage(m)">
+                        <div class="msg-item-title">{{ m.title }}</div>
+                        <div class="msg-item-desc">{{ m.body }}</div>
+                        <div class="msg-item-time">{{ formatMessageTime(m.createdAt) }}</div>
+                    </div>
+                    <el-empty v-if="!messageList.length" description="暂无消息" :image-size="60"></el-empty>
+                </div>
+            </el-drawer>
 
             <el-main style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
                 <div v-if="!record" style="padding: 40px; text-align: center; color: #909399;">未找到该档案，请检查任务编号或 <a href="report_mgt.html">返回列表</a>。</div>
@@ -235,7 +252,7 @@
 </div>
 
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
 
     runOperatorApp({
         setup() {
@@ -249,6 +266,25 @@
             rawReports.forEach(r => {
                 if (r.reportVersion === undefined) r.reportVersion = r.status === 'process' ? 'draft' : 'sealed';
             });
+            // 若 URL 带 taskNo 但不在报告列表中，且任务在 MOCK_TASK_MAP 中，则生成占位档案，便于从任务详情跳转后能展示
+            if (taskNoFromUrl.value && typeof MOCK_TASK_MAP !== 'undefined' && MOCK_TASK_MAP[taskNoFromUrl.value]) {
+                const exists = rawReports.some(r => r.taskNo === taskNoFromUrl.value);
+                if (!exists) {
+                    const t = MOCK_TASK_MAP[taskNoFromUrl.value];
+                    rawReports.push({
+                        taskNo: t.taskId,
+                        orderNo: t.orderNo,
+                        productName: t.productName,
+                        supplierName: t.supplier,
+                        verifier: '-',
+                        status: 'process',
+                        reportVersion: 'draft',
+                        releasedToSupplier: false,
+                        docs: { calc: null, verify: null, cert: null },
+                        history: [{ title: '任务已进入报告阶段', desc: '可从本页进行用印版上传、下发与归档', timestamp: new Date().toLocaleString('zh-CN'), type: 'info' }]
+                    });
+                }
+            }
             const listRef = Vue.ref(rawReports);
 
             const record = Vue.computed(() => {
@@ -330,7 +366,7 @@
                 ElementPlus.ElMessage.success('已接受申诉，待重新核查');
             };
 
-            return { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, taskNoFromUrl, record, previewVisible, previewDoc, previewType, archiving, isAllReady, canArchive, goBack, goToTask, openPreview, onSealedFileChange, submitUploadSealed, manualSync, executeArchive, revokeArchive, rejectAppeal, acceptAppeal };
+            return { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, taskNoFromUrl, record, previewVisible, previewDoc, previewType, archiving, isAllReady, canArchive, goBack, goToTask, openPreview, onSealedFileChange, submitUploadSealed, manualSync, executeArchive, revokeArchive, rejectAppeal, acceptAppeal, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime };
         }
     });
 </script>

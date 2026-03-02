@@ -1,5 +1,5 @@
 // js/layout.js
-const { createApp, ref, reactive, computed } = Vue;
+const { createApp, ref, reactive, computed, watch } = Vue;
 
 function findActiveMenuId(menuConfig, path) {
     for (const item of menuConfig) {
@@ -60,6 +60,32 @@ const SharedLayout = {
             window.location.href = '../index.html';
         };
 
+        // 消息中心（用户级消息，与 docs/15 一致；未加载 mockMessages 时返回空实现）
+        const hasMessageAPI = typeof getMyMessages === 'function' && typeof getUnreadCount === 'function';
+        const messageCenterVisible = ref(false);
+        const messageList = ref([]);
+        const messageUnreadCount = computed(function () {
+            return hasMessageAPI ? getUnreadCount(currentUser.name || 'operator', 'operator') : 0;
+        });
+        const loadMessages = function () {
+            messageList.value = hasMessageAPI ? getMyMessages(currentUser.name || 'operator', {}, 'operator') : [];
+        };
+        const goMessage = function (m) {
+            if (m && m.jumpUrl) window.location.href = m.jumpUrl;
+        };
+        const formatMessageTime = function (iso) {
+            if (!iso) return '';
+            var d = new Date(iso);
+            var now = new Date();
+            var diff = (now - d) / 60000;
+            if (diff < 1) return '刚刚';
+            if (diff < 60) return Math.floor(diff) + '分钟前';
+            if (diff < 1440) return Math.floor(diff / 60) + '小时前';
+            if (diff < 43200) return Math.floor(diff / 1440) + '天前';
+            return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+        };
+        watch(messageCenterVisible, function (v) { if (v) loadMessages(); });
+
         return {
             menuConfig,
             currentUser,
@@ -67,7 +93,13 @@ const SharedLayout = {
             openPage,
             sidebarCollapsed,
             toggleSidebar,
-            activeMenuId
+            activeMenuId,
+            messageCenterVisible,
+            messageList,
+            messageUnreadCount,
+            loadMessages,
+            goMessage,
+            formatMessageTime
         };
     }
 };

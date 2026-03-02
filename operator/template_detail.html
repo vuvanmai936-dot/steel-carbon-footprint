@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/mockTasks.js"></script>
+    <script src="../js/mockMessages.js"></script>
     <script src="../js/layout.js"></script>
 
     <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.16.0.0.css">
@@ -166,7 +167,12 @@
                         </div>
                     </div>
                 </div>
-                <div>
+                <div style="display: flex; align-items: center;">
+                    <el-badge :value="messageUnreadCount" :hidden="messageUnreadCount === 0" class="msg-badge">
+                        <el-button link type="primary" @click="messageCenterVisible = true" style="padding: 8px;">
+                            <el-icon :size="20"><component :is="'Bell'"></component></el-icon>
+                        </el-button>
+                    </el-badge>
                     <el-button icon="View" @click="handlePreview">供应商填报预览</el-button>
                     <el-divider direction="vertical"></el-divider>
                     <template v-if="!isReadOnly">
@@ -180,6 +186,16 @@
                     </template>
                 </div>
             </el-header>
+            <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
+                <div class="message-center-list">
+                    <div v-for="m in messageList" :key="m.messageId" class="message-item" :class="{ unread: !m.read }" @click="goMessage(m)">
+                        <div class="msg-item-title">{{ m.title }}</div>
+                        <div class="msg-item-desc">{{ m.body }}</div>
+                        <div class="msg-item-time">{{ formatMessageTime(m.createdAt) }}</div>
+                    </div>
+                    <el-empty v-if="!messageList.length" description="暂无消息" :image-size="60"></el-empty>
+                </div>
+            </el-drawer>
 
             <el-main style="background: #f0f2f5; padding: 0;">
                 <div class="workspace-container">
@@ -327,7 +343,7 @@
 </div>
 
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
 
     runOperatorApp({
         setup() {
@@ -529,7 +545,8 @@
                 templateData, requirements, isReadOnly, nextVersion, previewVisible,
                 excelFileInputRef, triggerExcelImport, handleExcelImport,
                 addRequirement, removeReq, handleTemplateUpload,
-                handleSaveDraft, handlePublish, handleUnlock, handlePreview, goBack
+                handleSaveDraft, handlePublish, handleUnlock, handlePreview, goBack,
+                messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime
             };
         }
     });

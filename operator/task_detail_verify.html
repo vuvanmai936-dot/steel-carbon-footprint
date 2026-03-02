@@ -7,12 +7,16 @@
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/operator.css">
     <link rel="stylesheet" href="../css/task_detail.css">
+    <link rel="stylesheet" href="../css/clarify_panel.css">
     
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/clarifyUtils.js"></script>
     <script src="../js/mockTasks.js"></script>
+    <script src="../js/mockClarifications.js"></script>
+    <script src="../js/mockMessages.js"></script>
     <script src="../js/layout.js"></script>
     
     <style>
@@ -49,26 +53,6 @@
         .file-info { flex: 1; overflow: hidden; }
         .file-name { font-size: 13px; font-weight: bold; color: #303133; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .file-meta { font-size: 12px; color: #909399; margin-top: 4px; }
-
-        /* === 悬浮全景进度 === */
-        .floating-timeline {
-            position: fixed; bottom: 20px; right: 20px; z-index: 2000;
-            background: #fff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-            border: 1px solid #ebeef5; transition: all 0.3s;
-            display: flex; flex-direction: column; overflow: hidden;
-        }
-        .floating-timeline.collapsed {
-            width: 48px !important; height: 48px !important; border-radius: 50% !important; cursor: pointer;
-            align-items: center; justify-content: center; background: #409EFF; color: #fff; padding: 0;
-        }
-        .floating-timeline.expanded { width: 340px; height: 680px; border-radius: 8px; }
-        
-        .ft-header { padding: 12px 15px; background: #409EFF; color: #fff; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; flex: none; }
-        .ft-body { flex: 1; overflow-y: auto; padding: 15px; background: #fff; }
-
-        .stage-node { transition: all 0.3s; }
-        .stage-node.clickable { cursor: pointer; }
-        .stage-node.clickable:hover .stage-title { color: #409EFF !important; text-decoration: underline; }
 
         .panel-footer { padding: 15px; border-top: 1px solid #e4e7ed; background: #fff; display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
     </style>
@@ -112,60 +96,85 @@
                     </el-breadcrumb>
                 </div>
                 <div style="display: flex; align-items: center;">
-                    <el-tooltip content="SLA 剩余时间" placement="bottom"><div class="sla-capsule"><el-icon><Timer /></el-icon> 12:30:05</div></el-tooltip>
+                    <el-badge :value="messageUnreadCount" :hidden="messageUnreadCount === 0" class="msg-badge">
+                        <el-button link type="primary" @click="messageCenterVisible = true" style="padding: 8px;">
+                            <el-icon :size="20"><component :is="'Bell'"></component></el-icon>
+                        </el-button>
+                    </el-badge>
                     <el-avatar :size="32" style="background: #409EFF; margin-right:8px">运营</el-avatar>
                     <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
                 </div>
             </el-header>
+            <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
+                <div class="message-center-list">
+                    <div v-for="m in messageList" :key="m.messageId" class="message-item" :class="{ unread: !m.read }" @click="goMessage(m)">
+                        <div class="msg-item-title">{{ m.title }}</div>
+                        <div class="msg-item-desc">{{ m.body }}</div>
+                        <div class="msg-item-time">{{ formatMessageTime(m.createdAt) }}</div>
+                    </div>
+                    <el-empty v-if="!messageList.length" description="暂无消息" :image-size="60"></el-empty>
+                </div>
+            </el-drawer>
 
             <el-main style="padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column;">
                 
                 <div class="task-info-dashboard">
-                    <div class="dash-block" style="flex: 1.5;">
-                        <div class="dash-title">产品与任务</div>
-                        <div class="dash-content">
-                            <div class="prod-main">
-                                <span class="prod-name">{{ taskInfo.productName }}</span>
-                                <span class="prod-id" style="font-family:monospace; font-size:12px; background:#f4f4f5; padding:2px 6px; border-radius:4px; margin-left:8px;">{{ taskInfo.taskId }}</span>
+                    <div class="task-info-dashboard__main">
+                        <div class="dash-block" style="flex: 1.5;">
+                            <div class="dash-title">产品与任务</div>
+                            <div class="dash-content">
+                                <div class="prod-info">
+                                    <div class="prod-primary">
+                                        <span class="prod-name">{{ taskInfo.productName }}</span>
+                                        <span class="prod-id">{{ taskInfo.taskId }}</span>
+                                    </div>
+                                    <div class="prod-meta">
+                                        <div class="prod-meta-row">
+                                            <span class="prod-label">规格</span>
+                                            <span class="prod-value">{{ taskInfo.specs }}</span>
+                                        </div>
+                                        <div class="prod-meta-row">
+                                            <span class="prod-label">订单</span>
+                                            <span class="prod-value">
+                                                <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="prod-sub">
-                                <span style="margin-right: 10px;">{{ taskInfo.specs }}</span>
-                                <span style="color:#dcdfe6; margin-right: 10px;">|</span>
-                                <el-link type="primary" :underline="false" style="font-size:12px;" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
+                        </div>
+                        <div class="dash-block" style="flex: 1.2;">
+                            <div class="dash-title">来源供应商</div>
+                            <div class="dash-content">
+                                <div style="display:flex; align-items:center;">
+                                    <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
+                                    <el-link type="primary" :underline="false" style="font-weight:bold; font-size:14px;" @click="viewSupplier">{{ taskInfo.supplier }}</el-link>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dash-block">
+                            <div class="dash-title">文档</div>
+                            <div class="data-stats">
+                                <div class="stat-item">
+                                    <div class="stat-num" style="color:#409EFF">3</div>
+                                    <div class="stat-label">文件</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="dash-block" style="flex: 1.2;">
-                        <div class="dash-title">来源供应商</div>
-                        <div class="dash-content">
-                            <div style="display:flex; align-items:center;">
-                                <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
-                                <span style="font-weight:bold; font-size:14px;">{{ taskInfo.supplier }}</span>
-                            </div>
-                            <div style="font-size:12px; color:#909399; margin-top:4px; margin-left:32px;">Level A</div>
+                    <div class="task-info-dashboard__status-bar">
+                        <div class="dash-block">
+                            <div class="dash-title">核查状态</div>
+                            <div class="dash-content"><el-tag type="info">{{ getStageStatusText(taskRow) || '待运营验收' }}</el-tag></div>
                         </div>
-                    </div>
-
-                    <div class="dash-block" style="flex: 1;">
-                        <div class="dash-title">核查状态</div>
-                        <div class="dash-content">
-                            <div style="display:flex; align-items:center; gap:8px">
-                                <el-tag v-if="verifyState === 'pending_review'" type="warning" effect="dark">待运营验收</el-tag>
-                                <el-tag v-else-if="verifyState === 'rejected'" type="danger">已驳回 (Rejected)</el-tag>
-                                <el-tag v-else type="success" effect="dark">已上链 (On-Chain)</el-tag>
-                            </div>
-                            <div style="font-size:12px; color:#999; margin-top:4px;">{{ getStatusDesc() }}</div>
+                        <div class="dash-sep">
+                            <el-tooltip content="截止剩余时间" placement="bottom"><div class="sla-capsule"><el-icon><Timer /></el-icon> 12:30:05</div></el-tooltip>
                         </div>
-                    </div>
-
-                    <div class="dash-block">
-                        <div class="dash-title">文档</div>
-                        <div class="data-stats">
-                            <div class="stat-item">
-                                <div class="stat-num" style="color:#409EFF">3</div>
-                                <div class="stat-label">文件</div>
-                            </div>
+                        <div class="dash-sep">
+                            <el-badge v-if="hasClarifyBadge" is-dot class="msg-badge">
+                                <el-button type="primary" link size="small" icon="ChatLineSquare" @click="taskMessageDrawerVisible = true">消息与澄清</el-button>
+                            </el-badge>
+                            <el-button v-else type="primary" link size="small" icon="ChatLineSquare" @click="taskMessageDrawerVisible = true">消息与澄清</el-button>
                         </div>
                     </div>
                 </div>
@@ -286,85 +295,107 @@
                             </div>
 
                             <div v-else-if="verifyState === 'verified'">
-                                <el-button type="primary" size="large" style="width: 100%;" icon="Trophy" @click="navigateTo('certify')">
-                                    前往证书下发页面
+                                <el-button type="primary" size="large" style="width: 100%;" icon="Document" @click="openReportDetail">
+                                    前往报告管理
                                 </el-button>
                             </div>
                         </div>
                     </el-col>
                 </el-row>
 
-                <div class="floating-timeline" :class="isExpanded ? 'expanded' : 'collapsed'">
-                    <div v-if="!isExpanded" @click="isExpanded = true" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
-                        <el-icon size="24"><DataLine /></el-icon>
-                    </div>
-                    <div v-else style="height:100%; display:flex; flex-direction:column;">
-                        <div class="ft-header" @click="isExpanded = false"><span>全景进度</span><el-icon><ArrowDown /></el-icon></div>
-                        <div class="ft-body timeline-scroll" id="timelineStream">
-                            <div class="stage-node done clickable" @click="navigateTo('config')">
-                                <div class="stage-marker"><el-icon><Check /></el-icon></div><div class="stage-content"><div class="stage-title">规则配置</div></div>
-                            </div>
-                            <div class="stage-node done clickable" @click="navigateTo('collect')">
-                                <div class="stage-marker"><el-icon><Check /></el-icon></div><div class="stage-content"><div class="stage-title">数据采集</div></div>
-                            </div>
-                            <div class="stage-node done clickable" @click="navigateTo('lca')">
-                                <div class="stage-marker"><el-icon><Check /></el-icon></div><div class="stage-content"><div class="stage-title">LCA 计算</div></div>
-                            </div>
-                            
-                            <div class="stage-node active">
-                                <div class="stage-marker">4</div>
-                                <div class="stage-content">
-                                    <div class="stage-title">核查认证 (Verify)</div>
-                                    <div class="stage-meta">{{ getStatusDesc() }}</div>
-                                </div>
-                            </div>
-
-                            <div v-for="(evt, idx) in events" :key="idx" class="event-node" :class="evt.type">
-                                <div class="event-dot"></div>
-                                <div class="event-box">
-                                    <div class="evt-head"><span class="evt-user">{{ evt.user }}</span> <span class="evt-time">{{ evt.time }}</span></div>
-                                    <div class="evt-body">{{ evt.content }}</div>
-                                </div>
-                            </div>
-
-                            <div class="stage-node" :class="verifyState==='verified'?'done clickable':'pending'" @click="navigateTo('certify')">
-                                <div class="stage-marker">5</div>
-                                <div class="stage-content">
-                                    <div class="stage-title">证书下发</div>
-                                    <div v-if="verifyState==='verified'" class="stage-meta" style="color:#67C23A">点击生成最终证书</div>
-                                </div>
-                            </div>
-
-                            <div v-if="verifyState === 'rejected'" style="margin-top: 20px; border-top: 1px dashed #dcdfe6; padding-top: 10px;">
-                                <div style="font-size: 12px; color: #909399; margin-bottom: 8px; text-align: center;">[演示控制台]</div>
-                                <el-button type="warning" size="small" plain style="width:100%;" @click="simulateReSubmit">模拟：SGS 重新提交</el-button>
-                            </div>
-
-                            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ebeef5;">
-                                <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">报告与档案</div>
-                                <div style="font-size: 12px; color: #606266; margin-bottom: 10px;">发证后可在报告管理中归档、查看档案及处理申诉。</div>
-                                <el-button link type="primary" size="small" @click="openPage('report_mgt.html')">进入报告管理</el-button>
-                                <el-button link type="primary" size="small" @click="openReportDetail">查看本任务档案</el-button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
             </el-main>
         </el-container>
     </el-container>
+
+    <el-drawer v-model="taskMessageDrawerVisible" title="任务消息" direction="rtl" size="520" destroy-on-close>
+        <el-tabs v-model="messageActiveTab" style="height: 100%; display: flex; flex-direction: column;">
+            <el-tab-pane label="协作日志" name="log" style="height: 100%;">
+                <div id="timelineStream" class="timeline-scroll" style="max-height: 60vh; overflow-y: auto; padding: 10px 0;">
+                    <div v-for="(ev, idx) in events" :key="idx" style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                        <span style="color: #909399; margin-right: 8px;">{{ ev.time }}</span>
+                        <span style="color: #606266;">{{ ev.user }}：{{ ev.content }}</span>
+                    </div>
+                    <el-empty v-if="!events.length" description="暂无协作日志" :image-size="50"></el-empty>
+                </div>
+            </el-tab-pane>
+            <el-tab-pane label="澄清" name="clarify" style="height: 100%;">
+                <div class="clarify-layout">
+                    <div v-if="showNewClarify" class="clarify-new-form">
+                        <div class="clarify-new-title">新建澄清</div>
+                        <div class="clarify-new-hint">发第一条消息即创建会话，标题将自动生成</div>
+                        <el-form label-position="top" size="small">
+                            <el-form-item label="主题类型（选填）">
+                                <el-select v-model="newClarifyForm.type" placeholder="选填，默认「其他」" clearable style="width:100%;">
+                                    <el-option v-for="t in clarifyTypes" :key="t.value" :label="t.label" :value="t.value"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="内容">
+                                <el-input v-model="newClarifyForm.firstMessage" type="textarea" :rows="3" placeholder="输入要澄清的内容（必填，至少 5 字）"></el-input>
+                            </el-form-item>
+                            <div class="clarify-new-actions">
+                                <el-button size="small" @click="showNewClarify = false">取消</el-button>
+                                <el-button type="primary" size="small" @click="submitNewClarify">发送</el-button>
+                            </div>
+                        </el-form>
+                    </div>
+                    <div v-else class="clarify-main">
+                        <div class="clarify-sidebar">
+                            <el-button type="primary" size="small" icon="Plus" class="clarify-new-btn" @click="showNewClarify = true">新建澄清</el-button>
+                            <div class="clarify-list">
+                                <div v-for="c in clarificationList" :key="c.id" class="clarify-item" :class="{ active: selectedClarId === c.id, verifier: c.initiator === 'verifier' }" @click="selectClarification(c.id)">
+                                    <div class="clarify-item-avatar" :data-role="c.initiator">{{ roleAvatar(c.initiator) }}</div>
+                                    <div class="clarify-item-body">
+                                        <div class="clarify-item-subject">{{ c.subject }}</div>
+                                        <div class="clarify-item-preview">{{ (c.lastMessage || "").slice(0, 20) }}{{ (c.lastMessage && c.lastMessage.length > 20) ? "..." : "" }}</div>
+                                        <div class="clarify-item-meta">{{ formatClarifyTime(c.updatedAt) }} · {{ c.status === "open" ? "进行中" : "已关闭" }}</div>
+                                        <div v-if="c.initiator === 'verifier'" class="clarify-item-tag">来自核查机构</div>
+                                    </div>
+                                </div>
+                                <el-empty v-if="!clarificationList.length" description="暂无澄清" :image-size="60"></el-empty>
+                            </div>
+                        </div>
+                        <div v-if="selectedClarId" class="clarify-chat">
+                            <div class="clarify-messages">
+                                <template v-for="(m, idx) in (selectedClarDetail && selectedClarDetail.messages) || []" :key="m.id">
+                                    <div v-if="clarifyShouldShowTimeDivider(idx)" class="clarify-time-divider">{{ formatClarifyTime(m.createdAt) }}</div>
+                                    <div class="clarify-msg" :class="{ self: clarifyIsSelf(m.role) }">
+                                        <div class="clarify-msg-avatar" :data-role="m.role">{{ roleAvatar(m.role) }}</div>
+                                        <div class="clarify-msg-content">
+                                            <div class="clarify-msg-meta">{{ m.authorName }} · {{ formatClarifyTime(m.createdAt) }}</div>
+                                            <div class="clarify-msg-bubble">{{ m.content }}</div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            <div v-if="selectedClarDetail && selectedClarDetail.status === 'open'" class="clarify-input-wrap">
+                                <el-input v-model="replyContent" type="textarea" :rows="3" placeholder="输入回复内容..."></el-input>
+                                <div class="clarify-input-actions">
+                                    <el-button type="primary" size="small" @click="submitClarifyReply">发送</el-button>
+                                </div>
+                            </div>
+                            <div v-else class="clarify-input-disabled">该澄清已关闭</div>
+                            <div v-if="selectedClarDetail && selectedClarDetail.status === 'open'" class="clarify-close-row">
+                                <el-button size="small" type="info" plain @click="closeClarifyItem">关闭澄清</el-button>
+                            </div>
+                        </div>
+                        <div v-else class="clarify-empty">请从左侧选择一个澄清主题</div>
+                    </div>
+                </div>
+            </el-tab-pane>
+        </el-tabs>
+    </el-drawer>
 </div>
 
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
 
     runOperatorApp({
         setup() {
             // State
             const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-889'));
+            const taskRow = Vue.ref(typeof getTaskByTaskId === 'function' ? getTaskByTaskId(getTaskIdFromUrl() || taskInfo.taskId, 3) : null);
             const verifyState = Vue.ref('pending_review'); 
             const activeTab = Vue.ref('decl'); // 默认看声明
-            const isExpanded = Vue.ref(true);
             const events = Vue.ref([
                 { type: 'sys', user: '系统', time: '10:00', content: 'LCA 计算完成，SGS 已上传核查文档' }
             ]);
@@ -415,19 +446,94 @@
             const openPage = (p) => window.location.href = p;
             const openReportDetail = () => { const tid = taskInfo.taskId || (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : ''); if (tid) window.location.href = 'report_detail.html?taskNo=' + encodeURIComponent(tid); else window.location.href = 'report_mgt.html'; };
             const viewOrder = () => window.location.href='order.html';
+            const viewSupplier = () => window.location.href='supplier_mgt_detail.html';
             const q = () => { const tid = taskInfo.taskId || getTaskIdFromUrl(); const from = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? '&from=order' : ''; return '?taskId=' + tid + from; };
             const navigateTo = (p) => { 
                 if(p==='config') window.location.href='task_detail_config.html' + q();
                 if(p==='collect') window.location.href='task_detail_collect.html' + q();
                 if(p==='lca') window.location.href='task_detail_lca.html' + q();
-                if(p==='certify' && verifyState.value==='verified') window.location.href='task_detail_certify.html' + q();
+                if(p==='report' || p==='certify') openReportDetail();
             };
 
+            const getStageStatusText = (t) => (typeof window.getStageStatusText === 'function' ? window.getStageStatusText(t) : '');
+            const taskMessageDrawerVisible = Vue.ref(false);
+            const messageActiveTab = Vue.ref('log');
+            const hasClarifyBadge = Vue.ref(false);
+            const clarifyTaskId = Vue.computed(function () { return taskInfo.taskId || (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : ''); });
+            const clarificationList = Vue.ref([]);
+            const selectedClarId = Vue.ref('');
+            const selectedClarDetail = Vue.ref(null);
+            const replyContent = Vue.ref('');
+            const showNewClarify = Vue.ref(false);
+            const newClarifyForm = Vue.reactive({ type: '其他', subject: '', firstMessage: '' });
+            const clarifyTypes = Vue.ref(typeof getClarificationTypes === 'function' ? getClarificationTypes() : []);
+            const formatClarifyTime = typeof window.formatClarifyTime === 'function' ? window.formatClarifyTime : function (t) { return t || ''; };
+            const roleAvatar = typeof window.roleAvatar === 'function' ? window.roleAvatar : function (r) { return '?'; };
+            function clarifyIsSelf(role) { return role === 'operator'; }
+            function clarifyShouldShowTimeDivider(idx) {
+                var msgs = selectedClarDetail.value && selectedClarDetail.value.messages || [];
+                if (idx === 0) return true;
+                var prev = msgs[idx - 1], curr = msgs[idx];
+                if (!prev || !curr) return false;
+                return (new Date(curr.createdAt) - new Date(prev.createdAt)) > 5 * 60 * 1000;
+            }
+            function loadClarifications() {
+                var tid = clarifyTaskId.value;
+                if (!tid) return;
+                clarificationList.value = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(tid) : [];
+                if (clarificationList.value.length && !selectedClarId.value) selectClarification(clarificationList.value[0].id);
+                hasClarifyBadge.value = clarificationList.value.some(function (c) { return c.status === 'open' && c.initiator === 'verifier'; });
+            }
+            function selectClarification(id) {
+                selectedClarId.value = id;
+                selectedClarDetail.value = typeof getClarificationDetail === 'function' ? getClarificationDetail(clarifyTaskId.value, id) : null;
+                replyContent.value = '';
+            }
+            function submitClarifyReply() {
+                if (!replyContent.value.trim()) { ElementPlus.ElMessage.warning('请输入回复内容'); return; }
+                if (typeof replyClarification === 'function') {
+                    replyClarification(clarifyTaskId.value, selectedClarId.value, { content: replyContent.value }, 'operator', '运营');
+                    selectClarification(selectedClarId.value);
+                    loadClarifications();
+                }
+                replyContent.value = '';
+                ElementPlus.ElMessage.success('已回复');
+            }
+            function closeClarifyItem() {
+                if (typeof closeClarification === 'function') closeClarification(clarifyTaskId.value, selectedClarId.value);
+                loadClarifications();
+                selectClarification(selectedClarId.value);
+                ElementPlus.ElMessage.success('已关闭');
+            }
+            function submitNewClarify() {
+                var msg = (newClarifyForm.firstMessage || '').trim();
+                if (msg.length < 5) { ElementPlus.ElMessage.warning('请输入澄清内容，至少 5 字'); return; }
+                var subject = msg.length > 20 ? msg.slice(0, 20) + '...' : msg;
+                if (typeof createClarification === 'function') {
+                    createClarification(clarifyTaskId.value, { type: newClarifyForm.type || '其他', subject: subject, firstMessage: msg }, 'operator', '运营', 3);
+                    loadClarifications();
+                    showNewClarify.value = false;
+                    newClarifyForm.firstMessage = '';
+                }
+                ElementPlus.ElMessage.success('已发送');
+            }
+            Vue.watch(function () { return taskMessageDrawerVisible.value && messageActiveTab.value === 'clarify'; }, function (active) { if (active && clarifyTaskId.value) loadClarifications(); });
+            Vue.watch(clarifyTaskId, function (tid) { if (taskMessageDrawerVisible.value && messageActiveTab.value === 'clarify' && tid) loadClarifications(); });
+            Vue.onMounted(function () {
+                var openParam = (function(){ var p = new URLSearchParams(window.location.search); return p.get('open'); })();
+                if (openParam === 'clarify') { taskMessageDrawerVisible.value = true; messageActiveTab.value = 'clarify'; }
+                if (taskMessageDrawerVisible.value && messageActiveTab.value === 'clarify' && clarifyTaskId.value) loadClarifications();
+            });
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
-                taskInfo, verifyState, activeTab, isExpanded, events,
+                taskInfo, taskRow, getStageStatusText,
+                taskMessageDrawerVisible, messageActiveTab, hasClarifyBadge, clarifyTaskId,
+                clarificationList, selectedClarId, selectedClarDetail, replyContent, showNewClarify, newClarifyForm, clarifyTypes,
+                formatClarifyTime, roleAvatar, clarifyIsSelf, clarifyShouldShowTimeDivider, loadClarifications, selectClarification, submitClarifyReply, closeClarifyItem, submitNewClarify,
+                verifyState, activeTab, events,
                 confirmAndMint, rejectDocs, simulateReSubmit,
-                goBack, viewOrder, navigateTo, getStatusDesc, openReportDetail
+                goBack, viewOrder, viewSupplier, navigateTo, getStatusDesc, openReportDetail,
+                messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime
             };
         }
     });

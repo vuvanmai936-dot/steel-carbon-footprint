@@ -214,3 +214,13 @@ html, body {
 .mb-10 { margin-bottom: 10px; }
 .ml-10 { margin-left: 10px; }
 .mr-10 { margin-right: 10px; }
+
+/* --- 7. 消息中心（用户级，与 docs/15 一致）--- */
+.msg-badge { margin-right: 12px; }
+.message-center-list { padding: 0; }
+.message-item { padding: 12px; border-bottom: 1px solid #ebeef5; cursor: pointer; }
+.message-item:hover { background: #f5f7fa; }
+.message-item.unread { background: #ecf5ff; }
+.msg-item-title { font-weight: 600; font-size: 14px; color: #303133; margin-bottom: 4px; }
+.msg-item-desc { font-size: 12px; color: #909399; margin-bottom: 4px; }
+.msg-item-time { font-size: 11px; color: #c0c4cc; }

@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../js/mockMessages.js"></script>
     <script src="../js/certifierLayout.js"></script>
     <style>
         .welcome-banner { background: #fff; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
@@ -161,10 +162,10 @@
                         <div class="dash-section">
                             <div class="section-header">
                                 <span class="section-title">消息通知</span>
-                                <el-badge :value="3" class="item" />
+                                <el-badge :value="messageUnreadCount" :hidden="messageUnreadCount === 0" class="item" />
                             </div>
                             <div class="msg-list">
-                                <div v-for="(msg, idx) in messages" :key="idx" class="msg-item" :class="{ unread: msg.unread }" @click="goTaskDetail({ taskId: msg.taskId })">
+                                <div v-for="(msg, idx) in messages" :key="idx" class="msg-item" :class="{ unread: msg.unread }" @click="goTaskDetail(msg)">
                                     <div class="msg-icon" :style="{ background: msg.iconBg, color: msg.iconColor }">
                                         <el-icon><component :is="msg.icon" /></el-icon>
                                     </div>
@@ -203,16 +204,36 @@
                 { taskId: 'PCF-2511-0034', product: '南通碳素 · 石墨电极', status: '核查中', statusType: 'primary', nodeTime: '昨天 10:00', nodeDesc: '任务创建', sla: '47小时', taskIdParam: '' },
                 { taskId: 'PCF-2511-0038', product: 'XX钢管厂 · 无缝钢管', status: '核查中', statusType: 'primary', nodeTime: '今天 09:00', nodeDesc: '任务创建', sla: '5天', taskIdParam: '' }
             ]);
-            const messages = Vue.ref([
-                { title: 'YY耐火材料 回复了澄清', desc: '已上传《绿电交易凭证.pdf》，请重新审核。', time: '10分钟前', unread: true, icon: 'ChatLineRound', iconBg: '#dcfce7', iconColor: '#16a34a', taskId: 'PCF-2511-0035' },
-                { title: '新任务分配', desc: '系统自动分配了“无缝钢管”核查任务。', time: '1小时前', unread: true, icon: 'DocumentAdd', iconBg: '#dbeafe', iconColor: '#2563eb', taskId: 'PCF-2511-0038' },
-                { title: 'SLA 预警', desc: '任务 PCF-2511-0034 剩余时间不足 48 小时。', time: '昨天 16:00', unread: false, icon: 'Warning', iconBg: '#f1f5f9', iconColor: '#64748b', taskId: 'PCF-2511-0034' }
-            ]);
+            const messageTypeMeta = function (type) {
+                var t = { task_assign: { icon: 'DocumentAdd', iconBg: '#dbeafe', iconColor: '#2563eb' }, sla_alert: { icon: 'Warning', iconBg: '#f1f5f9', iconColor: '#64748b' }, clarify: { icon: 'ChatLineRound', iconBg: '#dcfce7', iconColor: '#16a34a' }, reject_rectify: { icon: 'RefreshRight', iconBg: '#fef3c7', iconColor: '#d97706' }, report_cert: { icon: 'DocumentChecked', iconBg: '#d1fae5', iconColor: '#059669' }, system: { icon: 'Bell', iconBg: '#e0e7ff', iconColor: '#4f46e5' } };
+                return t[type] || t.system;
+            };
+            const formatMessageTime = function (iso) {
+                if (!iso) return '';
+                var d = new Date(iso);
+                var now = new Date();
+                var diff = (now - d) / 60000;
+                if (diff < 1) return '刚刚';
+                if (diff < 60) return Math.floor(diff) + '分钟前';
+                if (diff < 1440) return Math.floor(diff / 60) + '小时前';
+                if (diff < 43200) return Math.floor(diff / 1440) + '天前';
+                return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+            };
+            const messages = Vue.ref([]);
+            const messageUnreadCount = Vue.computed(function () { return messages.value.filter(function (m) { return m.unread; }).length; });
             const goTaskDetail = (row) => {
-                window.location.href = 'task_detail.html?taskId=' + encodeURIComponent(row.taskId) + (row.taskIdParam || '');
+                if (row.jumpUrl) { window.location.href = row.jumpUrl; return; }
+                window.location.href = 'task_detail.html?taskId=' + encodeURIComponent(row.relatedId || row.taskId || '');
             };
             if (typeof Vue !== 'undefined' && Vue.onMounted) {
                 Vue.onMounted(() => {
+                    if (typeof getMyMessages === 'function') {
+                        var raw = getMyMessages('certifier', {}, 'certifier');
+                        messages.value = raw.map(function (m) {
+                            var meta = messageTypeMeta(m.type);
+                            return { title: m.title, desc: m.body || m.desc, time: formatMessageTime(m.createdAt), unread: !m.read, icon: meta.icon, iconBg: meta.iconBg, iconColor: meta.iconColor, jumpUrl: m.jumpUrl, relatedId: m.relatedId, taskId: m.relatedId };
+                        });
+                    }
                     const ctx = document.getElementById('efficiencyChart');
                     if (ctx && typeof Chart !== 'undefined') {
                         new Chart(ctx.getContext('2d'), {
@@ -236,7 +257,7 @@
             }
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
-                todayLabel, priorityTasks, messages, goTaskDetail
+                todayLabel, priorityTasks, messages, messageUnreadCount, goTaskDetail
             };
         }
     });

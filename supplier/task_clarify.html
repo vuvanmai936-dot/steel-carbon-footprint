@@ -12,6 +12,7 @@
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/mockTasks.js"></script>
+    <script src="../js/mockClarifications.js"></script>
     <script src="../js/supplierLayout.js"></script>
     <style>
         .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
@@ -95,15 +96,32 @@
             'TSK-2026-889': '运营转派：请重新核对 M焙烧 工序天然气数值，并上传燃气发票原件。',
             'TSK-2026-890': '认证机构要求：请提供针状焦投入与产出对应关系的说明文档。'
         };
-        var clarificationText = clarificationMap[taskInfo.taskId] || '请根据运营/认证机构要求补充数据或说明并提交。';
+        var fallbackText = clarificationMap[taskInfo.taskId] || '请根据运营/认证机构要求补充数据或说明并提交。';
+        var firstClarId = null;
+        if (typeof getClarificationsByTaskId === 'function') {
+            var list = getClarificationsByTaskId(taskInfo.taskId);
+            var openOne = list.filter(function (c) { return c.status === 'open'; })[0];
+            if (openOne) firstClarId = openOne.id;
+        }
 
         var layout = SupplierLayout.setup();
         runSupplierApp({
             setup() {
                 const taskInfoRef = Vue.ref(taskInfo);
-                const clarificationTextRef = Vue.ref(clarificationText);
+                var displayText = fallbackText;
+                if (firstClarId && typeof getClarificationDetail === 'function') {
+                    var detail = getClarificationDetail(taskInfo.taskId, firstClarId);
+                    if (detail && detail.messages && detail.messages.length) {
+                        var last = detail.messages[detail.messages.length - 1];
+                        displayText = (detail.subject ? '【' + detail.subject + '】 ' : '') + (last.content || displayText);
+                    }
+                }
+                const clarificationTextRef = Vue.ref(displayText);
                 const replyText = Vue.ref('');
                 const submit = () => {
+                    if (firstClarId && typeof replyClarification === 'function' && replyText.value.trim()) {
+                        replyClarification(taskInfo.taskId, firstClarId, { content: replyText.value }, 'supplier', '供应商');
+                    }
                     ElementPlus.ElMessage.success('已提交，等待运营/认证机构确认');
                     setTimeout(() => { window.location.href = 'task_list.html'; }, 1200);
                 };

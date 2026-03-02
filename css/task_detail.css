@@ -9,7 +9,7 @@ html, body, #app, .el-container {
     display: flex; flex-direction: column; height: 100%; width: 100%; background-color: #f5f7fa;
 }
 
-/* === 1. 顶部 SLA 植入 (针对 el-header 的微调) === */
+/* === 1. SLA 剩余（展示在 body 顶部 task-info-dashboard 内）=== */
 .sla-capsule {
     display: inline-flex; align-items: center; gap: 6px;
     background: #fef0f0; color: #F56C6C; border: 1px solid #fde2e2;
@@ -20,22 +20,38 @@ html, body, #app, .el-container {
 .sla-capsule:hover { background: #F56C6C; color: #fff; border-color: #F56C6C; }
 
 /* === 2. 任务富信息仪表盘 (Info Dashboard) === 
-   取代之前的 Header，专注于展示高维信息 */
+   左信息区 + 右状态栏，分区清晰、不换行 */
 .task-info-dashboard {
     flex: none; background: #fff; border-bottom: 1px solid #dcdfe6;
-    padding: 16px 24px; display: flex; gap: 40px; align-items: stretch;
+    padding: 16px 24px; display: flex; align-items: stretch; justify-content: space-between;
     box-shadow: 0 1px 3px rgba(0,0,0,0.03); z-index: 10;
 }
+.task-info-dashboard__main {
+    flex: 1; min-width: 0; display: flex; gap: 24px; align-items: stretch;
+}
+.task-info-dashboard__status-bar {
+    display: flex; align-items: center; gap: 16px; flex-wrap: nowrap;
+    padding-left: 20px; margin-left: 20px; border-left: 1px solid #ebeef5;
+}
+.task-info-dashboard__status-bar .dash-block { flex: none; }
+.task-info-dashboard__status-bar .dash-content { flex-direction: row; gap: 0; }
+.task-info-dashboard__status-bar .dash-sep { padding-left: 16px; margin-left: 16px; border-left: 1px solid #ebeef5; display: flex; align-items: center; }
 
 /* 模块 A: 核心身份 */
 .dash-block { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
 .dash-title { font-size: 12px; color: #909399; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
 .dash-content { display: flex; flex-direction: column; gap: 4px; }
 
-.prod-main { display: flex; align-items: center; gap: 10px; }
-.prod-name { font-size: 20px; font-weight: 800; color: #303133; }
-.prod-id { font-family: monospace; color: #909399; font-size: 12px; background: #f4f4f5; padding: 2px 6px; border-radius: 4px; }
-.prod-sub { font-size: 13px; color: #606266; display: flex; align-items: center; gap: 6px; }
+/* 产品与任务区块：统一层级与字体，保留全部内容 */
+.prod-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.prod-primary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.prod-name { font-size: 14px; font-weight: 700; color: #303133; line-height: 1.35; }
+.prod-id { font-size: 12px; font-family: monospace; color: #909399; background: #f4f4f5; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; }
+.prod-meta { display: flex; flex-direction: column; gap: 2px; }
+.prod-meta-row { display: flex; align-items: center; gap: 6px; font-size: 12px; flex-wrap: wrap; }
+.prod-label { color: #909399; font-size: 11px; flex-shrink: 0; }
+.prod-value { color: #303133; font-size: 12px; }
+.prod-value .el-link { font-size: 12px; }
 
 /* 模块 B: 供应商画像 */
 .supplier-card { display: flex; align-items: center; gap: 12px; background: #f9f9fa; padding: 8px 12px; border-radius: 6px; border: 1px solid #ebeef5; }

@@ -6,11 +6,14 @@
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/certifier.css">
+    <link rel="stylesheet" href="../css/clarify_panel.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/clarifyUtils.js"></script>
     <script src="../js/mockTasks.js"></script>
+    <script src="../js/mockClarifications.js"></script>
     <script src="../js/certifierLayout.js"></script>
     <style>
         .card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; }
@@ -71,12 +74,74 @@
                         <div class="section-title">操作</div>
                         <el-button type="success" @click="handlePass">通过</el-button>
                         <el-button type="danger" @click="handleReject">驳回</el-button>
-                        <el-button type="warning" @click="handleClarify">发起澄清</el-button>
+                        <el-button type="warning" @click="clarifyDrawerVisible = true">澄清</el-button>
                     </div>
                 </div>
             </el-main>
         </el-container>
     </el-container>
+
+    <el-drawer v-model="clarifyDrawerVisible" title="任务澄清（核查机构）" direction="rtl" size="520" destroy-on-close>
+        <div class="clarify-layout">
+            <div v-if="showNewClarify" class="clarify-new-form">
+                <div class="clarify-new-title">发起澄清</div>
+                <div class="clarify-new-hint">发第一条消息即创建会话，标题将自动生成</div>
+                <el-form label-position="top" size="small">
+                    <el-form-item label="主题类型（选填）">
+                        <el-select v-model="newClarifyForm.type" placeholder="选填，默认「其他」" clearable style="width:100%;">
+                            <el-option v-for="t in clarifyTypes" :key="t.value" :label="t.label" :value="t.value"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="内容">
+                        <el-input v-model="newClarifyForm.firstMessage" type="textarea" :rows="3" placeholder="输入要澄清的内容（必填，至少 5 字）"></el-input>
+                    </el-form-item>
+                    <div class="clarify-new-actions">
+                        <el-button size="small" @click="showNewClarify = false">取消</el-button>
+                        <el-button type="primary" size="small" @click="submitNewClarify">发送</el-button>
+                    </div>
+                </el-form>
+            </div>
+            <div v-else class="clarify-main">
+                <div class="clarify-sidebar">
+                    <el-button type="primary" size="small" icon="Plus" class="clarify-new-btn" @click="showNewClarify = true">发起澄清</el-button>
+                    <div class="clarify-list">
+                        <div v-for="c in clarificationList" :key="c.id" class="clarify-item" :class="{ active: selectedClarId === c.id, verifier: c.initiator === 'verifier' }" @click="selectClarification(c.id)">
+                            <div class="clarify-item-avatar" :data-role="c.initiator">{{ roleAvatar(c.initiator) }}</div>
+                            <div class="clarify-item-body">
+                                <div class="clarify-item-subject">{{ c.subject }}</div>
+                                <div class="clarify-item-preview">{{ (c.lastMessage || "").slice(0, 20) }}{{ (c.lastMessage && c.lastMessage.length > 20) ? "..." : "" }}</div>
+                                <div class="clarify-item-meta">{{ formatClarifyTime(c.updatedAt) }} · {{ c.status === "open" ? "进行中" : "已关闭" }}</div>
+                                <div v-if="c.initiator === 'verifier'" class="clarify-item-tag">来自核查机构</div>
+                            </div>
+                        </div>
+                        <el-empty v-if="!clarificationList.length" description="暂无澄清" :image-size="60"></el-empty>
+                    </div>
+                </div>
+                <div v-if="selectedClarId" class="clarify-chat">
+                    <div class="clarify-messages">
+                        <template v-for="(m, idx) in (selectedClarDetail && selectedClarDetail.messages) || []" :key="m.id">
+                            <div v-if="clarifyShouldShowTimeDivider(idx)" class="clarify-time-divider">{{ formatClarifyTime(m.createdAt) }}</div>
+                            <div class="clarify-msg" :class="{ self: clarifyIsSelf(m.role) }">
+                                <div class="clarify-msg-avatar" :data-role="m.role">{{ roleAvatar(m.role) }}</div>
+                                <div class="clarify-msg-content">
+                                    <div class="clarify-msg-meta">{{ m.authorName }} · {{ formatClarifyTime(m.createdAt) }}</div>
+                                    <div class="clarify-msg-bubble">{{ m.content }}</div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    <div v-if="selectedClarDetail && selectedClarDetail.status === 'open'" class="clarify-input-wrap">
+                        <el-input v-model="replyContent" type="textarea" :rows="3" placeholder="输入回复内容..."></el-input>
+                        <div class="clarify-input-actions">
+                            <el-button type="primary" size="small" @click="submitClarifyReply">发送</el-button>
+                        </div>
+                    </div>
+                    <div v-else class="clarify-input-disabled">该澄清已关闭</div>
+                </div>
+                <div v-else class="clarify-empty">请从左侧选择一个澄清主题</div>
+            </div>
+        </div>
+    </el-drawer>
 </div>
 <script>
     (function () {
@@ -87,10 +152,71 @@
                 const taskInfoRef = Vue.ref(taskInfo);
                 const handlePass = () => { ElementPlus.ElMessage.success('已反馈：通过'); };
                 const handleReject = () => { ElementPlus.ElMessageBox.prompt('请输入驳回原因', '驳回').then(() => ElementPlus.ElMessage.success('已反馈：驳回')).catch(() => {}); };
-                const handleClarify = () => { ElementPlus.ElMessageBox.prompt('请输入澄清内容', '发起澄清').then(() => ElementPlus.ElMessage.success('已发起澄清')).catch(() => {}); };
+                const clarifyDrawerVisible = Vue.ref(false);
+                const clarificationList = Vue.ref([]);
+                const selectedClarId = Vue.ref('');
+                const selectedClarDetail = Vue.ref(null);
+                const replyContent = Vue.ref('');
+                const showNewClarify = Vue.ref(false);
+                const newClarifyForm = Vue.reactive({ type: '其他', subject: '', firstMessage: '' });
+                const clarifyTypes = Vue.ref(typeof getClarificationTypes === 'function' ? getClarificationTypes() : []);
+                const formatClarifyTime = typeof window.formatClarifyTime === 'function' ? window.formatClarifyTime : function (t) { return t || ''; };
+                const roleAvatar = typeof window.roleAvatar === 'function' ? window.roleAvatar : function (r) { return '?'; };
+                function clarifyIsSelf(role) { return role === 'verifier'; }
+                function clarifyShouldShowTimeDivider(idx) {
+                    var msgs = selectedClarDetail.value && selectedClarDetail.value.messages || [];
+                    if (idx === 0) return true;
+                    var prev = msgs[idx - 1], curr = msgs[idx];
+                    if (!prev || !curr) return false;
+                    return (new Date(curr.createdAt) - new Date(prev.createdAt)) > 5 * 60 * 1000;
+                }
+                function loadClarifications() {
+                    var tid = taskInfo.taskId;
+                    if (!tid) return;
+                    clarificationList.value = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(tid) : [];
+                    if (clarificationList.value.length && !selectedClarId.value) selectClarification(clarificationList.value[0].id);
+                }
+                function selectClarification(id) {
+                    selectedClarId.value = id;
+                    selectedClarDetail.value = typeof getClarificationDetail === 'function' ? getClarificationDetail(taskInfo.taskId, id) : null;
+                    replyContent.value = '';
+                }
+                function submitClarifyReply() {
+                    if (!replyContent.value.trim()) { ElementPlus.ElMessage.warning('请输入回复内容'); return; }
+                    if (typeof replyClarification === 'function') {
+                        replyClarification(taskInfo.taskId, selectedClarId.value, { content: replyContent.value }, 'verifier', currentUser.name || 'SGS');
+                        selectClarification(selectedClarId.value);
+                        loadClarifications();
+                    }
+                    replyContent.value = '';
+                    ElementPlus.ElMessage.success('已发送');
+                }
+                function submitNewClarify() {
+                    var msg = (newClarifyForm.firstMessage || '').trim();
+                    if (msg.length < 5) { ElementPlus.ElMessage.warning('请输入澄清内容，至少 5 字'); return; }
+                    var subject = msg.length > 20 ? msg.slice(0, 20) + '...' : msg;
+                    if (typeof createClarification === 'function') {
+                        createClarification(taskInfo.taskId, { type: newClarifyForm.type || '其他', subject: subject, firstMessage: msg }, 'verifier', currentUser.name || 'SGS', 3);
+                        loadClarifications();
+                        showNewClarify.value = false;
+                        newClarifyForm.firstMessage = '';
+                    }
+                    ElementPlus.ElMessage.success('已发送，运营端将收到提醒');
+                }
+                Vue.watch(clarifyDrawerVisible, function (v) { if (v && taskInfo.taskId) loadClarifications(); });
+                if (typeof Vue !== 'undefined' && Vue.onMounted) {
+                    Vue.onMounted(function () {
+                        var openParam = (function(){ var p = new URLSearchParams(window.location.search); return p.get('open'); })();
+                        if (openParam === 'clarify') { clarifyDrawerVisible.value = true; }
+                        if (clarifyDrawerVisible.value && taskInfo.taskId) loadClarifications();
+                    });
+                }
                 return {
                     menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
-                    taskInfo: taskInfoRef, handlePass, handleReject, handleClarify
+                    taskInfo: taskInfoRef, handlePass, handleReject,
+                    clarifyDrawerVisible,
+                    clarificationList, selectedClarId, selectedClarDetail, replyContent, showNewClarify, newClarifyForm, clarifyTypes,
+                    formatClarifyTime, roleAvatar, clarifyIsSelf, clarifyShouldShowTimeDivider, loadClarifications, selectClarification, submitClarifyReply, submitNewClarify
                 };
             }
         });

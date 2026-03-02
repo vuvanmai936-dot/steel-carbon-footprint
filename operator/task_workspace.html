@@ -5,11 +5,13 @@
     <title>订单全流程详情 | 运营端</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/mockTasks.js"></script>
+    <script src="../js/mockMessages.js"></script>
     <script src="../js/layout.js"></script>
     
     <style>
@@ -80,11 +82,26 @@
                     </div>
                     <el-tag :type="statusBadge.type" style="margin-left: 15px;" effect="dark">{{ statusBadge.text }}</el-tag>
                 </div>
-                <div>
+                <div style="display: flex; align-items: center;">
+                    <el-badge :value="messageUnreadCount" :hidden="messageUnreadCount === 0" class="msg-badge">
+                        <el-button link type="primary" @click="messageCenterVisible = true" style="padding: 8px;">
+                            <el-icon :size="20"><component :is="'Bell'"></component></el-icon>
+                        </el-button>
+                    </el-badge>
                     <el-button @click="viewLog">操作日志</el-button>
                     <el-button type="danger" plain>终止订单</el-button>
                 </div>
             </el-header>
+            <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
+                <div class="message-center-list">
+                    <div v-for="m in messageList" :key="m.messageId" class="message-item" :class="{ unread: !m.read }" @click="goMessage(m)">
+                        <div class="msg-item-title">{{ m.title }}</div>
+                        <div class="msg-item-desc">{{ m.body }}</div>
+                        <div class="msg-item-time">{{ formatMessageTime(m.createdAt) }}</div>
+                    </div>
+                    <el-empty v-if="!messageList.length" description="暂无消息" :image-size="60"></el-empty>
+                </div>
+            </el-drawer>
 
             <el-main style="background: #f0f2f5; padding: 20px;">
                 <div class="meta-grid">
@@ -275,7 +292,7 @@
 </div>
 
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
 
     runOperatorApp({
         setup() {
@@ -352,7 +369,8 @@
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
                 activeStep, orderInfo, config, supplierData,
                 clarifyVisible, clarifyForm, statusBadge,
-                handleNextStep, openClarifyDialog, submitClarify, simulateVerifyReject, goBack, viewLog
+                handleNextStep, openClarifyDialog, submitClarify, simulateVerifyReject, goBack, viewLog,
+                messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime
             };
         }
     });
