@@ -76,8 +76,10 @@ const SharedLayout = {
 function initApp(app) {
     const localeOpt = typeof ElementPlusLocaleZhCn !== 'undefined' ? { locale: ElementPlusLocaleZhCn } : {};
     app.use(ElementPlus, localeOpt);
-    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-        app.component(key, component);
+    if (typeof ElementPlusIconsVue !== 'undefined') {
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
     }
     return app;
 }

@@ -593,7 +593,11 @@
             const submitAssign = () => {
                 if (assignForm.taskType === 'entrusted' && !assignForm.entrustedParty) return;
                 const partyText = assignForm.taskType === 'self' ? '自营' : (assignForm.entrustedParty === 'qingong' ? '擎工互联' : '易碳数科');
-                ElementPlus.ElMessage.success(`订单已确认，任务类型：${assignForm.taskType === 'self' ? '自营任务' : '委托任务'}${assignForm.taskType === 'entrusted' ? '，委托方：' + partyText : ''}`);
+                const taskCount = currentAssignOrder.value?.subTasks?.length || 0;
+                ElementPlus.ElMessage.success({
+                    message: `订单已确认，任务类型：${assignForm.taskType === 'self' ? '自营任务' : '委托任务'}${assignForm.taskType === 'entrusted' ? '，委托方：' + partyText : ''}。已生成 ${taskCount} 个子任务，可前往「任务管理」处理。`,
+                    duration: 4500
+                });
                 if (currentAssignOrder.value) currentAssignOrder.value.orderStatus = 'CONFIRMED';
                 assignDialogVisible.value = false;
                 drawerVisible.value = false;

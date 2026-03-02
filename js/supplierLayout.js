@@ -49,7 +49,7 @@
             };
 
             const goPortal = () => {
-                window.location.href = '../index.html';
+                window.location.href = '../pcf.html';
             };
 
             return {

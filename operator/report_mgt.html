@@ -119,11 +119,13 @@
                                 <el-date-picker v-model="query.dateRange" type="daterange" start-placeholder="开始" end-placeholder="结束" style="width: 220px;"></el-date-picker>
                             </el-form-item>
                             <el-form-item label="报告状态">
-                                <el-select v-model="query.status" placeholder="全部" clearable style="width: 110px;">
-                                    <el-option label="流转中" value="process"></el-option>
-                                    <el-option label="已归档" value="archived"></el-option>
-                                    <el-option label="已作废" value="revoked"></el-option>
-                                </el-select>
+                                <el-tooltip content="流转中：未归档可下发；已归档：供应商已确认接收且已执行归档上链；待归档在列表中归入流转中，需在档案详情内执行归档。" placement="top">
+                                    <el-select v-model="query.status" placeholder="全部" clearable style="width: 110px;">
+                                        <el-option label="流转中" value="process"></el-option>
+                                        <el-option label="已归档" value="archived"></el-option>
+                                        <el-option label="已作废" value="revoked"></el-option>
+                                    </el-select>
+                                </el-tooltip>
                             </el-form-item>
                             <el-form-item>
                                 <el-checkbox v-model="query.appealOnly">仅申诉中</el-checkbox>
@@ -195,7 +197,9 @@
                                             <el-button link type="primary" @click="viewDetail(scope.row)">查看档案</el-button>
                                             <el-divider direction="vertical"></el-divider>
                                             <el-button link type="danger" @click="rejectAppeal(scope.row)">驳回申诉</el-button>
-                                            <el-button link type="primary" @click="acceptAppeal(scope.row)">接受申诉</el-button>
+                                            <el-tooltip content="接受后将创建重核查任务，可在任务列表中查看（后续迭代）；当前仅演示接受操作。" placement="top">
+                                                <el-button link type="primary" @click="acceptAppeal(scope.row)">接受申诉</el-button>
+                                            </el-tooltip>
                                         </template>
                                         <template v-else-if="scope.row.status === 'process'">
                                             <template v-if="scope.row.reportVersion === 'sealed' && !scope.row.releasedToSupplier">

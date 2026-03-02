@@ -124,7 +124,9 @@
             </el-header>
 
             <el-main style="padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column;">
-                
+                <el-alert type="info" :closable="false" show-icon style="margin: 12px 20px 0; flex-shrink: 0;">
+                    LCA 计算在外部系统（当前南钢部署）完成，由运营线下操作后在本系统更新状态；后续迭代将预留接口对接。
+                </el-alert>
                 <div class="task-info-dashboard">
                     <div class="dash-block" style="flex: 1.5;">
                         <div class="dash-title">产品与任务</div>

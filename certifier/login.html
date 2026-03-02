@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>安全登录 - 可信数据空间认证端</title>
+    <title>安全登录（演示） - 可信数据空间认证端</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -48,8 +48,11 @@
             <div class="footer">&copy; 2025 Industrial Chain Carbon Data Service System. Secured by Blockchain.</div>
         </div>
         <div class="user-side">
-            <h2>核查员登录</h2>
-            <p class="sub">请使用个人身份凭证解锁工作台</p>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <h2 style="margin: 0;">核查员登录</h2>
+                <el-tag type="info" size="small" effect="plain">演示</el-tag>
+            </div>
+            <p class="sub">请使用个人身份凭证解锁工作台（当前为演示环境，未强制登录）</p>
             <el-tabs v-model="loginTab">
                 <el-tab-pane label="U-Key 登录" name="ukey">
                     <div style="text-align: center; margin: 24px 0;">
