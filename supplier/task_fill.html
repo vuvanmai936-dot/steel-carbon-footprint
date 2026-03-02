@@ -127,6 +127,7 @@
                     var snapshot = null;
                     if (spreadInstance.value && typeof SpreadUtils !== 'undefined') {
                         snapshot = SpreadUtils.getSnapshotFromSpread(spreadInstance.value, { taskId: taskId });
+                        if (typeof submitTaskData === 'function') submitTaskData(taskId, snapshot, evidenceFiles.value || []);
                     }
                     ElementPlus.ElMessage.success('提交成功，请等待运营审核');
                     setTimeout(function () { window.location.href = 'task_list.html'; }, 1000);

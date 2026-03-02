@@ -12,7 +12,7 @@
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/layout.js"></script>
-    
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <style>
         /* === 🛡️ 关键样式内联 (防止外部CSS未加载导致布局塌陷) === */
 
@@ -335,18 +335,52 @@
                     }, 500);
                 } else {
                     const loading = ElementPlus.ElLoading.service({ text: '正在解析 Excel 结构...' });
-                    const newCode = 'TPL-' + Date.now();
-                    setTimeout(() => {
+                    const file = createForm.file && createForm.file.raw ? createForm.file.raw : (createForm.file && createForm.file instanceof File ? createForm.file : null);
+                    if (!file) {
                         loading.close();
-                        tableData.value.unshift({
-                            code: newCode, name: createForm.name, version: '1.0',
-                            productCategory: createForm.productCategory, standard: createForm.standard,
-                            boundary: createForm.boundary, updateTime: new Date().toLocaleString(), status: '草稿'
-                        });
-                        createDialogVisible.value = false;
-                        ElementPlus.ElMessage.success('模版导入成功，已生成草稿');
-                        window.location.href = 'template_detail.html?id=' + newCode + '&mode=edit&source=import';
-                    }, 1000);
+                        ElementPlus.ElMessage.warning('请先选择要上传的 Excel 文件');
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = function () {
+                        try {
+                            const data = reader.result;
+                            if (typeof XLSX === 'undefined') {
+                                loading.close();
+                                ElementPlus.ElMessage.warning('Excel 解析库未加载');
+                                return;
+                            }
+                            const wb = XLSX.read(data, { type: 'array', cellNF: false });
+                            const sheetData = {};
+                            (wb.SheetNames || []).forEach(function (name) {
+                                const sheet = wb.Sheets[name];
+                                if (!sheet) return;
+                                try {
+                                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+                                    if (rows && rows.length > 0) sheetData[name] = rows;
+                                } catch (e) {}
+                            });
+                            loading.close();
+                            if (Object.keys(sheetData).length > 0) {
+                                try { sessionStorage.setItem('TEMPLATE_IMPORT_SHEETDATA', JSON.stringify(sheetData)); } catch (e) {}
+                                tableData.value.unshift({
+                                    code: 'TPL-' + Date.now(), name: createForm.name, version: '1.0',
+                                    productCategory: createForm.productCategory, standard: createForm.standard,
+                                    boundary: createForm.boundary, updateTime: new Date().toLocaleString(), status: '草稿'
+                                });
+                                createDialogVisible.value = false;
+                                ElementPlus.ElMessage.success('模版导入成功，正在打开画布');
+                                window.location.href = 'template_detail.html?id=NEW&mode=edit&source=import';
+                            } else {
+                                ElementPlus.ElMessage.warning('未能解析出有效表格，请检查文件');
+                            }
+                        } catch (err) {
+                            loading.close();
+                            ElementPlus.ElMessage.warning('解析失败：' + (err.message || '请检查文件格式'));
+                        }
+                    };
+                    reader.onerror = function () { loading.close(); ElementPlus.ElMessage.warning('文件读取失败'); };
+                    reader.readAsArrayBuffer(file);
                 }
             };
 

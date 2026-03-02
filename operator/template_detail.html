@@ -10,11 +10,13 @@
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
     <script src="../js/layout.js"></script>
 
     <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.16.0.0.css">
     <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/gc.spread.sheets.all.16.0.0.min.js"></script>
     <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/resources/zh/gc.spread.sheets.resources.zh.16.0.0.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="../js/spreadUtils.js"></script>
     
     <style>
@@ -168,6 +170,8 @@
                     <el-button icon="View" @click="handlePreview">供应商填报预览</el-button>
                     <el-divider direction="vertical"></el-divider>
                     <template v-if="!isReadOnly">
+                        <el-button icon="Upload" @click="triggerExcelImport">导入 Excel</el-button>
+                        <input ref="excelFileInputRef" type="file" accept=".xlsx,.xls" style="display:none" @change="handleExcelImport">
                         <el-button @click="handleSaveDraft">保存草稿</el-button>
                         <el-button type="primary" @click="handlePublish">发布并锁定</el-button>
                     </template>
@@ -327,11 +331,11 @@
 
     runOperatorApp({
         setup() {
-            // === 真实业务数据 ===
+            // === 真实业务数据（6 列：类别、名称、单位、填报指引、数值、备注，与 docs/05 一致）===
             const REAL_SHEET_DATA = {
-                "M配料": [["类别", "名称", "单位", "数值", "备注"], ["能源", "电力", "kWh", "4264774.06", "实际生产报表"], ["原材料", "油系针状焦", "吨", "15943.35", "外购"]],
-                "M焙烧": [["类别", "名称", "单位", "数值", "备注"], ["能源", "天然气", "m³", "6046144.77", "燃烧炉"]],
-                "M石墨化": [["类别", "名称", "单位", "数值", "备注"], ["能源", "电力", "kWh", "83836597.27", "艾奇逊炉"]]
+                "M配料": [["类别", "名称", "单位", "填报指引", "数值", "备注"], ["能源", "电力", "kWh", "请提供电费单", "4264774.06", "实际生产报表"], ["原材料", "油系针状焦", "吨", "", "15943.35", "外购"]],
+                "M焙烧": [["类别", "名称", "单位", "填报指引", "数值", "备注"], ["能源", "天然气", "m³", "", "6046144.77", "燃烧炉"]],
+                "M石墨化": [["类别", "名称", "单位", "填报指引", "数值", "备注"], ["能源", "电力", "kWh", "", "83836597.27", "艾奇逊炉"]]
             };
 
             const templateData = Vue.ref({
@@ -347,6 +351,7 @@
             ]);
 
             const spreadInstance = Vue.ref(null);
+            const excelFileInputRef = Vue.ref(null);
             const previewVisible = Vue.ref(false);
             const isReadOnly = Vue.computed(() => templateData.value.status === '已发布');
             const nextVersion = Vue.computed(() => {
@@ -357,18 +362,44 @@
             const initSpread = () => {
                 const host = document.getElementById('ss');
                 if (!host) return;
-                const snapshot = { sheetData: REAL_SHEET_DATA };
+                const params = typeof window !== 'undefined' && window.location && window.location.search ? new URLSearchParams(window.location.search) : null;
+                const sourceImport = params && params.get('source') === 'import';
+                let snapshot;
+                if (sourceImport && typeof sessionStorage !== 'undefined') {
+                    try {
+                        const raw = sessionStorage.getItem('TEMPLATE_IMPORT_SHEETDATA');
+                        if (raw) {
+                            const sheetData = JSON.parse(raw);
+                            sessionStorage.removeItem('TEMPLATE_IMPORT_SHEETDATA');
+                            if (sheetData && typeof sheetData === 'object' && Object.keys(sheetData).length > 0) {
+                                snapshot = { sheetData: sheetData };
+                            }
+                        }
+                    } catch (e) {}
+                }
+                if (!snapshot) {
+                    const templateId = typeof getTemplateIdFromUrl !== 'undefined' ? getTemplateIdFromUrl() : '';
+                    if (templateId && templateId !== 'NEW' && typeof getTemplateSnapshot !== 'undefined') {
+                        const stored = getTemplateSnapshot(templateId);
+                        snapshot = { sheetData: stored.sheetData, evidenceRequirements: stored.evidenceRequirements };
+                        if (stored.evidenceRequirements && stored.evidenceRequirements.length) {
+                            requirements.value = stored.evidenceRequirements.map((r, i) => ({ id: r.id || ('req_' + (i + 1)), name: r.name || '', desc: r.desc || '', templateFile: null }));
+                        }
+                    } else {
+                        snapshot = { sheetData: REAL_SHEET_DATA };
+                    }
+                }
                 if (typeof SpreadUtils !== 'undefined') {
                     spreadInstance.value = SpreadUtils.createSpreadFromSnapshot(host, snapshot, { readOnly: isReadOnly.value });
                 } else {
                     GC.Spread.Common.CultureManager.culture("zh-cn");
-                    const sheetNames = Object.keys(REAL_SHEET_DATA);
+                    const sheetNames = Object.keys(snapshot.sheetData);
                     const spread = new GC.Spread.Sheets.Workbook(host, { sheetCount: sheetNames.length });
                     spreadInstance.value = spread;
                     sheetNames.forEach((name, index) => {
                         const sheet = spread.getSheet(index);
                         sheet.name(name);
-                        const data = REAL_SHEET_DATA[name];
+                        const data = snapshot.sheetData[name];
                         sheet.setArray(0, 0, data);
                         const style = new GC.Spread.Sheets.Style();
                         style.backColor = "#f0f2f5"; style.font = "bold 12px sans-serif";
@@ -404,9 +435,44 @@
                 ElementPlus.ElMessage.success(`模板 ${file.name} 已挂载`);
             };
 
+            const triggerExcelImport = () => {
+                if (excelFileInputRef.value) excelFileInputRef.value.click();
+            };
+
+            const handleExcelImport = (ev) => {
+                const file = ev.target && ev.target.files && ev.target.files[0];
+                if (!file) return;
+                if (typeof SpreadUtils === 'undefined' || typeof SpreadUtils.parseExcelFile !== 'function') {
+                    ElementPlus.ElMessage.warning('Excel 解析不可用，请确保已加载 SheetJS');
+                    ev.target.value = '';
+                    return;
+                }
+                SpreadUtils.parseExcelFile(file).then(function (res) {
+                    if (res && res.sheetData && Object.keys(res.sheetData).length > 0) {
+                        const host = document.getElementById('ss');
+                        if (host && spreadInstance.value) {
+                            if (spreadInstance.value.destroy) spreadInstance.value.destroy();
+                            spreadInstance.value = null;
+                        }
+                        if (host && typeof SpreadUtils !== 'undefined') {
+                            host.innerHTML = '';
+                            spreadInstance.value = SpreadUtils.createSpreadFromSnapshot(host, { sheetData: res.sheetData }, { readOnly: isReadOnly.value });
+                            updateSpreadLockState();
+                            ElementPlus.ElMessage.success('Excel 已导入到当前画布');
+                        }
+                    } else {
+                        ElementPlus.ElMessage.warning('未能解析出有效表格数据，请检查文件格式');
+                    }
+                    ev.target.value = '';
+                });
+            };
+
             const handleSaveDraft = () => {
                 if (spreadInstance.value && typeof SpreadUtils !== 'undefined') {
                     const snapshot = SpreadUtils.getSnapshotFromSpread(spreadInstance.value, { evidenceRequirements: requirements.value });
+                    const templateId = typeof getTemplateIdFromUrl !== 'undefined' ? getTemplateIdFromUrl() : '';
+                    const idToSave = templateId && templateId !== 'NEW' ? templateId : ('TPL-' + Date.now());
+                    if (typeof saveTemplateSnapshot !== 'undefined') saveTemplateSnapshot(idToSave, snapshot);
                 }
                 templateData.value.lastUpdated = new Date().toLocaleString();
                 ElementPlus.ElMessage.success('草稿保存成功');
@@ -419,6 +485,12 @@
                     '发布至模板库',
                     { confirmButtonText: '确认发布', cancelButtonText: '取消', type: 'warning' }
                 ).then(() => {
+                    if (spreadInstance.value && typeof SpreadUtils !== 'undefined' && typeof saveTemplateSnapshot !== 'undefined') {
+                        const snapshot = SpreadUtils.getSnapshotFromSpread(spreadInstance.value, { evidenceRequirements: requirements.value });
+                        const templateId = typeof getTemplateIdFromUrl !== 'undefined' ? getTemplateIdFromUrl() : '';
+                        const idToSave = templateId && templateId !== 'NEW' ? templateId : ('TPL-' + Date.now());
+                        saveTemplateSnapshot(idToSave, snapshot);
+                    }
                     templateData.value.status = '已发布';
                     updateSpreadLockState();
                     ElementPlus.ElMessage.success(`模板 ${templateData.value.version} 已上架到模板库`);
@@ -455,6 +527,7 @@
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
                 templateData, requirements, isReadOnly, nextVersion, previewVisible,
+                excelFileInputRef, triggerExcelImport, handleExcelImport,
                 addRequirement, removeReq, handleTemplateUpload,
                 handleSaveDraft, handlePublish, handleUnlock, handlePreview, goBack
             };

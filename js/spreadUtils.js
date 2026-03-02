@@ -25,7 +25,7 @@
         const sheetNames = Object.keys(sheetData);
         if (sheetNames.length === 0) {
             sheetNames.push('Sheet1');
-            sheetData['Sheet1'] = [['类别', '名称', '单位', '数值', '备注']];
+            sheetData['Sheet1'] = [['类别', '名称', '单位', '填报指引', '数值', '备注']];
         }
 
         const spread = new SpreadNS.Workbook(hostEl, { sheetCount: sheetNames.length });
@@ -92,9 +92,9 @@
                     }
                     arr.push(row);
                 }
-                sheetData[name] = arr.length > 0 ? arr : [['类别', '名称', '单位', '数值', '备注']];
+                sheetData[name] = arr.length > 0 ? arr : [['类别', '名称', '单位', '填报指引', '数值', '备注']];
             } else {
-                sheetData[name] = [['类别', '名称', '单位', '数值', '备注']];
+                sheetData[name] = [['类别', '名称', '单位', '填报指引', '数值', '备注']];
             }
         }
         return Object.assign({ version: '1.0', sheetData }, extra);
@@ -136,12 +136,40 @@
     }
 
     /**
-     * 解析上传的 Excel 文件为 sheetData（需后端或 SheetJS 支持，此处为占位）
-     * @param {File} file - xlsx 文件
-     * @returns {Promise<Object|null>} sheetData 或 null
+     * 解析上传的 Excel 文件为 sheetData（依赖全局 XLSX/SheetJS，页面需先引入如 cdn.sheetjs.com）
+     * @param {File} file - xlsx/xls 文件
+     * @returns {Promise<Object|null>} { sheetData: { SheetName: [[...]], ... } } 或 null（解析失败或未加载 XLSX）
      */
     function parseExcelFile(file) {
-        return Promise.resolve(null);
+        if (!file || typeof (global.XLSX || (typeof window !== 'undefined' && window.XLSX)) === 'undefined') {
+            return Promise.resolve(null);
+        }
+        const XLSXLib = global.XLSX || (typeof window !== 'undefined' && window.XLSX);
+        return new Promise(function (resolve) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = e.target && e.target.result;
+                    if (!data) { resolve(null); return; }
+                    const wb = XLSXLib.read(data, { type: 'array', cellNF: false, cellDates: false });
+                    const sheetData = {};
+                    (wb.SheetNames || []).forEach(function (name) {
+                        const sheet = wb.Sheets[name];
+                        if (!sheet) return;
+                        try {
+                            const rows = XLSXLib.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+                            if (rows && rows.length > 0) sheetData[name] = rows;
+                        } catch (err) { /* 单 sheet 解析失败时跳过 */ }
+                    });
+                    resolve(Object.keys(sheetData).length > 0 ? { sheetData: sheetData } : null);
+                } catch (err) {
+                    console.error('parseExcelFile:', err);
+                    resolve(null);
+                }
+            };
+            reader.onerror = function () { resolve(null); };
+            reader.readAsArrayBuffer(file);
+        });
     }
 
     global.SpreadUtils = {

@@ -425,6 +425,27 @@
                 spreadInstance.value = SpreadUtils.createSpreadFromSnapshot(host, snapshot, { readOnly: true });
             }
 
+            function loadSpreadFromMockSnapshot() {
+                var host = spreadHostRef.value;
+                if (!host || typeof SpreadUtils === 'undefined') return;
+                var taskId = taskInfo.taskId || (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : '');
+                if (!taskId) return;
+                var submittedSnapshot = typeof getTaskSubmittedSnapshot === 'function' ? getTaskSubmittedSnapshot(taskId) : null;
+                var snapshot = submittedSnapshot || (typeof getTaskSnapshot === 'function' ? getTaskSnapshot(taskId) : null);
+                if (!snapshot || !snapshot.sheetData || Object.keys(snapshot.sheetData).length === 0) return;
+                if (spreadInstance.value && spreadInstance.value.destroy) {
+                    spreadInstance.value.destroy();
+                    spreadInstance.value = null;
+                }
+                host.innerHTML = '';
+                spreadInstance.value = SpreadUtils.createSpreadFromSnapshot(host, snapshot, { readOnly: true });
+                if (submittedSnapshot) collectionState.value = 'auditing';
+            }
+
+            Vue.onMounted(function () {
+                Vue.nextTick(loadSpreadFromMockSnapshot);
+            });
+
             // Actions
             const simulateSupplierSubmit = (type) => {
                 const loading = ElementPlus.ElLoading.service({ text: '正在同步供应商数据...' });

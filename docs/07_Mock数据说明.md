@@ -66,12 +66,18 @@
 
 | 函数 | 说明 | 使用页面 |
 |------|------|----------|
-| `getTemplateSnapshot(templateId)` | 返回模板 Snapshot（version、templateId、sheetData、evidenceRequirements） | task_detail_config（选模板后实例化） |
-| `getTaskSnapshot(taskId)` | 返回任务实例 Snapshot（含 taskId，基于模板） | task_fill、task_detail_collect |
+| `getTemplateIdFromUrl()` | 从 URL 参数 `id` 取模板 ID | template_detail 初始化 |
+| `getTemplateSnapshot(templateId)` | 返回模板 Snapshot（已存储则返回存储值，否则默认） | template_detail、task_detail_config |
+| `saveTemplateSnapshot(templateId, snapshot)` | 保存模板 Snapshot（保存草稿/发布时写入） | template_detail |
+| `getTaskSnapshot(taskId)` | 返回任务已下发的 Snapshot（已下发则返回存储值，否则模板默认） | task_fill、task_detail_collect |
+| `saveTaskSnapshot(taskId, snapshot)` | 保存任务 Snapshot（任务配置下发时写入） | task_detail_config |
+| `submitTaskData(taskId, snapshot, evidenceFiles)` | 供应商提交数据（写入 Mock，供采集审核页读取） | task_fill |
+| `getTaskSubmittedSnapshot(taskId)` | 返回供应商已提交的 Snapshot（采集审核只读展示） | task_detail_collect |
 
-Snapshot 格式参见 `docs/05_模板引擎解析逻辑.md` 第四节。后续对接时需替换为：
+Snapshot 格式参见 `docs/05_模板引擎解析逻辑.md`。后续对接时需替换为：
 
 * `getTemplateSnapshot(templateId)` → `GET /api/templates/{id}/snapshot`
+* `saveTemplateSnapshot(templateId, snapshot)` → `PUT /api/templates/{id}/snapshot`
 * `getTaskSnapshot(taskId)` → `GET /api/tasks/{id}/snapshot`
 * `saveTaskSnapshot(taskId, snapshot)` → `PUT /api/tasks/{id}/snapshot`（任务配置保存/下发）
 * `submitTaskData(taskId, snapshot, evidenceFiles)` → `POST /api/tasks/{id}/submit`（供应商提交）

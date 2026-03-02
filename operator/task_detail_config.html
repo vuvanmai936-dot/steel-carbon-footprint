@@ -431,6 +431,7 @@
                             evidenceRequirements: evidenceRequirements.value.map(function(r, i){ return { id: 'req_' + (i+1), name: r.name, desc: r.desc || '' }; })
                         });
                         currentSnapshot.value = snapshot;
+                        if (typeof saveTaskSnapshot === 'function') saveTaskSnapshot(taskInfo.taskId, snapshot);
                         for (var i = 0; i < spreadInstance.value.getSheetCount(); i++) {
                             spreadInstance.value.getSheet(i).options.isProtected = true;
                         }
