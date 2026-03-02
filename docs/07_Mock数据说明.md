@@ -45,7 +45,7 @@
 
 运营端报告数据由 **`js/mockOperator.js`** 提供，与订单、任务共用同一套 **taskId/orderNo**。
 
-* **数据源**：`MOCK_REPORTS`（数组），每条报告的 **taskNo = 任务 taskId**，仅包含「待归档 / 已归档」阶段（stageIndex 5 或 6，任务列表 7 段：0 配置 / 1 采集 / 2 计算 / 3 核查 / 4 下发 / 5 待归档 / 6 已归档）对应的任务，便于从任务列表「查看档案」跳报告详情时能命中同一条档案。
+* **数据源**：`MOCK_REPORTS`（数组），每条报告的 **taskNo = 任务 taskId**，对应任务列表 **阶段 4「报告」**（任务为 5 段：0 配置 / 1 采集 / 2 计算 / 3 核查 / 4 报告）；报告主状态为 process（流转中）/ archived（已归档）/ revoked（已作废），便于从任务列表阶段 4 跳报告管理时能命中同一条档案。
 * **使用约定**：
   * `operator/report_mgt.html`：报告列表初始数据来自 `MOCK_REPORTS`（深拷贝后写入 `reportList`）。
   * `operator/report_detail.html`：根据 URL 参数 `taskNo` 在 `MOCK_REPORTS` 的副本中查找当前档案；无 taskNo 或未命中时展示「未找到该档案」。
