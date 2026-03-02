@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>待核查任务 - 认证机构</title>
+    <title>机构管理 - 认证机构</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/certifier.css">
@@ -13,6 +13,7 @@
     <script src="../js/certifierLayout.js"></script>
     <style>
         .card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; }
+        .section-title { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 16px; }
     </style>
 </head>
 <body>
@@ -38,7 +39,7 @@
             <el-header style="background: #fff; border-bottom: 1px solid #e4e7ed; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
                 <el-breadcrumb separator="/">
                     <el-breadcrumb-item>认证机构工作台</el-breadcrumb-item>
-                    <el-breadcrumb-item>待核查任务</el-breadcrumb-item>
+                    <el-breadcrumb-item>机构管理</el-breadcrumb-item>
                 </el-breadcrumb>
                 <div style="display: flex; align-items: center;">
                     <el-avatar :size="32" style="background: #1e40af;">SGS</el-avatar>
@@ -48,24 +49,24 @@
             </el-header>
             <el-main style="padding: 24px; overflow: auto; background: #f8fafc;">
                 <div class="card">
-                    <p style="color: #606266; font-size: 13px; margin: 0 0 16px 0;">请对以下任务的核算报告与凭证进行穿透查看，并反馈通过/驳回/澄清意见。</p>
-                    <el-table :data="taskList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
-                        <el-table-column prop="taskId" label="任务编号" width="160" />
-                        <el-table-column prop="orderNo" label="关联订单" width="160" />
-                        <el-table-column prop="productName" label="产品名称" min-width="140" />
-                        <el-table-column prop="supplier" label="供应商" width="140" />
-                        <el-table-column prop="status" label="状态" width="100">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <span class="section-title">人员列表</span>
+                        <el-button type="primary" size="small" @click="addMember">添加成员</el-button>
+                    </div>
+                    <el-table :data="staffList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
+                        <el-table-column prop="name" label="姓名" width="120" />
+                        <el-table-column prop="email" label="邮箱" min-width="180" />
+                        <el-table-column prop="role" label="角色" width="120">
                             <template #default="scope">
-                                <el-tag size="small" type="warning">待核查</el-tag>
+                                <el-tag size="small" type="primary">{{ scope.row.role }}</el-tag>
                             </template>
                         </el-table-column>
-                        <el-table-column label="操作" width="100" align="center" fixed="right">
+                        <el-table-column label="操作" width="100" fixed="right">
                             <template #default="scope">
-                                <el-button link type="primary" size="small" @click="goDetail(scope.row)">核查</el-button>
+                                <el-button link type="primary" size="small" @click="editMember(scope.row)">编辑</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
-                    <el-empty v-if="!taskList.length" description="暂无待核查任务" style="padding: 40px 0;" />
                 </div>
             </el-main>
         </el-container>
@@ -75,14 +76,16 @@
     const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = CertifierLayout.setup();
     runCertifierApp({
         setup() {
-            const taskList = Vue.ref([
-                { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极', supplier: '南通碳素有限公司', status: '待核查' },
-                { taskId: 'TSK-2025-999', orderNo: 'ORD-20251212-015', productName: '汽车结构钢', supplier: '马钢股份', status: '待核查' }
+            const staffList = Vue.ref([
+                { name: '张核查', email: 'zhang@sgs.com', role: '核查员' },
+                { name: '李审核', email: 'li@sgs.com', role: '高级审核员' },
+                { name: '王复核', email: 'wang@sgs.com', role: '复核员' }
             ]);
-            const goDetail = (row) => { window.location.href = 'task_detail.html?taskId=' + encodeURIComponent(row.taskId); };
+            const addMember = () => { ElementPlus.ElMessage.info('添加成员（演示）'); };
+            const editMember = (row) => { ElementPlus.ElMessage.info('编辑：' + row.name); };
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
-                taskList, goDetail
+                staffList, addMember, editMember
             };
         }
     });

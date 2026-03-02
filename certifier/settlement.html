@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>待核查任务 - 认证机构</title>
+    <title>结算中心 - 认证机构</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/certifier.css">
@@ -12,7 +12,9 @@
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/certifierLayout.js"></script>
     <style>
+        .certifier-main { padding: 24px; background: #f0f2f5; min-height: calc(100vh - 140px); }
         .card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; }
+        .filter-row { margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
     </style>
 </head>
 <body>
@@ -38,7 +40,7 @@
             <el-header style="background: #fff; border-bottom: 1px solid #e4e7ed; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
                 <el-breadcrumb separator="/">
                     <el-breadcrumb-item>认证机构工作台</el-breadcrumb-item>
-                    <el-breadcrumb-item>待核查任务</el-breadcrumb-item>
+                    <el-breadcrumb-item>结算中心</el-breadcrumb-item>
                 </el-breadcrumb>
                 <div style="display: flex; align-items: center;">
                     <el-avatar :size="32" style="background: #1e40af;">SGS</el-avatar>
@@ -48,24 +50,38 @@
             </el-header>
             <el-main style="padding: 24px; overflow: auto; background: #f8fafc;">
                 <div class="card">
-                    <p style="color: #606266; font-size: 13px; margin: 0 0 16px 0;">请对以下任务的核算报告与凭证进行穿透查看，并反馈通过/驳回/澄清意见。</p>
-                    <el-table :data="taskList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
-                        <el-table-column prop="taskId" label="任务编号" width="160" />
-                        <el-table-column prop="orderNo" label="关联订单" width="160" />
-                        <el-table-column prop="productName" label="产品名称" min-width="140" />
-                        <el-table-column prop="supplier" label="供应商" width="140" />
+                    <div class="filter-row">
+                        <el-input v-model="filterSettlementNo" placeholder="结算单号" clearable style="width: 180px;" />
+                        <el-select v-model="filterStatus" placeholder="状态" clearable style="width: 120px;">
+                            <el-option label="待结算" value="pending" />
+                            <el-option label="已结算" value="settled" />
+                            <el-option label="已驳回" value="rejected" />
+                        </el-select>
+                        <el-date-picker v-model="filterDateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" style="width: 260px;" />
+                        <el-button type="primary" @click="onSearch">查询</el-button>
+                        <el-button @click="onReset">重置</el-button>
+                    </div>
+                    <el-table :data="settlementList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
+                        <el-table-column prop="settlementNo" label="结算单号" width="180" />
+                        <el-table-column prop="period" label="结算周期" width="140" />
+                        <el-table-column prop="taskCount" label="核查任务数" width="100" align="right" />
+                        <el-table-column prop="amount" label="结算金额（元）" width="120" align="right" />
                         <el-table-column prop="status" label="状态" width="100">
                             <template #default="scope">
-                                <el-tag size="small" type="warning">待核查</el-tag>
+                                <el-tag v-if="scope.row.status === '已结算'" type="success" size="small">已结算</el-tag>
+                                <el-tag v-else-if="scope.row.status === '待结算'" type="warning" size="small">待结算</el-tag>
+                                <el-tag v-else type="info" size="small">{{ scope.row.status }}</el-tag>
                             </template>
                         </el-table-column>
-                        <el-table-column label="操作" width="100" align="center" fixed="right">
+                        <el-table-column prop="submitTime" label="提交时间" width="160" />
+                        <el-table-column label="操作" width="120" fixed="right">
                             <template #default="scope">
-                                <el-button link type="primary" size="small" @click="goDetail(scope.row)">核查</el-button>
+                                <el-button v-if="scope.row.status === '待结算'" link type="primary" size="small">确认结算</el-button>
+                                <el-button link type="primary" size="small" @click="viewDetail(scope.row)">查看</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
-                    <el-empty v-if="!taskList.length" description="暂无待核查任务" style="padding: 40px 0;" />
+                    <el-empty v-if="!settlementList.length" description="暂无结算记录" style="padding: 40px 0;" />
                 </div>
             </el-main>
         </el-container>
@@ -75,14 +91,20 @@
     const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = CertifierLayout.setup();
     runCertifierApp({
         setup() {
-            const taskList = Vue.ref([
-                { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极', supplier: '南通碳素有限公司', status: '待核查' },
-                { taskId: 'TSK-2025-999', orderNo: 'ORD-20251212-015', productName: '汽车结构钢', supplier: '马钢股份', status: '待核查' }
+            const filterSettlementNo = Vue.ref('');
+            const filterStatus = Vue.ref('');
+            const filterDateRange = Vue.ref(null);
+            const settlementList = Vue.ref([
+                { settlementNo: 'STL-2025-1101', period: '2025-10', taskCount: 12, amount: '36,000.00', status: '已结算', submitTime: '2025-11-05 14:30:00' },
+                { settlementNo: 'STL-2025-1102', period: '2025-11', taskCount: 8, amount: '24,000.00', status: '待结算', submitTime: '2025-11-14 10:00:00' },
+                { settlementNo: 'STL-2025-1003', period: '2025-09', taskCount: 15, amount: '45,000.00', status: '已结算', submitTime: '2025-10-08 09:20:00' }
             ]);
-            const goDetail = (row) => { window.location.href = 'task_detail.html?taskId=' + encodeURIComponent(row.taskId); };
+            const onSearch = () => { ElementPlus.ElMessage.info('已按条件筛选（演示）'); };
+            const onReset = () => { filterSettlementNo.value = ''; filterStatus.value = ''; filterDateRange.value = null; };
+            const viewDetail = (row) => { ElementPlus.ElMessage.info('查看结算单：' + row.settlementNo); };
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
-                taskList, goDetail
+                filterSettlementNo, filterStatus, filterDateRange, settlementList, onSearch, onReset, viewDetail
             };
         }
     });

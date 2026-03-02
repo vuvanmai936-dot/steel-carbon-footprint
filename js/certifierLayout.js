@@ -1,5 +1,5 @@
 /**
- * 供应商工作台统一布局：与 operator layout.js 技术栈一致，提供侧栏菜单、顶栏、返回门户与 runSupplierApp。
+ * 核查机构端统一布局：与 supplierLayout 技术栈一致，提供侧栏菜单、顶栏、返回门户与 runCertifierApp。
  * 依赖：Vue 3、Element Plus、@element-plus/icons-vue、element-plus/dist/locale/zh-cn.js
  */
 (function (global) {
@@ -8,29 +8,30 @@
     function findActiveMenuId(menuConfig, path) {
         for (const item of menuConfig) {
             if (item.path && item.path === path) return item.id;
+            if (item.match && item.match.indexOf(path) !== -1) return item.id;
             if (item.children) {
                 for (const c of item.children) {
                     if (c.path === path) return c.id;
+                    if (c.match && c.match.indexOf(path) !== -1) return c.id;
                 }
             }
         }
         return '';
     }
 
-    const SupplierLayout = {
+    const CertifierLayout = {
         setup() {
             const menuConfig = [
-                { id: '1', title: '工作台', icon: 'Odometer', path: 'dashboard.html' },
-                { id: '2', title: '待办任务', icon: 'List', path: 'task_list.html' },
-                { id: '3', title: '我的报告', icon: 'DocumentChecked', path: 'reports.html' },
-                { id: '4', title: '身份认证', icon: 'User', path: 'identity.html' },
-                { id: '5', title: '市场', icon: 'Goods', path: 'market.html' },
-                { id: '6', title: '知识库与帮助', icon: 'QuestionFilled', path: 'help.html' }
+                { id: '1', title: '核查仪表盘', icon: 'DataAnalysis', path: 'dashboard.html' },
+                { id: '2', title: '核查任务列表', icon: 'List', path: 'task_list.html', match: ['task_detail.html'] },
+                { id: '3', title: '证书颁发管理', icon: 'Medal', path: 'certificates.html' },
+                { id: '4', title: '结算中心', icon: 'Money', path: 'settlement.html' },
+                { id: '5', title: '机构管理', icon: 'Setting', path: 'admin.html' }
             ];
 
             const currentUser = reactive({
-                name: '供应商账号',
-                role: '供应商 (L2)'
+                name: '张核查',
+                role: 'SGS 高级审核员'
             });
 
             const sidebarCollapsed = ref(false);
@@ -49,7 +50,7 @@
             };
 
             const goPortal = () => {
-                window.location.href = '../index.html';
+                window.location.href = '../pcf.html';
             };
 
             return {
@@ -64,7 +65,7 @@
         }
     };
 
-    function initSupplierApp(app) {
+    function initCertifierApp(app) {
         const localeOpt = typeof ElementPlusLocaleZhCn !== 'undefined' ? { locale: ElementPlusLocaleZhCn } : {};
         app.use(ElementPlus, localeOpt);
         if (typeof ElementPlusIconsVue !== 'undefined') {
@@ -75,12 +76,12 @@
         return app;
     }
 
-    /** 供应商端统一启动：创建 Vue 应用、注册 Element Plus 与图标、挂载 #app */
-    function runSupplierApp(component) {
+    /** 核查机构端统一启动：创建 Vue 应用、注册 Element Plus 与图标、挂载 #app */
+    function runCertifierApp(component) {
         const app = createApp(component);
-        initSupplierApp(app).mount('#app');
+        initCertifierApp(app).mount('#app');
     }
 
-    global.SupplierLayout = SupplierLayout;
-    global.runSupplierApp = runSupplierApp;
+    global.CertifierLayout = CertifierLayout;
+    global.runCertifierApp = runCertifierApp;
 })(typeof window !== 'undefined' ? window : this);

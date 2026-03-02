@@ -337,7 +337,7 @@
         createApp({
             setup() {
                 const enterSystem = (role) => {
-                    const routes = { operator: 'operator/dashboard.html', supplier: 'supplier/dashboard.html', certifier: 'certifier/task_list.html' };
+                    const routes = { operator: 'operator/dashboard.html', supplier: 'supplier/dashboard.html', certifier: 'certifier/dashboard.html' };
                     const url = routes[role];
                     if (url) window.location.href = url;
                     else ElementPlus.ElMessage.info('未知角色入口');

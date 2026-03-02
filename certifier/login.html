@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>安全登录 - 可信数据空间认证端</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <style>
+        body { margin: 0; background: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .login-container { width: 900px; max-width: 95vw; background: #fff; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); display: flex; overflow: hidden; }
+        .org-side { width: 38%; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: #fff; padding: 40px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .org-side .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; font-size: 18px; font-weight: bold; }
+        .org-side .logo-box { width: 40px; height: 40px; background: #fff; color: #1e3a8a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .org-side .device-info { background: rgba(255,255,255,0.1); padding: 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); font-size: 13px; }
+        .org-side .device-info .org-name { font-weight: bold; margin-bottom: 4px; }
+        .org-side .footer { font-size: 12px; opacity: 0.7; }
+        .user-side { flex: 1; padding: 40px 48px; }
+        .user-side h2 { font-size: 24px; font-weight: 700; color: #303133; margin: 0 0 8px 0; }
+        .user-side .sub { font-size: 13px; color: #909399; margin-bottom: 24px; }
+        .verify-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.96); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        .verify-step { display: flex; align-items: center; gap: 12px; width: 320px; padding: 14px; border-radius: 8px; background: #f5f7fa; border: 1px solid #e4e7ed; margin-bottom: 12px; transition: 0.3s; }
+        .verify-step.active { border-color: #409eff; background: #ecf5ff; }
+        .verify-step.done { border-color: #67c23a; background: #f0f9eb; }
+        .verify-step .step-text { flex: 1; font-size: 14px; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <div class="login-container">
+        <div class="org-side">
+            <div>
+                <div class="logo">
+                    <div class="logo-box">S</div>
+                    <span>TRUST SPACE</span>
+                </div>
+                <div v-if="!deviceReady" style="font-size: 13px; opacity: 0.9;">正在识别可信终端...</div>
+                <div v-else class="device-info">
+                    <div class="org-name">SGS 通标标准</div>
+                    <div style="font-size: 12px; opacity: 0.8;">Certification Body</div>
+                    <div style="font-size: 11px; margin-top: 8px; opacity: 0.7;">DID: did:xin:cert:sgs...010A</div>
+                    <div style="margin-top: 8px; font-size: 12px; color: #86efac;"><el-icon><Select /></el-icon> 终端证书有效</div>
+                </div>
+            </div>
+            <div class="footer">&copy; 2025 Industrial Chain Carbon Data Service System. Secured by Blockchain.</div>
+        </div>
+        <div class="user-side">
+            <h2>核查员登录</h2>
+            <p class="sub">请使用个人身份凭证解锁工作台</p>
+            <el-tabs v-model="loginTab">
+                <el-tab-pane label="U-Key 登录" name="ukey">
+                    <div style="text-align: center; margin: 24px 0;">
+                        <div style="width: 120px; height: 120px; border: 2px dashed #c0c4cc; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 48px; color: #c0c4cc;" :style="ukeyInserted && { borderColor: '#409eff', background: '#ecf5ff', color: '#409eff' }">
+                            <el-icon><Usb /></el-icon>
+                        </div>
+                        <p style="font-size: 13px; color: #909399;">{{ ukeyInserted ? '设备已连接: SGS_Master_Key' : '请插入 SGS 身份认证锁 (U-Key)' }}</p>
+                    </div>
+                    <el-button type="primary" style="width: 100%;" :disabled="!ukeyInserted" @click="startVerify">验证并登录</el-button>
+                </el-tab-pane>
+                <el-tab-pane label="账号密码" name="pwd">
+                    <el-form label-width="0" style="margin-top: 16px;">
+                        <el-form-item>
+                            <el-input v-model="username" placeholder="用户名 / 手机号" size="large" />
+                        </el-form-item>
+                        <el-form-item>
+                            <el-input v-model="password" type="password" placeholder="登录密码" size="large" show-password />
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" style="width: 100%;" size="large" @click="startVerify">登 录</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-tab-pane>
+            </el-tabs>
+        </div>
+    </div>
+
+    <div v-if="showVerify" class="verify-overlay">
+        <h3 style="margin-bottom: 24px; font-size: 20px; color: #303133;">正在建立可信通道...</h3>
+        <div v-for="(step, i) in verifySteps" :key="i" class="verify-step" :class="{ active: step.active, done: step.done }">
+            <el-icon v-if="step.done" color="#67c23a" :size="20"><CircleCheck /></el-icon>
+            <el-icon v-else-if="step.active" class="is-loading" :size="20"><Loading /></el-icon>
+            <el-icon v-else :size="20"><CircleClose /></el-icon>
+            <span class="step-text">{{ step.text }}</span>
+        </div>
+    </div>
+</div>
+<script>
+    const { createApp, ref, onMounted } = Vue;
+    const app = createApp({
+        setup() {
+            const deviceReady = ref(false);
+            const loginTab = ref('ukey');
+            const ukeyInserted = ref(false);
+            const username = ref('auditor_01');
+            const password = ref('123456');
+            const showVerify = ref(false);
+            const verifySteps = ref([
+                { text: '验证机构终端证书 (SGS)', active: false, done: false },
+                { text: '验证核查员身份签名', active: false, done: false },
+                { text: '连接可信数据空间节点', active: false, done: false }
+            ]);
+            onMounted(() => {
+                setTimeout(() => { deviceReady.value = true; }, 800);
+                setTimeout(() => { if (loginTab.value === 'ukey') ukeyInserted.value = true; }, 1500);
+            });
+            const runVerify = () => {
+                let idx = 0;
+                const next = () => {
+                    if (idx > 0 && idx <= 3) verifySteps.value[idx - 1] = { ...verifySteps.value[idx - 1], active: false, done: true };
+                    if (idx >= 3) {
+                        setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
+                        return;
+                    }
+                    verifySteps.value[idx] = { ...verifySteps.value[idx], active: true, done: false };
+                    idx++;
+                    setTimeout(next, 1000);
+                };
+                next();
+            };
+            const startVerify = () => {
+                showVerify.value = true;
+                verifySteps.value = [
+                    { text: '验证机构终端证书 (SGS)', active: false, done: false },
+                    { text: '验证核查员身份签名', active: false, done: false },
+                    { text: '连接可信数据空间节点', active: false, done: false }
+                ];
+                setTimeout(runVerify, 300);
+            };
+            return {
+                deviceReady, loginTab, ukeyInserted, username, password, showVerify, verifySteps, startVerify
+            };
+        }
+    });
+    app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
+    if (typeof ElementPlusIconsVue !== 'undefined') {
+        for (const [key, comp] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, comp);
+        }
+    }
+    app.mount('#app');
+</script>
+</body>
+</html>

@@ -2,26 +2,92 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>证书管理 - 认证机构</title>
+    <title>证书颁发管理 - 认证机构</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/certifier.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/certifierLayout.js"></script>
     <style>
-        .placeholder-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f0f2f5; padding: 40px; }
-        .placeholder-card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 40px; max-width: 480px; text-align: center; }
-        .placeholder-card h1 { margin: 0 0 16px 0; font-size: 22px; color: #303133; }
-        .placeholder-card p { color: #606266; font-size: 14px; margin: 0 0 24px 0; line-height: 1.6; }
-        .placeholder-card a { margin: 0 8px; }
-        .placeholder-card .btn-portal { padding: 10px 20px; background: #409EFF; color: #fff; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 14px; display: inline-block; margin-top: 8px; }
-        .placeholder-card .btn-portal:hover { opacity: 0.9; }
+        .card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; }
     </style>
 </head>
 <body>
-<div class="placeholder-page">
-    <div class="placeholder-card">
-        <h1>证书管理</h1>
-        <p>演示占位，功能开发中。</p>
-        <a href="../index.html" class="btn-portal">返回门户</a>
-    </div>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #1e3a5f; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 16px; border-bottom: 1px solid #2d4a6f; flex-shrink: 0;">第三方核查机构</div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#1e3a5f" text-color="#e2e8f0" active-text-color="#60a5fa" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-menu-item :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #2d4a6f; text-align: center;">
+                <el-button link style="color: #e2e8f0; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #e4e7ed; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>认证机构工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item>证书颁发管理</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #1e40af;">SGS</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                    <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+                </div>
+            </el-header>
+            <el-main style="padding: 24px; overflow: auto; background: #f8fafc;">
+                <div class="card">
+                    <el-input v-model="searchCert" placeholder="搜索证书编号 / 产品名称" clearable style="width: 280px; margin-bottom: 16px;" />
+                    <el-table :data="certList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
+                        <el-table-column prop="certId" label="证书编号" width="160" />
+                        <el-table-column prop="productName" label="产品名称" min-width="140" />
+                        <el-table-column prop="supplier" label="供应商" width="140" />
+                        <el-table-column prop="issueDate" label="签发日期" width="120" />
+                        <el-table-column prop="carbonFootprint" label="碳足迹" width="120" />
+                        <el-table-column prop="status" label="状态" width="100">
+                            <template #default="scope">
+                                <el-tag v-if="scope.row.status === '有效'" type="success" size="small">有效</el-tag>
+                                <el-tag v-else type="info" size="small">{{ scope.row.status }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="100" fixed="right">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small">查看</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <el-empty v-if="!certList.length" description="暂无证书记录" style="padding: 40px 0;" />
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
 </div>
+<script>
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = CertifierLayout.setup();
+    runCertifierApp({
+        setup() {
+            const searchCert = Vue.ref('');
+            const certList = Vue.ref([
+                { certId: 'VC-202510-0212', productName: '钢丝绳芯输送带', supplier: 'XXXXX 带有限公司', issueDate: '2025-10-15', carbonFootprint: '1.11 kgCO₂e', status: '有效' },
+                { certId: 'VC-202510-0198', productName: '超高功率石墨电极', supplier: '南通碳素', issueDate: '2025-10-12', carbonFootprint: '2.84 kgCO₂e', status: '有效' }
+            ]);
+            return {
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
+                searchCert, certList
+            };
+        }
+    });
+</script>
 </body>
 </html>

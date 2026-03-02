@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>知识库与帮助 - 供应商工作台</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/supplier.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/supplierLayout.js"></script>
+    <style>
+        .faq-section { max-width: 800px; }
+        .faq-section .el-card__header { font-size: 16px; font-weight: 600; color: #303133; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
+                供应商工作台
+            </div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#059669" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-menu-item :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item>知识库与帮助</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #059669;">供</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                    <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
+                <div class="faq-section">
+                    <el-card shadow="never">
+                        <template #header>
+                            <span>常见问题 (FAQ)</span>
+                        </template>
+                        <el-collapse v-model="activeNames">
+                            <el-collapse-item name="1">
+                                <template #title>
+                                    <span style="font-weight: 500;">什么是产品碳足迹 (PCF)？</span>
+                                </template>
+                                <div style="color: #606266; font-size: 14px; line-height: 1.6;">
+                                    产品碳足迹（Product Carbon Footprint, PCF）是指用于量化和报告产品在其整个生命周期中所产生的温室气体排放总量。
+                                </div>
+                            </el-collapse-item>
+                            <el-collapse-item name="2">
+                                <template #title>
+                                    <span style="font-weight: 500;">如何填报任务数据？</span>
+                                </template>
+                                <div style="color: #606266; font-size: 14px; line-height: 1.6;">
+                                    在「待办任务」中点击待填报任务进入填报页，按工序填写数据并上传凭证，提交后等待运营方审核与 LCA 计算。
+                                </div>
+                            </el-collapse-item>
+                            <el-collapse-item name="3">
+                                <template #title>
+                                    <span style="font-weight: 500;">报告下发后如何确认或申诉？</span>
+                                </template>
+                                <div style="color: #606266; font-size: 14px; line-height: 1.6;">
+                                    在「我的报告」中可预览报告。若认可结果请点击「确认接收」；若有异议请选择「对报告有异议」并填写原因与附件提交申诉，由运营方处理。
+                                </div>
+                            </el-collapse-item>
+                        </el-collapse>
+                    </el-card>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+<script>
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = SupplierLayout.setup();
+    runSupplierApp({
+        setup() {
+            const activeNames = Vue.ref(['1']);
+            return {
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
+                activeNames
+            };
+        }
+    });
+</script>
+</body>
+</html>

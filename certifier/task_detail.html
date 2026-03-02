@@ -8,67 +8,92 @@
     <link rel="stylesheet" href="../css/certifier.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/mockTasks.js"></script>
+    <script src="../js/certifierLayout.js"></script>
     <style>
-        .certifier-header { background: #fff; border-bottom: 1px solid #e4e7ed; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
-        .certifier-main { padding: 24px; background: #f0f2f5; min-height: calc(100vh - 70px); max-width: 900px; margin: 0 auto; }
-        .card { background: #fff; border-radius: 4px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; }
+        .card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; }
         .section-title { font-size: 14px; font-weight: 600; color: #303133; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #ebeef5; }
         .readonly-block { font-size: 13px; color: #606266; line-height: 1.8; }
+        .certifier-detail-main { max-width: 900px; margin: 0 auto; }
     </style>
 </head>
 <body>
 <div id="app" v-cloak>
-    <div class="certifier-header">
-        <div>
-            <a href="task_list.html" style="color: #606266; text-decoration: none; margin-right: 16px;">待核查任务</a>
-            <span style="color: #909399;">|</span>
-            <span style="margin-left: 16px; font-weight: 600;">{{ taskInfo.taskId }}</span>
-        </div>
-        <el-button link type="primary" @click="goPortal">返回门户</el-button>
-    </div>
-    <div class="certifier-main">
-        <div class="card">
-            <div class="section-title">任务与产品</div>
-            <div class="readonly-block">
-                <p>任务编号：{{ taskInfo.taskId }} &nbsp; 关联订单：{{ taskInfo.orderNo }}</p>
-                <p>产品：{{ taskInfo.productName }} &nbsp; 规格：{{ taskInfo.specs }} &nbsp; 供应商：{{ taskInfo.supplier }}</p>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #1e3a5f; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 16px; border-bottom: 1px solid #2d4a6f; flex-shrink: 0;">第三方核查机构</div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#1e3a5f" text-color="#e2e8f0" active-text-color="#60a5fa" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-menu-item :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #2d4a6f; text-align: center;">
+                <el-button link style="color: #e2e8f0; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
             </div>
-        </div>
-        <div class="card">
-            <div class="section-title">核算报告与凭证（只读穿透）</div>
-            <div class="readonly-block">
-                <p>产品碳足迹核算报告（摘要）：2.45 kgCO₂e/kg，边界：摇篮到大门。</p>
-                <p>凭证：电力采购结算单、燃气发票等已由运营审核通过。</p>
-            </div>
-        </div>
-        <div class="card">
-            <div class="section-title">操作</div>
-            <el-button type="success" @click="handlePass">通过</el-button>
-            <el-button type="danger" @click="handleReject">驳回</el-button>
-            <el-button type="warning" @click="handleClarify">发起澄清</el-button>
-        </div>
-    </div>
+        </el-aside>
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #e4e7ed; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>认证机构工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item><a href="task_list.html" style="color: #606266; text-decoration: none;">待核查任务</a></el-breadcrumb-item>
+                    <el-breadcrumb-item>{{ taskInfo.taskId }}</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #1e40af;">SGS</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                    <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+                </div>
+            </el-header>
+            <el-main style="padding: 24px; overflow: auto; background: #f8fafc;">
+                <div class="certifier-detail-main">
+                    <div class="card">
+                        <div class="section-title">任务与产品</div>
+                        <div class="readonly-block">
+                            <p>任务编号：{{ taskInfo.taskId }} &nbsp; 关联订单：{{ taskInfo.orderNo }}</p>
+                            <p>产品：{{ taskInfo.productName }} &nbsp; 规格：{{ taskInfo.specs }} &nbsp; 供应商：{{ taskInfo.supplier }}</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="section-title">核算报告与凭证（只读穿透）</div>
+                        <div class="readonly-block">
+                            <p>产品碳足迹核算报告（摘要）：2.45 kgCO₂e/kg，边界：摇篮到大门。</p>
+                            <p>凭证：电力采购结算单、燃气发票等已由运营审核通过。</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="section-title">操作</div>
+                        <el-button type="success" @click="handlePass">通过</el-button>
+                        <el-button type="danger" @click="handleReject">驳回</el-button>
+                        <el-button type="warning" @click="handleClarify">发起澄清</el-button>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
 </div>
 <script>
     (function () {
         var taskInfo = typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl('TSK-2026-888') : { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '南通碳素有限公司' };
-
-        const { createApp } = Vue;
-        const app = createApp({
+        const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = CertifierLayout.setup();
+        runCertifierApp({
             setup() {
                 const taskInfoRef = Vue.ref(taskInfo);
-                const goPortal = () => { window.location.href = '../index.html'; };
                 const handlePass = () => { ElementPlus.ElMessage.success('已反馈：通过'); };
                 const handleReject = () => { ElementPlus.ElMessageBox.prompt('请输入驳回原因', '驳回').then(() => ElementPlus.ElMessage.success('已反馈：驳回')).catch(() => {}); };
                 const handleClarify = () => { ElementPlus.ElMessageBox.prompt('请输入澄清内容', '发起澄清').then(() => ElementPlus.ElMessage.success('已发起澄清')).catch(() => {}); };
-                return { taskInfo: taskInfoRef, goPortal, handlePass, handleReject, handleClarify };
+                return {
+                    menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
+                    taskInfo: taskInfoRef, handlePass, handleReject, handleClarify
+                };
             }
         });
-        var localeOpt = typeof ElementPlusLocaleZhCn !== 'undefined' ? { locale: ElementPlusLocaleZhCn } : {};
-        app.use(ElementPlus, localeOpt);
-        app.mount('#app');
     })();
 </script>
 </body>
