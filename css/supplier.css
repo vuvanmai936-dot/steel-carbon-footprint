@@ -2,12 +2,12 @@
 /* 必须在 common.css 之后引入 */
 
 :root {
-    /* 主色：Emerald (适合碳中和、绿色供应链) */
-    --primary: #059669;      
-    --primary-bg: #ECFDF5;
+  /* 主色：Emerald (适合碳中和、绿色供应链) */
+  --primary: #059669;
+  --primary-bg: #ecfdf5;
 }
 
 /* 供应商侧边栏激活状态稍作区分 */
 .menu-item.active {
-    background-color: #D1FAE5; /* 更明显的浅绿 */
+  background-color: #d1fae5; /* 更明显的浅绿 */
 }

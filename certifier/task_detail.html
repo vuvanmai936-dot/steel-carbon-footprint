@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/certifier.css">
+    <link rel="stylesheet" href="../css/task_detail.css">
     <link rel="stylesheet" href="../css/clarify_panel.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
@@ -48,11 +49,14 @@
         </el-aside>
         <el-container style="display: flex; flex-direction: column; overflow: hidden;">
             <el-header style="background: #fff; border-bottom: 1px solid #e4e7ed; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
-                <el-breadcrumb separator="/">
-                    <el-breadcrumb-item>认证机构工作台</el-breadcrumb-item>
-                    <el-breadcrumb-item><a href="task_list.html" style="color: #606266; text-decoration: none;">待核查任务</a></el-breadcrumb-item>
-                    <el-breadcrumb-item>{{ taskInfo.taskId }}</el-breadcrumb-item>
-                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
+                    <el-breadcrumb separator="/">
+                        <el-breadcrumb-item>认证机构工作台</el-breadcrumb-item>
+                        <el-breadcrumb-item><a href="task_list.html" style="color: #606266; text-decoration: none;">待核查任务</a></el-breadcrumb-item>
+                        <el-breadcrumb-item>核查详情</el-breadcrumb-item>
+                    </el-breadcrumb>
+                </div>
                 <div style="display: flex; align-items: center;">
                     <el-tooltip content="本页面仅限在线查看与填报，受数字合约保护；禁止下载或截图。" placement="bottom">
                         <span style="display: inline-flex; align-items: center; color: #047857; font-size: 12px; cursor: help; margin-right: 12px;">
@@ -64,15 +68,50 @@
                     <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
                 </div>
             </el-header>
-            <el-main style="padding: 24px; overflow: auto; background: #f8fafc;">
-                <div class="certifier-detail-main">
-                    <div class="card">
-                        <div class="section-title">任务与产品</div>
-                        <div class="readonly-block">
-                            <p>任务编号：{{ taskInfo.taskId }} &nbsp; 关联订单：{{ taskInfo.orderNo }}</p>
-                            <p>产品：{{ taskInfo.productName }} &nbsp; 规格：{{ taskInfo.specs }} &nbsp; 供应商：{{ taskInfo.supplier }}</p>
+            <el-main style="padding: 0; overflow: auto; background: #f8fafc;">
+                <div class="task-info-dashboard">
+                    <div class="task-info-dashboard__main">
+                        <div class="dash-block" style="flex: 1.5;">
+                            <div class="dash-title">产品与任务</div>
+                            <div class="dash-content">
+                                <div class="prod-info">
+                                    <div class="prod-primary">
+                                        <span class="prod-name">{{ taskInfo.productName }}</span>
+                                        <span class="prod-id">{{ taskInfo.taskId }}</span>
+                                    </div>
+                                    <div class="prod-meta">
+                                        <div class="prod-meta-row">
+                                            <span class="prod-label">规格</span>
+                                            <span class="prod-value">{{ taskInfo.specs }}</span>
+                                        </div>
+                                        <div class="prod-meta-row">
+                                            <span class="prod-label">订单</span>
+                                            <span class="prod-value">
+                                                <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dash-block" style="flex: 1.2;">
+                            <div class="dash-title">来源供应商</div>
+                            <div class="dash-content">
+                                <div style="display:flex; align-items:center;">
+                                    <el-avatar :size="24" style="background:#dbeafe; color:#2563eb; font-size:12px; margin-right:8px;">{{ (taskInfo.supplier || '')[0] }}</el-avatar>
+                                    <el-link type="primary" :underline="false" style="font-weight:bold; font-size:14px;" @click="viewSupplier">{{ taskInfo.supplier }}</el-link>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    <div class="task-info-dashboard__status-bar">
+                        <div class="dash-block">
+                            <div class="dash-title">核查状态</div>
+                            <div class="dash-content"><el-tag type="warning">待核查</el-tag></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="certifier-detail-main" style="padding: 24px;">
                     <div class="card">
                         <div class="section-title">供应商证照（仅供核查）<el-tag type="success" size="small" effect="plain" class="tds-sync-tag">由可信数据空间提供</el-tag></div>
                         <div class="readonly-block">
@@ -189,6 +228,9 @@
                 const taskInfoRef = Vue.ref(taskInfo);
                 const supplierProfileRef = Vue.ref(supplierProfile);
                 const supplierCertsRef = Vue.ref(supplierCerts);
+                const goBack = () => { window.location.href = 'task_list.html'; };
+                const viewOrder = () => { ElementPlus.ElMessage.info('订单详情由运营端管理'); };
+                const viewSupplier = () => { ElementPlus.ElMessage.info('供应商信息由运营端管理'); };
                 const handlePass = () => { ElementPlus.ElMessage.success('已反馈：通过'); };
                 const handleReject = () => { ElementPlus.ElMessageBox.prompt('请输入驳回原因', '驳回').then(() => ElementPlus.ElMessage.success('已反馈：驳回')).catch(() => {}); };
                 const clarifyDrawerVisible = Vue.ref(false);
@@ -252,7 +294,8 @@
                 }
                 return {
                     menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
-                    taskInfo: taskInfoRef, supplierProfile: supplierProfileRef, supplierCerts: supplierCertsRef, handlePass, handleReject,
+                    taskInfo: taskInfoRef, supplierProfile: supplierProfileRef, supplierCerts: supplierCertsRef,
+                    goBack, viewOrder, viewSupplier, handlePass, handleReject,
                     clarifyDrawerVisible,
                     clarificationList, selectedClarId, selectedClarDetail, replyContent, showNewClarify, newClarifyForm, clarifyTypes,
                     formatClarifyTime, roleAvatar, clarifyIsSelf, clarifyShouldShowTimeDivider, loadClarifications, selectClarification, submitClarifyReply, submitNewClarify

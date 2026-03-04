@@ -16,7 +16,7 @@
     var time = h + ':' + m;
     if (msgDate.getTime() === today.getTime()) return time;
     if (msgDate.getTime() === today.getTime() - 86400000) return '昨天 ' + time;
-    return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + time;
+    return d.getMonth() + 1 + '月' + d.getDate() + '日 ' + time;
   }
 
   function roleAvatar(role) {

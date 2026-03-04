@@ -2,10 +2,12 @@
 /* 必须在 common.css 之后引入 */
 
 :root {
-    /* 主色：Royal Blue (SGS/TUV 等机构常用的权威蓝) */
-    --primary: #1E40AF;      
-    --primary-bg: #EFF6FF;
+  /* 主色：Royal Blue (SGS/TUV 等机构常用的权威蓝) */
+  --primary: #1e40af;
+  --primary-bg: #eff6ff;
 }
 
 /* 核查方可能需要更严谨的字体间距 */
-body { letter-spacing: 0.01em; }
+body {
+  letter-spacing: 0.01em;
+}

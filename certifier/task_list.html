@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/certifier.css">
+    <script src="../js/mockTasks.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
@@ -13,6 +14,27 @@
     <script src="../js/certifierLayout.js"></script>
     <style>
         .card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; }
+        /* 与运营/供应商端信息结构一致的列表样式，主题色保持核查端身份 */
+        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .list-card-container { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #ebeef5; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .table-wrapper { flex: 1; overflow: auto; padding: 10px 15px 50px 15px; position: relative; }
+        .pagination-footer { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; border-top: 1px solid #ebeef5; background: #fff; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px; z-index: 10; }
+        .search-card { padding: 18px 20px; background: #fff; border: 1px solid #ebeef5; border-radius: 8px; margin-bottom: 15px; flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .info-group { display: flex; align-items: flex-start; width: 100%; }
+        .info-text-wrapper { flex: 1; min-width: 0; overflow: hidden; }
+        .info-icon-box { width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px; background: #dbeafe; color: #2563eb; border: 1px solid #93c5fd; }
+        .info-main-text { font-weight: 600; color: #1e40af; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+        .info-main-text:hover { color: #1d4ed8; text-decoration: underline; }
+        .info-sub-text { font-family: monospace; color: #909399; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mini-steps { display: flex; align-items: center; width: 100%; }
+        .mini-steps .step-item { flex: 1; height: 4px; background: #EBEEF5; margin-right: 2px; border-radius: 2px; }
+        .mini-steps .step-item:last-child { margin-right: 0; }
+        .mini-steps .step-item.active { background: #60a5fa; }
+        .mini-steps .step-item.done { background: #67C23A; }
+        .step-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: #C0C4CC; }
+        .step-label-active { color: #2563eb; font-weight: bold; }
+        .step-label-done { color: #67C23A; }
+        .certifier-task-table .el-table__body tr:hover > td { background-color: #eff6ff !important; }
     </style>
 </head>
 <body>
@@ -46,26 +68,98 @@
                     <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
                 </div>
             </el-header>
-            <el-main style="padding: 24px; overflow: auto; background: #f8fafc;">
-                <div class="card">
-                    <p style="color: #606266; font-size: 13px; margin: 0 0 16px 0;">请对以下任务的核算报告与凭证进行穿透查看，并反馈通过/驳回/澄清意见。</p>
-                    <el-table :data="taskList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
-                        <el-table-column prop="taskId" label="任务编号" width="160" />
-                        <el-table-column prop="orderNo" label="关联订单" width="160" />
-                        <el-table-column prop="productName" label="产品名称" min-width="140" />
-                        <el-table-column prop="supplier" label="供应商" width="140" />
-                        <el-table-column prop="status" label="状态" width="100">
-                            <template #default="scope">
-                                <el-tag size="small" type="warning">待核查</el-tag>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="操作" width="100" align="center" fixed="right">
-                            <template #default="scope">
-                                <el-button link type="primary" size="small" @click="goDetail(scope.row)">核查</el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                    <el-empty v-if="!taskList.length" description="暂无待核查任务" style="padding: 40px 0;" />
+            <el-main style="padding: 24px; overflow: hidden; background: #f8fafc;">
+                <div class="main-flex-wrapper">
+                    <div class="search-card">
+                        <p style="color: #606266; font-size: 13px; margin: 0 0 12px 0;">请对以下任务的核算报告与凭证进行穿透查看，并反馈通过/驳回/澄清意见。</p>
+                        <el-form :inline="true" size="default" style="margin-bottom: -18px;">
+                            <el-form-item label="关键词">
+                                <el-input v-model="searchKeyword" placeholder="任务编号 / 订单号 / 产品" clearable style="width: 220px;">
+                                    <template #prefix><el-icon><component :is="'Search'" /></el-icon></template>
+                                </el-input>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" @click="currentPage = 1">查询</el-button>
+                                <el-button @click="handleReset">重置</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+                    <div class="list-card-container">
+                        <div v-if="filteredTaskList.length" class="table-wrapper">
+                            <el-table
+                                :data="paginatedTaskList"
+                                border
+                                stripe
+                                class="certifier-task-table"
+                                style="width: 100%;"
+                                :header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: '600' }"
+                                @row-click="handleRowClick"
+                            >
+                                <el-table-column label="任务信息" min-width="260" show-overflow-tooltip>
+                                    <template #default="scope">
+                                        <div class="info-group">
+                                            <div class="info-icon-box"><el-icon><component :is="'List'" /></el-icon></div>
+                                            <div class="info-text-wrapper">
+                                                <div class="info-main-text" @click.stop="goDetail(scope.row)">{{ scope.row.taskId }}</div>
+                                                <div class="info-sub-text">ORD: {{ scope.row.orderNo }}</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="产品与规格" min-width="160" show-overflow-tooltip>
+                                    <template #default="scope">
+                                        <div style="font-weight: 500;">{{ scope.row.productName }}</div>
+                                        <div style="font-size: 12px; color: #909399;">{{ scope.row.specs || '—' }}</div>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="供应商" prop="supplier" width="140" show-overflow-tooltip></el-table-column>
+                                <el-table-column label="当前阶段 / 进度" width="400">
+                                    <template #default="scope">
+                                        <div class="mini-steps">
+                                            <div class="step-item" :class="getStepClass(scope.row.stageIndex, 0)"></div>
+                                            <div class="step-item" :class="getStepClass(scope.row.stageIndex, 1)"></div>
+                                            <div class="step-item" :class="getStepClass(scope.row.stageIndex, 2)"></div>
+                                            <div class="step-item" :class="getStepClass(scope.row.stageIndex, 3)"></div>
+                                            <div class="step-item" :class="getStepClass(scope.row.stageIndex, 4)"></div>
+                                        </div>
+                                        <div class="step-labels">
+                                            <span :class="getLabelClass(scope.row.stageIndex, 0)">配置</span>
+                                            <span :class="getLabelClass(scope.row.stageIndex, 1)">采集</span>
+                                            <span :class="getLabelClass(scope.row.stageIndex, 2)">计算</span>
+                                            <span :class="getLabelClass(scope.row.stageIndex, 3)">核查</span>
+                                            <span :class="getLabelClass(scope.row.stageIndex, 4)">报告</span>
+                                        </div>
+                                        <div style="margin-top: 6px; font-size: 11px; color: #606266;">
+                                            <span>核查：{{ getStageStatusText(scope.row) }}</span>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="状态" width="100">
+                                    <template #default="scope">
+                                        <el-tag size="small" type="warning">待核查</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="操作" width="100" align="center" fixed="right">
+                                    <template #default="scope">
+                                        <el-button link type="primary" size="small" @click.stop="goDetail(scope.row)">核查</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </div>
+                        <div v-if="filteredTaskList.length" class="pagination-footer">
+                            <el-pagination
+                                background
+                                layout="total, sizes, prev, pager, next"
+                                :total="filteredTaskList.length"
+                                :page-sizes="[10, 20, 50]"
+                                v-model:current-page="currentPage"
+                                v-model:page-size="pageSize"
+                            />
+                        </div>
+                        <div v-if="!filteredTaskList.length" style="min-height: 280px; display: flex; align-items: center; justify-content: center;">
+                            <el-empty description="暂无待核查任务" />
+                        </div>
+                    </div>
                 </div>
             </el-main>
         </el-container>
@@ -75,14 +169,66 @@
     const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = CertifierLayout.setup();
     runCertifierApp({
         setup() {
-            const taskList = Vue.ref([
-                { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极', supplier: '南通碳素有限公司', status: '待核查' },
-                { taskId: 'TSK-2025-999', orderNo: 'ORD-20251212-015', productName: '汽车结构钢', supplier: '马钢股份', status: '待核查' }
-            ]);
-            const goDetail = (row) => { window.location.href = 'task_detail.html?taskId=' + encodeURIComponent(row.taskId); };
+            const rawList = typeof getCertifierTaskList === 'function' ? getCertifierTaskList() : [];
+            const taskList = Vue.ref(rawList);
+            const searchKeyword = Vue.ref('');
+            const currentPage = Vue.ref(1);
+            const pageSize = Vue.ref(10);
+
+            const filteredTaskList = Vue.computed(() => {
+                let list = taskList.value || [];
+                if (searchKeyword.value) {
+                    const kw = searchKeyword.value.trim().toLowerCase();
+                    list = list.filter(function (r) {
+                        return (r.taskId || '').toLowerCase().includes(kw) ||
+                            (r.orderNo || '').toLowerCase().includes(kw) ||
+                            (r.productName || '').toLowerCase().includes(kw) ||
+                            (r.supplier || '').toLowerCase().includes(kw);
+                    });
+                }
+                return list;
+            });
+
+            const paginatedTaskList = Vue.computed(function () {
+                const list = filteredTaskList.value || [];
+                const start = (currentPage.value - 1) * pageSize.value;
+                return list.slice(start, start + pageSize.value);
+            });
+
+            const getStepClass = function (current, step) {
+                if (current > step) return 'done';
+                if (current === step) return 'active';
+                return '';
+            };
+            const getLabelClass = function (current, labelIndex) {
+                if (current > labelIndex) return 'step-label-done';
+                if (current === labelIndex) return 'step-label-active';
+                return '';
+            };
+            const getStageStatusText = function (row) {
+                return typeof window.getStageStatusText === 'function' ? window.getStageStatusText(row) : (row.stageSubStatus === 'pending_review' ? '待运营验收' : '—');
+            };
+
+            const handleReset = function () {
+                searchKeyword.value = '';
+                currentPage.value = 1;
+            };
+
+            const goDetail = function (row) {
+                window.location.href = 'task_detail.html?taskId=' + encodeURIComponent(row.taskId);
+            };
+            const handleRowClick = function (row) {
+                goDetail(row);
+            };
+
+            Vue.watch(searchKeyword, function () { currentPage.value = 1; });
+
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
-                taskList, goDetail
+                taskList, searchKeyword, currentPage, pageSize,
+                filteredTaskList, paginatedTaskList,
+                getStepClass, getLabelClass, getStageStatusText,
+                handleReset, goDetail, handleRowClick
             };
         }
     });

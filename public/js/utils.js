@@ -18,5 +18,5 @@ const Utils = {
   jumpTo(page, params = {}) {
     const queryString = new URLSearchParams(params).toString();
     window.location.href = `${page}.html${queryString ? '?' + queryString : ''}`;
-  }
+  },
 };
