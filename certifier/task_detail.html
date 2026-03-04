@@ -20,6 +20,11 @@
         .section-title { font-size: 14px; font-weight: 600; color: #303133; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #ebeef5; }
         .readonly-block { font-size: 13px; color: #606266; line-height: 1.8; }
         .certifier-detail-main { max-width: 900px; margin: 0 auto; }
+        .supplier-cert-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+        .supplier-cert-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #f8fafc; border: 1px solid #e4e7ed; border-radius: 6px; font-size: 13px; }
+        .supplier-cert-item .cert-name { font-weight: 600; color: #303133; }
+        .supplier-cert-item .cert-meta { font-size: 12px; color: #909399; margin-top: 4px; }
+        .tds-sync-tag { font-size: 11px; color: #67C23A; margin-left: 8px; }
     </style>
 </head>
 <body>
@@ -61,6 +66,22 @@
                         <div class="readonly-block">
                             <p>任务编号：{{ taskInfo.taskId }} &nbsp; 关联订单：{{ taskInfo.orderNo }}</p>
                             <p>产品：{{ taskInfo.productName }} &nbsp; 规格：{{ taskInfo.specs }} &nbsp; 供应商：{{ taskInfo.supplier }}</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="section-title">供应商证照（仅供核查）<el-tag type="success" size="small" effect="plain" class="tds-sync-tag">由可信数据空间提供</el-tag></div>
+                        <div class="readonly-block">
+                            <p><strong>企业名称：</strong>{{ supplierProfile.name }}</p>
+                            <p><strong>统一社会信用代码：</strong><span style="font-family: monospace;">{{ supplierProfile.creditCode }}</span></p>
+                        </div>
+                        <div class="supplier-cert-list">
+                            <div v-for="cert in supplierCerts" :key="cert.name" class="supplier-cert-item">
+                                <div>
+                                    <div class="cert-name">{{ cert.name }}</div>
+                                    <div class="cert-meta">{{ cert.expiry }}</div>
+                                </div>
+                                <el-link type="primary" :underline="false">查看</el-link>
+                            </div>
                         </div>
                     </div>
                     <div class="card">
@@ -153,9 +174,16 @@
     (function () {
         var taskInfo = typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl('TSK-2026-888') : { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '南通碳素有限公司' };
         const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = CertifierLayout.setup();
+        var supplierProfile = { name: '南通碳素有限公司', creditCode: '91320600MA1MXXXXX' };
+        var supplierCerts = [
+            { name: '营业执照 (副本)', expiry: '永久有效' },
+            { name: 'ISO 14001', expiry: '剩 30 天' }
+        ];
         runCertifierApp({
             setup() {
                 const taskInfoRef = Vue.ref(taskInfo);
+                const supplierProfileRef = Vue.ref(supplierProfile);
+                const supplierCertsRef = Vue.ref(supplierCerts);
                 const handlePass = () => { ElementPlus.ElMessage.success('已反馈：通过'); };
                 const handleReject = () => { ElementPlus.ElMessageBox.prompt('请输入驳回原因', '驳回').then(() => ElementPlus.ElMessage.success('已反馈：驳回')).catch(() => {}); };
                 const clarifyDrawerVisible = Vue.ref(false);
@@ -219,7 +247,7 @@
                 }
                 return {
                     menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
-                    taskInfo: taskInfoRef, handlePass, handleReject,
+                    taskInfo: taskInfoRef, supplierProfile: supplierProfileRef, supplierCerts: supplierCertsRef, handlePass, handleReject,
                     clarifyDrawerVisible,
                     clarificationList, selectedClarId, selectedClarDetail, replyContent, showNewClarify, newClarifyForm, clarifyTypes,
                     formatClarifyTime, roleAvatar, clarifyIsSelf, clarifyShouldShowTimeDivider, loadClarifications, selectClarification, submitClarifyReply, submitNewClarify

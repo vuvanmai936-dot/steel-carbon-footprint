@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>身份认证 - 供应商工作台</title>
+    <title>企业信息与证照 - 供应商工作台</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/operator.css">
@@ -13,10 +13,18 @@
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/supplierLayout.js"></script>
     <style>
-        .placeholder-in-main { display: flex; align-items: center; justify-content: center; min-height: 360px; padding: 40px; }
-        .placeholder-card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 40px; max-width: 480px; text-align: center; }
-        .placeholder-card h1 { margin: 0 0 16px 0; font-size: 22px; color: #303133; }
-        .placeholder-card p { color: #606266; font-size: 14px; margin: 0 0 24px 0; line-height: 1.6; }
+        .identity-page { max-width: 900px; margin: 0 auto; }
+        .card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 20px; }
+        .section-title { font-size: 15px; font-weight: 600; color: #303133; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #ebeef5; display: flex; align-items: center; gap: 8px; }
+        .tds-hint { font-size: 12px; color: #909399; background: #f4f4f5; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .cert-list { display: flex; flex-direction: column; gap: 12px; }
+        .cert-item { display: flex; align-items: center; justify-content: space-between; padding: 14px; background: #fafafa; border: 1px solid #e4e7ed; border-radius: 6px; }
+        .cert-item .cert-name { font-weight: 600; color: #303133; margin-bottom: 4px; }
+        .cert-item .cert-meta { font-size: 12px; color: #909399; }
+        .cert-item .source-tag { background: #e1f3d8; color: #67C23A; padding: 0 6px; border-radius: 2px; font-size: 11px; margin-right: 8px; }
+        .actions-bar { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #ebeef5; }
+        .contact-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 768px) { .contact-row { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -43,7 +51,7 @@
             <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
                 <el-breadcrumb separator="/">
                     <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
-                    <el-breadcrumb-item>身份认证</el-breadcrumb-item>
+                    <el-breadcrumb-item>企业信息</el-breadcrumb-item>
                 </el-breadcrumb>
                 <div style="display: flex; align-items: center;">
                     <el-avatar :size="32" style="background: #059669;">供</el-avatar>
@@ -53,11 +61,121 @@
             </el-header>
 
             <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
-                <div class="placeholder-in-main">
-                    <div class="placeholder-card">
-                        <h1>身份认证</h1>
-                        <p>演示占位，功能开发中。企业/联系人信息维护后续开放。</p>
-                        <el-button type="primary" @click="goPortal">返回门户</el-button>
+                <div class="identity-page">
+                    <div class="tds-hint">
+                        <el-icon><InfoFilled /></el-icon>
+                        <span>企业信息与证照将提交至可信数据空间，供运营端与核查端使用。请确保营业执照等证照真实有效。</span>
+                    </div>
+
+                    <!-- 企业基本信息 -->
+                    <div class="card">
+                        <div class="section-title">企业基本信息</div>
+                        <el-form :model="form" label-width="120px" size="default">
+                            <el-row :gutter="20">
+                                <el-col :span="12">
+                                    <el-form-item label="企业名称" required>
+                                        <el-input v-model="form.name" placeholder="请输入企业全称" />
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-form-item label="统一社会信用代码" required>
+                                        <el-input v-model="form.creditCode" placeholder="18 位统一社会信用代码" maxlength="18" show-word-limit />
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-form-item label="所属行业">
+                                        <el-input v-model="form.industry" placeholder="如：非金属矿物制品业" />
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-form-item label="注册资本">
+                                        <el-input v-model="form.capital" placeholder="如：5000 万人民币" />
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="24">
+                                    <el-form-item label="注册地址">
+                                        <el-input v-model="form.location" placeholder="省市区" style="margin-bottom: 8px;" />
+                                        <el-input v-model="form.addressDetail" placeholder="详细地址" />
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-form-item label="官方网站">
+                                        <el-input v-model="form.website" placeholder="如：www.example.com" />
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+                        </el-form>
+                    </div>
+
+                    <!-- 联系人 -->
+                    <div class="card">
+                        <div class="section-title">核心联系人</div>
+                        <div class="contact-row">
+                            <el-form :model="form" label-width="100px" size="default">
+                                <el-form-item label="商务负责人">
+                                    <el-input v-model="form.contactBizName" placeholder="姓名" style="margin-bottom: 8px;" />
+                                    <el-input v-model="form.contactBizPhone" placeholder="电话" style="margin-bottom: 8px;" />
+                                    <el-input v-model="form.contactBizEmail" placeholder="邮箱" />
+                                </el-form-item>
+                            </el-form>
+                            <el-form :model="form" label-width="100px" size="default">
+                                <el-form-item label="技术负责人">
+                                    <el-input v-model="form.contactTechName" placeholder="姓名" style="margin-bottom: 8px;" />
+                                    <el-input v-model="form.contactTechPhone" placeholder="电话" style="margin-bottom: 8px;" />
+                                    <el-input v-model="form.contactTechEmail" placeholder="邮箱" />
+                                </el-form-item>
+                            </el-form>
+                        </div>
+                    </div>
+
+                    <!-- 证照管理 -->
+                    <div class="card">
+                        <div class="section-title">证照管理</div>
+                        <p style="font-size: 13px; color: #606266; margin-bottom: 12px;">营业执照（副本）为必填项，提交后将同步至可信数据空间，供运营与核查使用。</p>
+                        <div class="cert-list">
+                            <div class="cert-item">
+                                <div>
+                                    <div class="cert-name">营业执照 (副本)</div>
+                                    <div class="cert-meta">
+                                        <span class="source-tag" v-if="certs.businessLicense.source">{{ certs.businessLicense.source }}</span>
+                                        <span>{{ certs.businessLicense.expiry || '请上传' }}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <el-button v-if="!certs.businessLicense.uploaded" type="primary" size="small" @click="handleUploadCert('businessLicense')">上传</el-button>
+                                    <template v-else>
+                                        <el-link type="primary" :underline="false" style="margin-right: 8px;">查看</el-link>
+                                        <el-button type="primary" link size="small" @click="handleUploadCert('businessLicense')">更新</el-button>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="cert-item">
+                                <div>
+                                    <div class="cert-name">ISO 14001（可选）</div>
+                                    <div class="cert-meta">
+                                        <span class="source-tag" v-if="certs.iso14001.source">{{ certs.iso14001.source }}</span>
+                                        <span>{{ certs.iso14001.expiry || '可选上传' }}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <el-button v-if="!certs.iso14001.uploaded" type="default" size="small" @click="handleUploadCert('iso14001')">上传</el-button>
+                                    <template v-else>
+                                        <el-link type="primary" :underline="false" style="margin-right: 8px;">查看</el-link>
+                                        <el-button type="primary" link size="small" @click="handleUploadCert('iso14001')">更新</el-button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                        <input ref="certFileInput" type="file" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" @change="onCertFileInputChange" />
+                    </div>
+
+                    <!-- 操作栏 -->
+                    <div class="card">
+                        <div class="actions-bar">
+                            <el-button @click="loadFromSpace" :loading="syncLoading">从空间同步</el-button>
+                            <el-button type="primary" @click="saveDraft">保存草稿</el-button>
+                            <el-button type="success" @click="submitToSpace" :loading="submitLoading">提交至空间</el-button>
+                        </div>
                     </div>
                 </div>
             </el-main>
@@ -68,7 +186,95 @@
     const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = SupplierLayout.setup();
     runSupplierApp({
         setup() {
-            return { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal };
+            const form = Vue.reactive({
+                name: '南通碳素有限公司',
+                creditCode: '91320600MA1MXXXXX',
+                industry: '非金属矿物制品业',
+                capital: '5000 万人民币',
+                location: '江苏省 · 南通市',
+                addressDetail: '开发区碳素路 88 号',
+                website: 'www.ntts.com',
+                contactBizName: '张总',
+                contactBizPhone: '13800001111',
+                contactBizEmail: 'zhang@ntts.com',
+                contactTechName: '李工',
+                contactTechPhone: '13912345678',
+                contactTechEmail: 'li@ntts.com'
+            });
+            const certs = Vue.reactive({
+                businessLicense: { uploaded: true, source: '本地上传', expiry: '永久有效' },
+                iso14001: { uploaded: false, source: '', expiry: '' }
+            });
+            const submitLoading = Vue.ref(false);
+            const syncLoading = Vue.ref(false);
+            const certFileInput = Vue.ref(null);
+            const currentCertKey = Vue.ref(null);
+
+            function handleUploadCert(key) {
+                currentCertKey.value = key;
+                const input = certFileInput.value;
+                if (input) input.click();
+            }
+            function onCertFileInputChange(ev) {
+                const file = ev.target && ev.target.files && ev.target.files[0];
+                if (!file) return;
+                const key = currentCertKey.value;
+                if (key === 'businessLicense') {
+                    certs.businessLicense.uploaded = true;
+                    certs.businessLicense.source = '本地上传';
+                    certs.businessLicense.expiry = '永久有效';
+                } else {
+                    certs.iso14001.uploaded = true;
+                    certs.iso14001.source = '本地上传';
+                    certs.iso14001.expiry = '剩 365 天';
+                }
+                ElementPlus.ElMessage.success('证照上传成功（演示）');
+                ev.target.value = '';
+            }
+            function saveDraft() {
+                ElementPlus.ElMessage.success('草稿已保存');
+            }
+            function loadFromSpace() {
+                syncLoading.value = true;
+                setTimeout(() => {
+                    syncLoading.value = false;
+                    ElementPlus.ElMessage.success('已从可信数据空间同步最新信息（演示）');
+                }, 800);
+            }
+            function submitToSpace() {
+                if (!form.name || !form.creditCode) {
+                    ElementPlus.ElMessage.warning('请填写企业名称与统一社会信用代码');
+                    return;
+                }
+                if (!certs.businessLicense.uploaded) {
+                    ElementPlus.ElMessage.warning('请上传营业执照（副本）');
+                    return;
+                }
+                submitLoading.value = true;
+                setTimeout(() => {
+                    submitLoading.value = false;
+                    ElementPlus.ElMessage.success('已提交至可信数据空间，运营端与核查端将可获取您的企业信息与证照。');
+                }, 1000);
+            }
+            return {
+                menuConfig,
+                currentUser,
+                openPage,
+                sidebarCollapsed,
+                toggleSidebar,
+                activeMenuId,
+                goPortal,
+                form,
+                certs,
+                submitLoading,
+                syncLoading,
+                certFileInput,
+                handleUploadCert,
+                onCertFileInputChange,
+                saveDraft,
+                loadFromSpace,
+                submitToSpace
+            };
         }
     });
 </script>

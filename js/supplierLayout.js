@@ -24,8 +24,9 @@
                 { id: '2', title: '我的任务', icon: 'List', path: 'task_list.html' },
                 { id: '3', title: '我的订单', icon: 'Tickets', path: 'order_list.html' },
                 { id: '4', title: '我的碳报告', icon: 'DocumentChecked', path: 'reports.html' },
-                { id: '5', title: '绿色生态市场', icon: 'OfficeBuilding', path: 'market.html' },
-                { id: '6', title: '知识库与帮助', icon: 'QuestionFilled', path: 'help.html' }
+                { id: '5', title: '企业信息', icon: 'UserFilled', path: 'identity.html' },
+                { id: '6', title: '绿色生态市场', icon: 'OfficeBuilding', path: 'market.html' },
+                { id: '7', title: '知识库与帮助', icon: 'QuestionFilled', path: 'help.html' }
             ];
 
             const currentUser = reactive({
