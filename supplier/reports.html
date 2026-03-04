@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockOperator.js"></script>
     <script src="../js/supplierLayout.js"></script>
     <style>
         .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
@@ -108,18 +109,17 @@
     const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = SupplierLayout.setup();
     runSupplierApp({
         setup() {
-            const reportList = Vue.ref([
-                { taskId: 'TSK-2025-101', productName: '热轧卷板', reportStatus: '已发证', reportDate: '2025-04-10', received: true },
-                { taskId: 'TSK-2026-888', productName: '超高功率石墨电极', reportStatus: '已出报告', reportDate: '2026-02-06', received: false },
-                { taskId: 'TSK-2026-889', productName: '普通功率石墨电极', reportStatus: '已下发', reportDate: '2026-02-09', received: false }
-            ]);
+            const supplierName = currentUser.supplierName || currentUser.name;
+            const reportList = Vue.ref(typeof getSupplierReports === 'function' ? getSupplierReports(supplierName) : []);
             const appealDialogVisible = Vue.ref(false);
             const currentReport = Vue.ref(null);
             const appealForm = Vue.reactive({ reason: '' });
 
             const viewReport = (row) => { ElementPlus.ElMessage.info('预览报告：' + row.taskId + '（演示）'); };
             const confirmReceive = (row) => {
+                if (typeof window.confirmReceive === 'function') window.confirmReceive(row.taskNo);
                 row.received = true;
+                reportList.value = typeof getSupplierReports === 'function' ? getSupplierReports(supplierName) : reportList.value;
                 ElementPlus.ElMessage.success('已确认接收报告，不可再申诉');
             };
             const openAppeal = (row) => {
@@ -129,6 +129,9 @@
             };
             const submitAppeal = () => {
                 if (!appealForm.reason.trim()) return;
+                var taskNo = currentReport.value && currentReport.value.taskNo;
+                if (taskNo && typeof window.submitAppeal === 'function') window.submitAppeal(taskNo, appealForm.reason.trim());
+                reportList.value = typeof getSupplierReports === 'function' ? getSupplierReports(supplierName) : reportList.value;
                 ElementPlus.ElMessage.success('申诉已提交，运营端报告列表与任务列表将显示「申诉中」');
                 appealDialogVisible.value = false;
             };

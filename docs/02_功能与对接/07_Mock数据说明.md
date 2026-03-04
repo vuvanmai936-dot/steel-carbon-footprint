@@ -47,7 +47,8 @@
 
 * **数据源**：`MOCK_REPORTS`（数组），每条报告的 **taskNo = 任务 taskId**，对应任务列表 **阶段 4「报告」**（任务为 5 段：0 配置 / 1 采集 / 2 计算 / 3 核查 / 4 报告）；报告主状态为 process（流转中）/ archived（已归档）/ revoked（已作废），便于从任务列表阶段 4 跳报告管理时能命中同一条档案。
 * **使用约定**：
-  * `operator/report_mgt.html`：报告列表初始数据来自 `MOCK_REPORTS`（深拷贝后写入 `reportList`）。
+  * `operator/report_mgt.html`：报告列表使用 **getReportList()** 获取 MOCK_REPORTS 同一引用（不再深拷贝），下发、归档、申诉等操作直接修改原数组，与供应商端「我的报告」确认接收/申诉闭环。
+  * 供应商端 `supplier/reports.html`：列表来自 **getSupplierReports(supplierName)**，仅展示 `releasedToSupplier === true` 且供应商匹配的报告；确认接收调用 **confirmReceive(taskNo)**，申诉调用 **submitAppeal(taskNo, reason)**，均写入 MOCK_REPORTS，报告管理页可见。
   * `operator/report_detail.html`：根据 URL 参数 `taskNo` 在 `MOCK_REPORTS` 的副本中查找当前档案；无 taskNo 或未命中时展示「未找到该档案」。
 
 ### 5.1 报告 taskNo 与订单/任务对应关系
@@ -71,8 +72,13 @@
 | `saveTemplateSnapshot(templateId, snapshot)` | 保存模板 Snapshot（保存草稿/发布时写入） | template_detail |
 | `getTaskSnapshot(taskId)` | 返回任务已下发的 Snapshot（已下发则返回存储值，否则模板默认） | task_fill、task_detail_collect |
 | `saveTaskSnapshot(taskId, snapshot)` | 保存任务 Snapshot（任务配置下发时写入） | task_detail_config |
-| `submitTaskData(taskId, snapshot, evidenceFiles)` | 供应商提交数据（写入 Mock，供采集审核页读取） | task_fill |
+| `submitTaskData(taskId, snapshot, evidenceFiles)` | 供应商提交数据（写入 Mock，供采集审核页读取；再次提交时清除该任务采集驳回原因） | task_fill |
 | `getTaskSubmittedSnapshot(taskId)` | 返回供应商已提交的 Snapshot（采集审核只读展示） | task_detail_collect |
+| `setTaskRejectReason(taskId, reason)` | 写入采集驳回原因（运营采集页驳回时调用） | task_detail_collect |
+| `getTaskRejectReason(taskId)` | 返回采集驳回原因（供应商待办列表、填报页展示） | task_list、task_fill |
+| `getSupplierTaskList(supplierName)` | 供应商待办列表：按供应商筛选且已配置下发的任务，结合驳回原因与澄清状态计算 taskType | supplier/task_list |
+
+`js/mockOperator.js` 还提供：`getReportList()`（报告管理用同一引用）、`getSupplierReports(supplierName)`、`confirmReceive(taskNo)`、`submitAppeal(taskNo, reason)`，供报告管理与供应商「我的报告」闭环。
 
 Snapshot 格式参见 [05_模板引擎解析逻辑](05_模板引擎解析逻辑.md)。后续对接时需替换为：
 
@@ -86,19 +92,22 @@ Snapshot 格式参见 [05_模板引擎解析逻辑](05_模板引擎解析逻辑.
 
 ### 7.1 与运营端数据对应关系
 
-- **供应商端**：`supplier/task_list.html`、`supplier/reports.html` 等页使用的任务与报告数据，应与运营端 **MOCK_TASK_MAP**、**MOCK_REPORTS**（及订单 Mock）共用同一套 **taskId / orderNo / taskNo**。供应商待办任务列表可按 taskType（待填报/采集已驳回/待澄清）从 MOCK_TASK_MAP 派生；报告列表仅展示运营已下发的报告，与 report_mgt 下发记录、report_detail 的 taskNo 一致。
-- **认证机构端**：`certifier/task_list.html` 待核查任务列表中的 taskId/orderNo 与运营端任务管理中处于「核查」阶段（VERIFY）的任务一致；任务详情 `certifier/task_detail.html?taskId=xxx` 与运营端 task_detail_verify 协作日志、报告管理中的同一任务可互相追溯。
+- **供应商端**：`supplier/task_list.html` 使用 **getSupplierTaskList(supplierName)** 从 MOCK_TASK_MAP 与 MOCK_TASK_SNAPSHOTS、驳回原因、澄清 Mock 派生待办列表；`supplier/reports.html` 使用 **getSupplierReports(supplierName)** 展示已下发报告，**confirmReceive(taskNo)** / **submitAppeal(taskNo, reason)** 回写 MOCK_REPORTS，与 report_mgt 单源一致。任务与报告 ID 与运营端共用同一套 taskId / orderNo / taskNo。
+- **认证机构端**：`certifier/task_list.html` 待核查任务列表中的 taskId/orderNo 与运营端任务管理中处于「核查」阶段（VERIFY）的任务一致；任务详情与运营端 task_detail_verify 协作日志、报告管理中的同一任务可互相追溯。
 
-### 7.2 推荐演示路径（评审走通闭环）
+### 7.2 推荐演示路径（三端闭环）
 
 | 路径 | 说明 | 关键 ID |
 |------|------|----------|
-| 订单 → 任务 → 任务详情 | 运营端：订单管理选订单（如 ORD-20260203-001）→ 确认并分配任务 → 任务管理（自营/委托）→ 点击任务进入对应 task_detail_* | orderNo, taskId（如 TSK-2026-888） |
-| 任务 → 报告管理 → 报告详情 | 运营端：任务列表阶段 4「报告」→ 跳转报告管理 → 按 taskNo 查看档案详情、下发、归档 | taskNo = taskId（如 TSK-2026-888） |
-| 运营下发 → 供应商我的报告 | 运营端报告管理对某 taskNo 执行「下发」→ 供应商端「我的报告」中应出现该 taskId 对应报告，可演示预览、确认接收、我有异议 | taskNo/taskId 一致 |
-| 核查阶段 ↔ 认证端 | 运营端任务处于核查阶段时，认证机构端「核查任务列表」中可展示同一 taskId；核查详情与运营端 task_detail_verify 对应 | taskId |
+| 订单 → 任务 → 任务详情 | 运营端：订单管理选订单（如 ORD-20260203-001）→ 确认并分配任务 → 任务管理 → 点击任务进入对应 task_detail_* | orderNo, taskId（如 TSK-2026-888） |
+| 配置下发 → 供应商待办 | 运营端任务配置页选模板并下发（saveTaskSnapshot）→ 供应商待办出现「待填报」（getSupplierTaskList；原型已为南通碳素预置 TSK-2026-888/889/890 下发） | taskId |
+| 填报 → 采集审核 → 驳回/通过 | 供应商填报并提交（submitTaskData）→ 中心采集页审核；驳回时 setTaskRejectReason，供应商待办为「采集已驳回」、填报页展示驳回原因；通过后进入 LCA | taskId |
+| 澄清 | 中心 LCA「转派供应商」或核查端「发起澄清」→ 供应商待办为「待澄清」→ 澄清页回复 → 中心/核查端可见 | taskId，澄清 Mock 三端共用 |
+| 报告下发 → 供应商我的报告 | 运营端报告管理对某 taskNo 执行「下发」→ 供应商「我的报告」出现该报告；可演示确认接收（confirmReceive）、我有异议（submitAppeal）；确认后运营可归档，申诉后运营显示「申诉中」 | taskNo = taskId（如 TSK-2026-889、TSK-2025-101） |
+| 任务 → 报告管理 → 报告详情 | 运营端：任务列表阶段 4「报告」→ 报告管理 → 按 taskNo 查看档案、下发、归档 | taskNo = taskId |
+| 核查阶段 ↔ 认证端 | 运营端任务处于核查阶段时，认证机构端可展示同一 taskId | taskId |
 
-演示前请确认各端 Mock 数据源（或本地 Mock 数组）使用上文「3. 主要 Mock 订单与任务对应关系」「5.1 报告 taskNo 与订单/任务对应关系」中的同一批 ID，便于多角色串联验证。
+演示前请确认各端使用「3. 主要 Mock 订单与任务对应关系」「5.1 报告 taskNo 与订单/任务对应关系」中的同一批 ID；供应商端当前固定为「南通碳素有限公司」。
 
 ## 8. 后续对接说明
 

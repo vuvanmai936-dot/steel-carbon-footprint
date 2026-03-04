@@ -96,9 +96,7 @@
         var taskInfo = typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl('TSK-2026-889') : { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '' };
         var taskId = taskInfo.taskId || 'TSK-2026-889';
         var params = new URLSearchParams(window.location.search);
-        var rejected = params.get('rejected') === '1';
-        var rejectReasonMap = { 'TSK-2026-889': 'M焙烧工序天然气凭证不清晰，请上传清晰扫描件并核对数值与月度总量。' };
-        var rejectReason = rejected && rejectReasonMap[taskId] ? rejectReasonMap[taskId] : '';
+        var rejectReason = (typeof getTaskRejectReason === 'function' ? getTaskRejectReason(taskId) : '') || '';
 
         var layout = SupplierLayout.setup();
         runSupplierApp({

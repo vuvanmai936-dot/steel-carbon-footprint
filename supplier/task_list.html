@@ -11,6 +11,8 @@
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockClarifications.js"></script>
+    <script src="../js/mockTasks.js"></script>
     <script src="../js/supplierLayout.js"></script>
     <style>
         .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
@@ -86,11 +88,7 @@
     const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = SupplierLayout.setup();
     runSupplierApp({
         setup() {
-            const taskList = Vue.ref([
-                { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', productName: '普通功率石墨电极', specs: 'Φ400mm', taskType: 'rejected_collect', rejectReason: 'M焙烧工序天然气凭证不清晰，请上传清晰扫描件并核对数值与月度总量。' },
-                { taskId: 'TSK-2026-890', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极接头', specs: 'T4L', taskType: 'pending_fill' },
-                { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极', specs: 'Φ600mm', taskType: 'clarification', clarificationText: 'SGS 核查组：请补充「电力采购结算单」与核算报告中的电量数据对应说明。' }
-            ]);
+            const taskList = Vue.ref(typeof getSupplierTaskList === 'function' ? getSupplierTaskList(currentUser.supplierName || currentUser.name) : []);
             const getStatusTagType = (t) => ({ pending_fill: 'warning', rejected_collect: 'danger', clarification: 'warning' }[t] || 'info');
             const getStatusLabel = (t) => ({ pending_fill: '待填报', rejected_collect: '采集已驳回', clarification: '待澄清/待整改' }[t] || t);
             const goHandle = (row) => {

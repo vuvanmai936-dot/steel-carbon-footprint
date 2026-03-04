@@ -268,7 +268,7 @@
     runOperatorApp({
         setup() {
             const query = Vue.reactive({ taskNo: '', supplier: '', verifier: '', status: '', dateRange: [], appealOnly: false });
-            const rawList = JSON.parse(JSON.stringify(MOCK_REPORTS));
+            const rawList = typeof getReportList === 'function' ? getReportList() : MOCK_REPORTS;
             rawList.forEach(r => {
                 if (r.reportVersion === undefined) r.reportVersion = r.status === 'process' ? 'draft' : 'sealed';
                 if (r.releasedToSupplier === undefined) r.releasedToSupplier = r.status === 'archived';

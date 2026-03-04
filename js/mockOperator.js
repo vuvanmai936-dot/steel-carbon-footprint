@@ -1,6 +1,7 @@
 /**
  * 运营端 Mock：订单→任务→报告 共用同一套 taskId/orderNo，与 js/mockTasks.js 的 MOCK_TASK_MAP 对齐。
  * 报告 taskNo = 任务 taskId；仅「待归档/已归档」阶段任务在报告列表中存在对应记录。
+ * 报告管理页使用 getReportList() 获取同一引用，下发/确认接收/申诉均直接修改 MOCK_REPORTS，与供应商端闭环。
  */
 (function (global) {
     // 与 mockTasks.js MOCK_TASK_MAP 一致的任务号；报告仅包含 stageIndex 4 或 5 的 taskId
@@ -14,6 +15,7 @@
             status: 'archived',
             reportVersion: 'sealed',
             releasedToSupplier: true,
+            received: true,
             archiveTime: '2026-02-06 14:05:22',
             docs: {
                 calc: { name: '核算报告_V2.pdf', ver: 'V2', date: '2026-02-05' },
@@ -72,6 +74,7 @@
             status: 'process',
             reportVersion: 'sealed',
             releasedToSupplier: true,
+            received: false,
             appeal: { reason: '核算边界与产品规格说明不一致，申请重新核查。', submitTime: '2026-02-09 14:30' },
             docs: {
                 calc: { name: '普通功率石墨电极核算报告_用印版.pdf', ver: 'V1', date: '2026-02-08' },
@@ -85,5 +88,88 @@
         }
     ];
 
+    /**
+     * 报告管理列表：返回 MOCK_REPORTS 同一引用，下发/确认/申诉直接修改原数组，与供应商端闭环
+     */
+    function getReportList() {
+        return MOCK_REPORTS;
+    }
+
+    /**
+     * 供应商端「我的报告」列表：仅已下发且属于该供应商的报告
+     * @param {string} supplierName 与 MOCK_REPORTS.supplierName 一致
+     * @returns {Array<{taskNo, taskId, orderNo, productName, reportStatus, reportDate, received, appeal}>}
+     */
+    function getSupplierReports(supplierName) {
+        if (!supplierName) return [];
+        return MOCK_REPORTS.filter(function (r) {
+            return r.releasedToSupplier === true && r.supplierName === supplierName;
+        }).map(function (r) {
+            var statusText = r.status === 'archived' ? '已发证' : r.releasedToSupplier ? '已下发' : '待处理';
+            var reportDate = (r.docs && r.docs.calc && r.docs.calc.date) ? r.docs.calc.date : (r.archiveTime || '').slice(0, 10);
+            return {
+                taskNo: r.taskNo,
+                taskId: r.taskNo,
+                orderNo: r.orderNo,
+                productName: r.productName,
+                reportStatus: statusText,
+                reportDate: reportDate,
+                received: r.received === true,
+                appeal: r.appeal
+            };
+        });
+    }
+
+    /**
+     * 供应商确认接收报告（写入 MOCK_REPORTS，报告管理可归档）
+     * @param {string} taskNo
+     */
+    function confirmReceive(taskNo) {
+        for (var i = 0; i < MOCK_REPORTS.length; i++) {
+            if (MOCK_REPORTS[i].taskNo === taskNo) {
+                MOCK_REPORTS[i].received = true;
+                if (!MOCK_REPORTS[i].history) MOCK_REPORTS[i].history = [];
+                MOCK_REPORTS[i].history.unshift({
+                    title: '供应商确认接收',
+                    desc: '供应商已确认接收报告',
+                    timestamp: new Date().toLocaleString('zh-CN'),
+                    type: 'success'
+                });
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 供应商提交申诉（写入 MOCK_REPORTS，报告管理显示申诉中）
+     * @param {string} taskNo
+     * @param {string} reason
+     * @param {Array} [attachments] 可选附件（Mock 仅占位）
+     */
+    function submitAppeal(taskNo, reason, attachments) {
+        for (var i = 0; i < MOCK_REPORTS.length; i++) {
+            if (MOCK_REPORTS[i].taskNo === taskNo) {
+                MOCK_REPORTS[i].appeal = {
+                    reason: reason || '',
+                    submitTime: new Date().toLocaleString('zh-CN')
+                };
+                if (!MOCK_REPORTS[i].history) MOCK_REPORTS[i].history = [];
+                MOCK_REPORTS[i].history.unshift({
+                    title: '供应商提交申诉',
+                    desc: '我有异议',
+                    timestamp: new Date().toLocaleString('zh-CN'),
+                    type: 'warning'
+                });
+                return true;
+            }
+        }
+        return false;
+    }
+
     global.MOCK_REPORTS = MOCK_REPORTS;
+    global.getReportList = getReportList;
+    global.getSupplierReports = getSupplierReports;
+    global.confirmReceive = confirmReceive;
+    global.submitAppeal = submitAppeal;
 })(typeof window !== 'undefined' ? window : this);

@@ -494,6 +494,7 @@
                 var subject = '整改要求：' + targetLabel;
                 var partItem = (rejectForm.targetType === 'data' && rejectForm.targetItem) ? '【具体数据项】' + (rejectForm.targetItem === 'all' ? '全部数据' : rejectForm.targetItem) + '\n' : '';
                 var firstMessage = '【针对对象】' + targetLabel + '\n' + partItem + '【整改要求】' + (rejectForm.desc || '(无)');
+                if (tid && typeof setTaskRejectReason === 'function') setTaskRejectReason(tid, firstMessage);
                 var created = null;
                 if (tid && typeof createClarification === 'function') {
                     created = createClarification(tid, { type: '整改要求', subject: subject, firstMessage: firstMessage }, 'operator', '运营', 1);

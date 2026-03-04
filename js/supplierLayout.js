@@ -29,8 +29,9 @@
             ];
 
             const currentUser = reactive({
-                name: '供应商账号',
-                role: '供应商 (L2)'
+                name: '南通碳素有限公司',
+                role: '供应商 (L2)',
+                supplierName: '南通碳素有限公司'
             });
 
             const sidebarCollapsed = ref(false);

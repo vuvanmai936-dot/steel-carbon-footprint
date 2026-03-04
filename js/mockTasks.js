@@ -50,8 +50,19 @@
     var MOCK_TEMPLATE_SNAPSHOTS = {};
     /** 按任务 ID 存储的已下发 Snapshot（任务配置下发时写入，task_fill 读取） */
     var MOCK_TASK_SNAPSHOTS = {};
+    (function seedSupplierDemo() {
+        for (var id in MOCK_TASK_MAP) {
+            if (MOCK_TASK_MAP[id].supplier !== '南通碳素有限公司') continue;
+            if (MOCK_TASK_SNAPSHOTS[id]) continue;
+            var base = getTemplateSnapshot('tpl_01');
+            base.taskId = id;
+            MOCK_TASK_SNAPSHOTS[id] = base;
+        }
+    })();
     /** 按任务 ID 存储的供应商已提交数据（submitTaskData 写入，task_detail_collect 读取） */
     var MOCK_TASK_SUBMITTED = {};
+    /** 按任务 ID 存储的采集驳回原因（运营驳回时写入，供应商待办/填报页读取；供应商再次提交后清除） */
+    var MOCK_TASK_REJECT_REASON = {};
 
     /**
      * 获取模板 Snapshot（用于任务配置选模板后加载、template_detail 初始化）
@@ -113,6 +124,7 @@
     function submitTaskData(taskId, snapshot, evidenceFiles) {
         if (!taskId) return;
         MOCK_TASK_SUBMITTED[taskId] = { snapshot: JSON.parse(JSON.stringify(snapshot)), evidenceFiles: evidenceFiles || [] };
+        delete MOCK_TASK_REJECT_REASON[taskId];
     }
 
     /**
@@ -123,6 +135,68 @@
     function getTaskSubmittedSnapshot(taskId) {
         if (!taskId || !MOCK_TASK_SUBMITTED[taskId]) return null;
         return JSON.parse(JSON.stringify(MOCK_TASK_SUBMITTED[taskId].snapshot));
+    }
+
+    /**
+     * 设置任务采集驳回原因（运营端驳回时调用）
+     * @param {string} taskId
+     * @param {string} reason
+     */
+    function setTaskRejectReason(taskId, reason) {
+        if (!taskId) return;
+        MOCK_TASK_REJECT_REASON[taskId] = reason || '';
+    }
+
+    /**
+     * 获取任务采集驳回原因（供应商待办列表与填报页使用）
+     * @param {string} taskId
+     * @returns {string} 驳回原因，无则返回空字符串
+     */
+    function getTaskRejectReason(taskId) {
+        if (!taskId) return '';
+        return MOCK_TASK_REJECT_REASON[taskId] || '';
+    }
+
+    /**
+     * 供应商待办任务列表：按供应商筛选，并结合配置下发、采集驳回、澄清状态计算 taskType
+     * @param {string} supplierName 当前登录供应商名称，与 MOCK_TASK_MAP.supplier 一致
+     * @returns {Array<{taskId, orderNo, productName, specs, taskType, rejectReason?, clarificationText?}>}
+     */
+    function getSupplierTaskList(supplierName) {
+        if (!supplierName) return [];
+        var list = [];
+        for (var taskId in MOCK_TASK_MAP) {
+            if (MOCK_TASK_MAP[taskId].supplier !== supplierName) continue;
+            if (!MOCK_TASK_SNAPSHOTS[taskId]) continue;
+            var task = MOCK_TASK_MAP[taskId];
+            var rejectReason = getTaskRejectReason(taskId);
+            var clarifications = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(taskId) : [];
+            var openClarify = null;
+            for (var i = 0; i < clarifications.length; i++) {
+                if (clarifications[i].status === 'open' && (clarifications[i].initiator === 'operator' || clarifications[i].initiator === 'verifier')) {
+                    openClarify = clarifications[i];
+                    break;
+                }
+            }
+            var taskType = 'pending_fill';
+            var clarificationText = '';
+            if (openClarify) {
+                taskType = 'clarification';
+                clarificationText = openClarify.lastMessage || openClarify.subject || '有待回复的澄清';
+            } else if (rejectReason) {
+                taskType = 'rejected_collect';
+            }
+            list.push({
+                taskId: task.taskId,
+                orderNo: task.orderNo,
+                productName: task.productName,
+                specs: task.specs,
+                taskType: taskType,
+                rejectReason: taskType === 'rejected_collect' ? rejectReason : undefined,
+                clarificationText: taskType === 'clarification' ? clarificationText : undefined
+            });
+        }
+        return list;
     }
 
     /**
@@ -245,4 +319,7 @@
     global.saveTaskSnapshot = saveTaskSnapshot;
     global.submitTaskData = submitTaskData;
     global.getTaskSubmittedSnapshot = getTaskSubmittedSnapshot;
+    global.setTaskRejectReason = setTaskRejectReason;
+    global.getTaskRejectReason = getTaskRejectReason;
+    global.getSupplierTaskList = getSupplierTaskList;
 })(typeof window !== 'undefined' ? window : this);
