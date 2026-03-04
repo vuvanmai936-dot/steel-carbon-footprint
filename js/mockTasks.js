@@ -264,7 +264,7 @@
             if (!MOCK_TASK_SNAPSHOTS[taskId]) continue;
             var task = MOCK_TASK_MAP[taskId];
             var rejectReason = getTaskRejectReason(taskId);
-            var clarifications = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(taskId) : [];
+            var clarifications = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(taskId, 'supplier') : [];
             var openClarify = null;
             for (var i = 0; i < clarifications.length; i++) {
                 if (clarifications[i].status === 'open' && (clarifications[i].initiator === 'operator' || clarifications[i].initiator === 'verifier')) {

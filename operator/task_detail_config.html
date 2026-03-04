@@ -484,7 +484,7 @@
             function loadClarifications() {
                 var tid = clarifyTaskId.value;
                 if (!tid) return;
-                clarificationList.value = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(tid) : [];
+                clarificationList.value = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(tid, 'operator') : [];
                 if (clarificationList.value.length && !selectedClarId.value) selectClarification(clarificationList.value[0].id);
                 hasClarifyBadge.value = clarificationList.value.some(function (c) { return c.status === 'open' && c.initiator === 'verifier'; });
             }

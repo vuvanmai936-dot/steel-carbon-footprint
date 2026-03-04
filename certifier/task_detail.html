@@ -87,6 +87,12 @@
                 <div class="clarify-new-title">发起澄清</div>
                 <div class="clarify-new-hint">发第一条消息即创建会话，标题将自动生成</div>
                 <el-form label-position="top" size="small">
+                    <el-form-item label="澄清对象">
+                        <el-select v-model="newClarifyForm.subjectType" placeholder="请选择" style="width:100%;">
+                            <el-option label="核算报告草稿（仅运营可见）" value="report_draft"></el-option>
+                            <el-option label="供应商数据/凭证（先发运营，由运营决定回复或转派）" value="supplier_data"></el-option>
+                        </el-select>
+                    </el-form-item>
                     <el-form-item label="主题类型（选填）">
                         <el-select v-model="newClarifyForm.type" placeholder="选填，默认「其他」" clearable style="width:100%;">
                             <el-option v-for="t in clarifyTypes" :key="t.value" :label="t.label" :value="t.value"></el-option>
@@ -158,7 +164,7 @@
                 const selectedClarDetail = Vue.ref(null);
                 const replyContent = Vue.ref('');
                 const showNewClarify = Vue.ref(false);
-                const newClarifyForm = Vue.reactive({ type: '其他', subject: '', firstMessage: '' });
+                const newClarifyForm = Vue.reactive({ subjectType: 'report_draft', type: '核查意见', subject: '', firstMessage: '' });
                 const clarifyTypes = Vue.ref(typeof getClarificationTypes === 'function' ? getClarificationTypes() : []);
                 const formatClarifyTime = typeof window.formatClarifyTime === 'function' ? window.formatClarifyTime : function (t) { return t || ''; };
                 const roleAvatar = typeof window.roleAvatar === 'function' ? window.roleAvatar : function (r) { return '?'; };
@@ -173,7 +179,7 @@
                 function loadClarifications() {
                     var tid = taskInfo.taskId;
                     if (!tid) return;
-                    clarificationList.value = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(tid) : [];
+                    clarificationList.value = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(tid, 'verifier') : [];
                     if (clarificationList.value.length && !selectedClarId.value) selectClarification(clarificationList.value[0].id);
                 }
                 function selectClarification(id) {
@@ -196,7 +202,7 @@
                     if (msg.length < 5) { ElementPlus.ElMessage.warning('请输入澄清内容，至少 5 字'); return; }
                     var subject = msg.length > 20 ? msg.slice(0, 20) + '...' : msg;
                     if (typeof createClarification === 'function') {
-                        createClarification(taskInfo.taskId, { type: newClarifyForm.type || '其他', subject: subject, firstMessage: msg }, 'verifier', currentUser.name || 'SGS', 3);
+                        createClarification(taskInfo.taskId, { type: newClarifyForm.type || '核查意见', subjectType: newClarifyForm.subjectType || 'report_draft', subject: subject, firstMessage: msg, participants: ['operator', 'verifier'] }, 'verifier', currentUser.name || 'SGS', 3);
                         loadClarifications();
                         showNewClarify.value = false;
                         newClarifyForm.firstMessage = '';

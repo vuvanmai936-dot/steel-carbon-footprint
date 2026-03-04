@@ -1,5 +1,5 @@
 /**
- * 用户级消息 Mock（与 docs/04_澄清与消息/15_消息功能规划.md 一致）
+ * 用户级消息 Mock（与 docs/04_澄清与消息/18_驳回澄清与消息全局规划.md 一致）
  * 提供 getMyMessages、markRead、markAllRead；消息类型：任务分配、SLA预警、澄清、驳回/整改、报告/证书、系统通知
  */
 (function (global) {
@@ -134,11 +134,11 @@
         return '';
     }
 
-    /**
-     * 获取当前用户的消息列表
+/**
+     * 获取当前用户的消息列表（按接收人过滤：仅返回该 userId/end 下的消息，与 18 可见性一致）
      * @param {string} userId - 用户 ID 或角色标识
      * @param {Object} opts - { limit, offset, unreadOnly }
-     * @param {string} end - 'operator' | 'certifier' | 'supplier'，用于生成 jumpUrl
+     * @param {string} end - 'operator' | 'certifier' | 'supplier'，用于生成 jumpUrl 及隔离各端消息
      * @returns {Array<{messageId, type, title, body, relatedType, relatedId, jumpUrl, read, createdAt}>}
      */
     function getMyMessages(userId, opts, end) {

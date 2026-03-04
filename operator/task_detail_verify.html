@@ -349,6 +349,7 @@
                                         <div class="clarify-item-preview">{{ (c.lastMessage || "").slice(0, 20) }}{{ (c.lastMessage && c.lastMessage.length > 20) ? "..." : "" }}</div>
                                         <div class="clarify-item-meta">{{ formatClarifyTime(c.updatedAt) }} · {{ c.status === "open" ? "进行中" : "已关闭" }}</div>
                                         <div v-if="c.initiator === 'verifier'" class="clarify-item-tag">来自核查机构</div>
+                                        <div v-if="c.subjectType === 'supplier_data' && (!c.participants || c.participants.indexOf('supplier') === -1)" class="clarify-item-tag pending-confirm">待确认</div>
                                     </div>
                                 </div>
                                 <el-empty v-if="!clarificationList.length" description="暂无澄清" :image-size="60"></el-empty>
@@ -366,6 +367,10 @@
                                         </div>
                                     </div>
                                 </template>
+                            </div>
+                            <div v-if="selectedClarDetail && selectedClarDetail.status === 'open' && selectedClarDetail.subjectType === 'supplier_data' && (!selectedClarDetail.participants || selectedClarDetail.participants.indexOf('supplier') === -1)" class="clarify-operator-actions">
+                                <span class="clarify-operator-actions-label">供应商数据/凭证类澄清：直接在下框回复并发送即自行回复核查机构；若需供应商参与回复，请点击「转发给供应商」。</span>
+                                <el-button size="small" type="warning" @click="assignClarifyToSupplier">转发给供应商</el-button>
                             </div>
                             <div v-if="selectedClarDetail && selectedClarDetail.status === 'open'" class="clarify-input-wrap">
                                 <el-input v-model="replyContent" type="textarea" :rows="3" placeholder="输入回复内容..."></el-input>
@@ -480,7 +485,7 @@
             function loadClarifications() {
                 var tid = clarifyTaskId.value;
                 if (!tid) return;
-                clarificationList.value = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(tid) : [];
+                clarificationList.value = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(tid, 'operator') : [];
                 if (clarificationList.value.length && !selectedClarId.value) selectClarification(clarificationList.value[0].id);
                 hasClarifyBadge.value = clarificationList.value.some(function (c) { return c.status === 'open' && c.initiator === 'verifier'; });
             }
@@ -504,6 +509,15 @@
                 loadClarifications();
                 selectClarification(selectedClarId.value);
                 ElementPlus.ElMessage.success('已关闭');
+            }
+            function assignClarifyToSupplier() {
+                if (typeof assignClarificationToSupplier !== 'function') { ElementPlus.ElMessage.warning('Mock 未提供 assignClarificationToSupplier'); return; }
+                var tid = clarifyTaskId.value, cid = selectedClarId.value;
+                if (!tid || !cid) return;
+                assignClarificationToSupplier(tid, cid);
+                loadClarifications();
+                selectClarification(cid);
+                ElementPlus.ElMessage.success('已转发给供应商，供应商将可见并可回复');
             }
             function submitNewClarify() {
                 var msg = (newClarifyForm.firstMessage || '').trim();
@@ -529,7 +543,7 @@
                 taskInfo, taskRow, getStageStatusText,
                 taskMessageDrawerVisible, messageActiveTab, hasClarifyBadge, clarifyTaskId,
                 clarificationList, selectedClarId, selectedClarDetail, replyContent, showNewClarify, newClarifyForm, clarifyTypes,
-                formatClarifyTime, roleAvatar, clarifyIsSelf, clarifyShouldShowTimeDivider, loadClarifications, selectClarification, submitClarifyReply, closeClarifyItem, submitNewClarify,
+                formatClarifyTime, roleAvatar, clarifyIsSelf, clarifyShouldShowTimeDivider, loadClarifications, selectClarification, submitClarifyReply, closeClarifyItem, submitNewClarify, assignClarifyToSupplier,
                 verifyState, activeTab, events,
                 confirmAndMint, rejectDocs, simulateReSubmit,
                 goBack, viewOrder, viewSupplier, navigateTo, getStatusDesc, openReportDetail,

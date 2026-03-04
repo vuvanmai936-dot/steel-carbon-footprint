@@ -100,7 +100,7 @@
         var fallbackText = clarificationMap[taskInfo.taskId] || '请根据运营/认证机构要求补充数据或说明并提交。';
         var firstClarId = null;
         if (typeof getClarificationsByTaskId === 'function') {
-            var list = getClarificationsByTaskId(taskInfo.taskId);
+            var list = getClarificationsByTaskId(taskInfo.taskId, 'supplier');
             var openOne = list.filter(function (c) { return c.status === 'open'; })[0];
             if (openOne) firstClarId = openOne.id;
         }
