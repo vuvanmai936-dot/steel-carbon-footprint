@@ -95,6 +95,56 @@
         createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
       });
     }
+    if (end === 'supplier') {
+      list.push({
+        messageId: nextId(),
+        userId: userId,
+        type: MESSAGE_TYPE.REJECT_RECTIFY,
+        title: '采集已驳回',
+        body: '任务 TSK-2026-001 工序数据未通过审核，请按驳回原因修改后重新提交。',
+        relatedType: 'task',
+        relatedId: 'TSK-2026-001',
+        jumpUrl: '',
+        read: false,
+        createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+      });
+      list.push({
+        messageId: nextId(),
+        userId: userId,
+        type: MESSAGE_TYPE.CLARIFY,
+        title: '待澄清回复',
+        body: '任务 TSK-2026-002：请补充说明外购半成品能耗数据来源。',
+        relatedType: 'task',
+        relatedId: 'TSK-2026-002',
+        jumpUrl: '',
+        read: false,
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      });
+      list.push({
+        messageId: nextId(),
+        userId: userId,
+        type: MESSAGE_TYPE.REPORT_CERT,
+        title: '报告已下发',
+        body: '产品“石墨电极 A 型”碳足迹报告已生成，可在“我的碳报告”中查看。',
+        relatedType: 'report',
+        relatedId: 'RPT-2026-001',
+        jumpUrl: '',
+        read: true,
+        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      });
+      list.push({
+        messageId: nextId(),
+        userId: userId,
+        type: MESSAGE_TYPE.SYSTEM,
+        title: '系统通知',
+        body: '填报模板已更新，请使用最新模板提交工序数据。',
+        relatedType: 'task',
+        relatedId: '',
+        jumpUrl: '',
+        read: true,
+        createdAt: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
+      });
+    }
     return list;
   }
 
@@ -127,8 +177,15 @@
         if (msg.type === MESSAGE_TYPE.CLARIFY) u += '&open=clarify';
         return u;
       }
+      if (end === 'supplier') {
+        if (msg.type === MESSAGE_TYPE.CLARIFY) {
+          return 'task_clarify.html?taskId=' + encodeURIComponent(msg.relatedId);
+        }
+        return 'task_detail.html?taskId=' + encodeURIComponent(msg.relatedId);
+      }
     }
     if (msg.relatedType === 'report' && msg.relatedId) {
+      if (end === 'supplier') return 'reports.html';
       return 'report_detail.html?taskNo=' + encodeURIComponent(msg.relatedId);
     }
     return '';

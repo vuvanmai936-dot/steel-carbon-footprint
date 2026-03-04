@@ -62,6 +62,21 @@ const SharedLayout = {
       window.location.href = '../index.html';
     };
 
+    const goPortal = () => {
+      window.location.href = '../pcf.html';
+    };
+
+    /** 一级入口页（仅这些页顶栏展示「返回门户」） */
+    const OPERATOR_PORTAL_PAGES = [
+      'dashboard.html', 'order.html', 'self_operated_task_list.html', 'entrusted_task_list.html',
+      'report_mgt.html', 'supplier_mgt.html', 'certifier_mgt.html', 'templates_mgt.html',
+      'assets_bridge.html', 'settlement.html', 'system_mgt.html', 'help.html',
+    ];
+    const showPortalInHeader = computed(function () {
+      var base = path && path.endsWith('.html') ? path : (path || '') + '.html';
+      return OPERATOR_PORTAL_PAGES.indexOf(base) !== -1 || OPERATOR_PORTAL_PAGES.indexOf(path) !== -1;
+    });
+
     // 消息中心（用户级消息，与 docs/15 一致；未加载 mockMessages 时返回空实现）
     const hasMessageAPI =
       typeof getMyMessages === 'function' && typeof getUnreadCount === 'function';
@@ -97,6 +112,8 @@ const SharedLayout = {
       menuConfig,
       currentUser,
       handleLogout,
+      goPortal,
+      showPortalInHeader,
       openPage,
       sidebarCollapsed,
       toggleSidebar,

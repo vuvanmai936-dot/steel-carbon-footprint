@@ -90,6 +90,7 @@
                     </el-badge>
                     <el-button @click="viewLog">操作日志</el-button>
                     <el-button type="danger" plain>终止订单</el-button>
+                    <el-button v-if="showPortalInHeader" link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
                 </div>
             </el-header>
             <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
@@ -292,7 +293,7 @@
 </div>
 
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
 
     runOperatorApp({
         setup() {
@@ -366,7 +367,7 @@
             const openPage = (path) => window.location.href = path;
 
             return {
-                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader,
                 activeStep, orderInfo, config, supplierData,
                 clarifyVisible, clarifyForm, statusBadge,
                 handleNextStep, openClarifyDialog, submitClarify, simulateVerifyReject, goBack, viewLog,

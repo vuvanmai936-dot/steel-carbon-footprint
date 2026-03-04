@@ -184,6 +184,7 @@
                     <template v-else>
                         <el-button type="warning" plain icon="Unlock" @click="handleUnlock">解锁 / 升级版本</el-button>
                     </template>
+                    <el-button v-if="showPortalInHeader" link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
                 </div>
             </el-header>
             <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
@@ -338,7 +339,7 @@
 </div>
 
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
 
     runOperatorApp({
         setup() {
@@ -536,7 +537,7 @@
             Vue.onMounted(() => { setTimeout(initSpread, 100); });
 
             return {
-                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader,
                 templateData, requirements, isReadOnly, nextVersion, previewVisible,
                 excelFileInputRef, triggerExcelImport, handleExcelImport,
                 addRequirement, removeReq, handleTemplateUpload,

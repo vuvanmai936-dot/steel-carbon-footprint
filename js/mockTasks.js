@@ -179,6 +179,8 @@
   var MOCK_TASK_SUBMITTED = {};
   /** 按任务 ID 存储的采集驳回原因（运营驳回时写入，供应商待办/填报页读取；供应商再次提交后清除） */
   var MOCK_TASK_REJECT_REASON = {};
+  /** 按任务 ID 存储的填报草稿（保存草稿写入，恢复草稿/提交成功时清除） */
+  var MOCK_TASK_DRAFT = {};
   /** 演示用：预置一条驳回，使 TSK-2026-889 在列表中呈「采集已驳回」状态 */
   (function () {
     MOCK_TASK_REJECT_REASON['TSK-2026-889'] = '请补充 M 配料表电力消耗数据及对应电费凭证。';
@@ -259,6 +261,31 @@
       evidenceFiles: evidenceFiles || [],
     };
     delete MOCK_TASK_REJECT_REASON[taskId];
+    delete MOCK_TASK_DRAFT[taskId];
+  }
+
+  /**
+   * 保存填报草稿（工序数据 + 凭证列表引用），提交成功时会被清除
+   * @param {string} taskId
+   * @param {Object} snapshot
+   * @param {Array} evidenceFiles
+   */
+  function saveTaskDraft(taskId, snapshot, evidenceFiles) {
+    if (!taskId) return;
+    MOCK_TASK_DRAFT[taskId] = {
+      snapshot: JSON.parse(JSON.stringify(snapshot || {})),
+      evidenceFiles: evidenceFiles || [],
+    };
+  }
+
+  /**
+   * 获取任务填报草稿（无则返回 null）
+   * @param {string} taskId
+   * @returns {{ snapshot: Object, evidenceFiles: Array }|null}
+   */
+  function getTaskDraft(taskId) {
+    if (!taskId || !MOCK_TASK_DRAFT[taskId]) return null;
+    return JSON.parse(JSON.stringify(MOCK_TASK_DRAFT[taskId]));
   }
 
   /**
@@ -777,7 +804,40 @@
   global.getTaskSubmittedSnapshot = getTaskSubmittedSnapshot;
   global.setTaskRejectReason = setTaskRejectReason;
   global.getTaskRejectReason = getTaskRejectReason;
+  global.saveTaskDraft = saveTaskDraft;
+  global.getTaskDraft = getTaskDraft;
   global.isTaskIssuedToSupplier = isTaskIssuedToSupplier;
+  /**
+   * 按订单号获取该供应商下可合并填报的任务（待填报或采集已驳回，且已下发模板）
+   * @param {string} orderNo
+   * @param {string} supplierName
+   * @returns {Array<{taskId, orderNo, productName, specs, snapshot, stageIndex, taskType, ...}>}
+   */
+  function getTasksByOrderNoForSupplier(orderNo, supplierName) {
+    if (!orderNo || !supplierName) return [];
+    var list = typeof getSupplierTaskList === 'function' ? getSupplierTaskList(supplierName) : [];
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      var t = list[i];
+      if ((t.orderNo || '') !== orderNo) continue;
+      if (t.stageIndex !== 1) continue;
+      if (t.taskType !== 'pending_fill' && t.taskType !== 'rejected_collect' && t.taskType !== '') continue;
+      if (!MOCK_TASK_SNAPSHOTS[t.taskId]) continue;
+      var snap = getTaskSnapshot(t.taskId);
+      out.push({
+        taskId: t.taskId,
+        orderNo: t.orderNo,
+        productName: t.productName,
+        specs: t.specs,
+        snapshot: snap,
+        stageIndex: t.stageIndex,
+        taskType: t.taskType,
+        rejectReason: getTaskRejectReason(t.taskId),
+      });
+    }
+    return out;
+  }
+
   /**
    * 供应商订单列表：按订单号聚合该供应商的任务，供订单列表/详情页使用。
    * @param {string} supplierName
@@ -812,5 +872,6 @@
 
   global.getSupplierTaskList = getSupplierTaskList;
   global.getSupplierTaskStageRow = getSupplierTaskStageRow;
+  global.getTasksByOrderNoForSupplier = getTasksByOrderNoForSupplier;
   global.getSupplierOrderList = getSupplierOrderList;
 })(typeof window !== 'undefined' ? window : this);

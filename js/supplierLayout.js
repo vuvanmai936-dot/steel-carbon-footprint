@@ -3,7 +3,7 @@
  * 依赖：Vue 3、Element Plus、@element-plus/icons-vue、element-plus/dist/locale/zh-cn.js
  */
 (function (global) {
-  const { createApp, ref, reactive } = Vue;
+  const { createApp, ref, reactive, computed, watch } = Vue;
 
   function findActiveMenuId(menuConfig, path) {
     for (const item of menuConfig) {
@@ -48,6 +48,16 @@
         typeof window !== 'undefined' ? window.location.pathname.split('/').pop() || '' : '';
       const activeMenuId = ref(findActiveMenuId(menuConfig, path));
 
+      /** 一级入口页（仅这些页顶栏展示「返回门户」） */
+      const SUPPLIER_PORTAL_PAGES = [
+        'dashboard.html', 'task_list.html', 'order_list.html', 'reports.html',
+        'identity.html', 'market.html', 'help.html',
+      ];
+      const showPortalInHeader = computed(function () {
+        var base = path && path.endsWith('.html') ? path : (path || '') + '.html';
+        return SUPPLIER_PORTAL_PAGES.indexOf(base) !== -1 || SUPPLIER_PORTAL_PAGES.indexOf(path) !== -1;
+      });
+
       const openPage = (pagePath) => {
         const current = window.location.pathname.split('/').pop();
         if (current !== pagePath) {
@@ -59,14 +69,52 @@
         window.location.href = '../pcf.html';
       };
 
+      // 消息中心（与 layout.js 一致；依赖 mockMessages.js）
+      const hasMessageAPI =
+        typeof getMyMessages === 'function' && typeof getUnreadCount === 'function';
+      const messageCenterVisible = ref(false);
+      const messageList = ref([]);
+      const messageUnreadCount = computed(function () {
+        return hasMessageAPI ? getUnreadCount(currentUser.name || 'supplier', 'supplier') : 0;
+      });
+      const loadMessages = function () {
+        messageList.value = hasMessageAPI
+          ? getMyMessages(currentUser.name || 'supplier', {}, 'supplier')
+          : [];
+      };
+      const goMessage = function (m) {
+        if (m && m.jumpUrl) window.location.href = m.jumpUrl;
+      };
+      const formatMessageTime = function (iso) {
+        if (!iso) return '';
+        var d = new Date(iso);
+        var now = new Date();
+        var diff = (now - d) / 60000;
+        if (diff < 1) return '刚刚';
+        if (diff < 60) return Math.floor(diff) + '分钟前';
+        if (diff < 1440) return Math.floor(diff / 60) + '小时前';
+        if (diff < 43200) return Math.floor(diff / 1440) + '天前';
+        return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+      };
+      watch(messageCenterVisible, function (v) {
+        if (v) loadMessages();
+      });
+
       return {
         menuConfig,
         currentUser,
         goPortal,
+        showPortalInHeader,
         openPage,
         sidebarCollapsed,
         toggleSidebar,
         activeMenuId,
+        messageCenterVisible,
+        messageList,
+        messageUnreadCount,
+        loadMessages,
+        goMessage,
+        formatMessageTime,
       };
     },
   };

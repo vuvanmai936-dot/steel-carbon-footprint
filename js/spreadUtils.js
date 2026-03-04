@@ -189,11 +189,87 @@
     });
   }
 
+  /**
+   * 从 Snapshot 的 sheetData 生成 Excel 文件 Blob（依赖全局 XLSX）
+   * @param {Object} snapshot - { sheetData: { SheetName: [[...]], ... } }
+   * @returns {Blob|null} xlsx blob 或 null（未加载 XLSX 时）
+   */
+  function exportSnapshotToExcelBlob(snapshot) {
+    const XLSXLib = global.XLSX || (typeof window !== 'undefined' && window.XLSX);
+    if (!XLSXLib || !snapshot || !snapshot.sheetData) return null;
+    const sheetData = snapshot.sheetData;
+    const wb = XLSXLib.utils.book_new();
+    Object.keys(sheetData).forEach(function (name) {
+      const rows = sheetData[name] || [];
+      const ws = XLSXLib.utils.aoa_to_sheet(rows.length ? rows : [['类别', '名称', '单位', '填报指引', '数值', '备注']]);
+      XLSXLib.utils.book_append_sheet(wb, ws, String(name).slice(0, 31));
+    });
+    const wbout = XLSXLib.write(wb, { bookType: 'xlsx', type: 'array' });
+    return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+
+  /**
+   * 校验上传 Excel 的 sheetData 与模板 snapshot 是否结构一致（Sheet 名 + 首行 6 列）
+   * @param {Object} parsed - { sheetData }
+   * @param {Object} templateSnapshot - 当前任务模板 snapshot
+   * @returns {Object} { ok: boolean, message?: string }
+   */
+  function validateUploadedSheetData(parsed, templateSnapshot) {
+    var STANDARD_HEADER = ['类别', '名称', '单位', '填报指引', '数值', '备注'];
+    if (!parsed || !parsed.sheetData || Object.keys(parsed.sheetData).length === 0) {
+      return { ok: false, message: '未解析到有效 Sheet 数据' };
+    }
+    var templateSheets = templateSnapshot && templateSnapshot.sheetData ? Object.keys(templateSnapshot.sheetData) : [];
+    if (templateSheets.length === 0) {
+      return { ok: false, message: '当前任务无模板结构，无法校验' };
+    }
+    for (var i = 0; i < templateSheets.length; i++) {
+      var name = templateSheets[i];
+      var rows = parsed.sheetData[name];
+      if (!rows || rows.length === 0) {
+        return { ok: false, message: '缺少与模板一致的 Sheet：「' + name + '」' };
+      }
+      var header = rows[0] || [];
+      for (var c = 0; c < STANDARD_HEADER.length; c++) {
+        if (String(header[c] || '').trim() !== STANDARD_HEADER[c]) {
+          return { ok: false, message: 'Sheet「' + name + '」首行须为：' + STANDARD_HEADER.join('、') + '。请参见线下样表对接说明。' };
+        }
+      }
+    }
+    return { ok: true };
+  }
+
+  /**
+   * 将解析后的 sheetData 仅写入 Spread 的可编辑列（4、5：数值、备注），其余列保持模板
+   * @param {GC.Spread.Sheets.Workbook} spread
+   * @param {Object} uploadedSheetData - { sheetData }
+   */
+  function applyUploadedSheetDataToSpread(spread, uploadedSheetData) {
+    if (!spread || !uploadedSheetData || !uploadedSheetData.sheetData) return;
+    var sheetData = uploadedSheetData.sheetData;
+    for (var i = 0; i < spread.getSheetCount(); i++) {
+      var sheet = spread.getSheet(i);
+      var name = sheet.name();
+      var rows = sheetData[name];
+      if (!rows || rows.length < 2) continue;
+      for (var r = 1; r < rows.length; r++) {
+        var row = rows[r];
+        if (row && row.length > 4) {
+          sheet.setValue(r, 4, row[4] !== undefined && row[4] !== null ? row[4] : '');
+          if (row.length > 5) sheet.setValue(r, 5, row[5] !== undefined && row[5] !== null ? row[5] : '');
+        }
+      }
+    }
+  }
+
   global.SpreadUtils = {
     createSpreadFromSnapshot,
     getSnapshotFromSpread,
     setEditableColumns,
     setSpreadReadOnly,
     parseExcelFile,
+    exportSnapshotToExcelBlob,
+    validateUploadedSheetData,
+    applyUploadedSheetDataToSpread,
   };
 })(typeof window !== 'undefined' ? window : this);

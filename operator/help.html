@@ -72,6 +72,7 @@
                 <div style="display: flex; align-items: center;">
                     <el-avatar :size="32" style="background: #409EFF;">管</el-avatar>
                     <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                    <el-button v-if="showPortalInHeader" link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
                 </div>
             </el-header>
             <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
@@ -218,7 +219,7 @@
     </el-container>
 </div>
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader } = SharedLayout.setup();
     const sectionIds = ['section-quickstart', 'section-background', 'section-guide', 'section-flow', 'section-security', 'section-faq', 'section-contact'];
     runOperatorApp({
         setup() {
@@ -250,7 +251,7 @@
                 }
             }
             Vue.onMounted(() => { const main = document.querySelector('.el-main'); if (main) main.addEventListener('scroll', onScroll); });
-            return { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, activeFaq, activeSection, navItems, scrollTo };
+            return { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader, activeFaq, activeSection, navItems, scrollTo };
         }
     });
 </script>

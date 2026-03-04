@@ -89,6 +89,7 @@
                     </el-badge>
                     <el-avatar :size="32" style="background: #409EFF; margin-right:8px">运营</el-avatar>
                     <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                    <el-button v-if="showPortalInHeader" link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
                 </div>
             </el-header>
             <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
@@ -311,7 +312,7 @@
 </div>
 
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
 
     runOperatorApp({
         setup() {
@@ -506,7 +507,7 @@
                 if (taskMessageDrawerVisible.value && messageActiveTab.value === 'clarify' && clarifyTaskId.value) loadClarifications();
             });
             return {
-                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId,
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader,
                 taskInfo, taskRow, getStageStatusText,
                 taskMessageDrawerVisible, messageActiveTab, logEventsForDrawer, hasClarifyBadge, clarifyTaskId,
                 clarificationList, selectedClarId, selectedClarDetail, replyContent, showNewClarify, newClarifyForm, clarifyTypes,

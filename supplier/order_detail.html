@@ -12,6 +12,7 @@
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/mockTasks.js"></script>
+    <script src="../js/mockMessages.js"></script>
     <script src="../js/supplierLayout.js"></script>
     <style>
         .main-flex-wrapper { display: flex; flex-direction: column; min-height: min-content; }
@@ -60,13 +61,30 @@
                     <el-breadcrumb-item><a href="order_list.html" style="color: inherit; text-decoration: none;">我的订单</a></el-breadcrumb-item>
                     <el-breadcrumb-item>订单详情</el-breadcrumb-item>
                 </el-breadcrumb>
-                <div class="header-user-block">
-                    <span class="name">{{ currentUser.name }}</span>
-                    <span class="company">{{ currentUser.companyName }}</span>
-                    <span class="badge">{{ currentUser.badge }}</span>
-                    <el-button link type="primary" style="margin-left: 8px;" @click="goPortal">返回门户</el-button>
+                <div style="display: flex; align-items: center;">
+                    <el-badge :value="messageUnreadCount" :hidden="messageUnreadCount === 0" class="msg-badge">
+                        <el-button link type="primary" @click="messageCenterVisible = true" style="padding: 8px;">
+                            <el-icon :size="20"><component :is="'Bell'"></component></el-icon>
+                        </el-button>
+                    </el-badge>
+                    <div class="header-user-block">
+                        <span class="name">{{ currentUser.name }}</span>
+                        <span class="company">{{ currentUser.companyName }}</span>
+                        <span class="badge">{{ currentUser.badge }}</span>
+                        <el-button v-if="showPortalInHeader" link type="primary" style="margin-left: 8px;" @click="goPortal">返回门户</el-button>
+                    </div>
                 </div>
             </el-header>
+            <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
+                <div class="message-center-list">
+                    <div v-for="m in messageList" :key="m.messageId" class="message-item" :class="{ unread: !m.read }" @click="goMessage(m)">
+                        <div class="msg-item-title">{{ m.title }}</div>
+                        <div class="msg-item-desc">{{ m.body }}</div>
+                        <div class="msg-item-time">{{ formatMessageTime(m.createdAt) }}</div>
+                    </div>
+                    <el-empty v-if="!messageList.length" description="暂无消息" :image-size="60"></el-empty>
+                </div>
+            </el-drawer>
 
             <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
                 <div class="main-flex-wrapper">
@@ -79,7 +97,10 @@
                             </div>
                         </div>
                         <div class="task-table-wrap">
-                            <div style="font-size: 14px; font-weight: 600; color: #303133; margin-bottom: 12px;">关联认证任务</div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <span style="font-size: 14px; font-weight: 600; color: #303133;">关联认证任务</span>
+                                <el-button v-if="fillableTaskCount >= 2" type="primary" size="small" @click="goBatchFill">合并填报</el-button>
+                            </div>
                             <el-table :data="orderRow.tasks || []" border stripe style="width: 100%;" :header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: '600' }">
                                 <el-table-column label="任务编号" min-width="140">
                                     <template #default="scope">
@@ -117,10 +138,16 @@
         var supplierName = (layout.currentUser && (layout.currentUser.supplierName || layout.currentUser.companyName || layout.currentUser.name)) || '南通碳素有限公司';
         var orderList = typeof getSupplierOrderList === 'function' ? getSupplierOrderList(supplierName) : [];
         var orderRow = orderList.find(function (o) { return (o.orderNo || '') === orderNo; }) || {};
+        var fillableList = typeof getTasksByOrderNoForSupplier === 'function' ? getTasksByOrderNoForSupplier(orderNo, supplierName) : [];
+        var fillableTaskCount = fillableList.length;
 
         runSupplierApp({
             setup() {
                 var orderRowRef = Vue.ref(orderRow);
+                var fillableTaskCountRef = Vue.ref(fillableTaskCount);
+                var goBatchFill = function () {
+                    window.location.href = 'task_fill_batch.html?orderNo=' + encodeURIComponent(orderNo);
+                };
                 var getStageLabel = function (stageIndex) {
                     return stageIndex === 0 ? '配置' : stageIndex === 1 ? '采集' : stageIndex === 2 ? '计算' : stageIndex === 3 ? '核查' : stageIndex === 4 ? '报告' : '—';
                 };
@@ -143,6 +170,8 @@
 
                 return Object.assign({}, layout, {
                     orderRow: orderRowRef,
+                    fillableTaskCount: fillableTaskCountRef,
+                    goBatchFill,
                     getStageLabel,
                     goTaskStage,
                     goList

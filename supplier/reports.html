@@ -12,6 +12,7 @@
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/mockOperator.js"></script>
+    <script src="../js/mockMessages.js"></script>
     <script src="../js/supplierLayout.js"></script>
     <style>
         .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
@@ -48,13 +49,30 @@
                     <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
                     <el-breadcrumb-item>我的碳报告</el-breadcrumb-item>
                 </el-breadcrumb>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 14px; color: #303133;">{{ currentUser.name }}</span>
-                    <span style="font-size: 13px; color: #606266;">{{ currentUser.companyName }}</span>
-                    <span style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 12px;">{{ currentUser.badge }}</span>
-                    <el-button link type="primary" @click="goPortal">返回门户</el-button>
+                <div style="display: flex; align-items: center;">
+                    <el-badge :value="messageUnreadCount" :hidden="messageUnreadCount === 0" class="msg-badge">
+                        <el-button link type="primary" @click="messageCenterVisible = true" style="padding: 8px;">
+                            <el-icon :size="20"><component :is="'Bell'"></component></el-icon>
+                        </el-button>
+                    </el-badge>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 14px; color: #303133;">{{ currentUser.name }}</span>
+                        <span style="font-size: 13px; color: #606266;">{{ currentUser.companyName }}</span>
+                        <span style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 12px;">{{ currentUser.badge }}</span>
+                        <el-button v-if="showPortalInHeader" link type="primary" @click="goPortal">返回门户</el-button>
+                    </div>
                 </div>
             </el-header>
+            <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
+                <div class="message-center-list">
+                    <div v-for="m in messageList" :key="m.messageId" class="message-item" :class="{ unread: !m.read }" @click="goMessage(m)">
+                        <div class="msg-item-title">{{ m.title }}</div>
+                        <div class="msg-item-desc">{{ m.body }}</div>
+                        <div class="msg-item-time">{{ formatMessageTime(m.createdAt) }}</div>
+                    </div>
+                    <el-empty v-if="!messageList.length" description="暂无消息" :image-size="60"></el-empty>
+                </div>
+            </el-drawer>
 
             <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
                 <div class="main-flex-wrapper">
@@ -111,7 +129,7 @@
     </el-dialog>
 </div>
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = SupplierLayout.setup();
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SupplierLayout.setup();
     runSupplierApp({
         setup() {
             const supplierName = currentUser.supplierName || currentUser.name;
@@ -141,7 +159,8 @@
                 appealDialogVisible.value = false;
             };
             return {
-                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader,
+                messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime,
                 reportList, viewReport, confirmReceive, openAppeal, appealDialogVisible, currentReport, appealForm, submitAppeal
             };
         }
