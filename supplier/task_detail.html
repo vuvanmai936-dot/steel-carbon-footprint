@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>跳转中 - 供应商工作台</title>
+    <script src="../js/mockTasks.js"></script>
+    <script src="../js/supplierLayout.js"></script>
+</head>
+<body>
+<p style="padding: 20px; font-family: sans-serif;">正在跳转到任务阶段页…</p>
+<script>
+(function () {
+    var params = typeof window !== 'undefined' && window.location && window.location.search ? new URLSearchParams(window.location.search) : null;
+    var taskId = params ? params.get('taskId') || '' : '';
+    var stagePages = ['task_stage_config.html', 'task_fill.html', 'task_stage_lca.html', 'task_stage_verify.html', 'task_stage_report.html'];
+    if (!taskId) {
+        window.location.href = 'task_list.html';
+        return;
+    }
+    var layout = typeof SupplierLayout !== 'undefined' && SupplierLayout.setup ? SupplierLayout.setup() : {};
+    var supplierName = (layout.currentUser && (layout.currentUser.supplierName || layout.currentUser.companyName || layout.currentUser.name)) || '南通碳素有限公司';
+    var list = typeof getSupplierTaskList === 'function' ? getSupplierTaskList(supplierName) : [];
+    var taskRow = list.find(function (t) { return t.taskId === taskId; }) || {};
+    var stageIndex = typeof taskRow.stageIndex === 'number' && taskRow.stageIndex >= 0 && taskRow.stageIndex <= 4 ? taskRow.stageIndex : 0;
+    var page = stagePages[stageIndex] || stagePages[0];
+    window.location.replace(page + '?taskId=' + encodeURIComponent(taskId));
+})();
+</script>
+</body>
+</html>

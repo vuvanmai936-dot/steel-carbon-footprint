@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>任务详情 - 报告阶段 - 供应商工作台</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/supplier.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
+    <script src="../js/supplierLayout.js"></script>
+    <style>
+        .main-flex-wrapper { display: flex; flex-direction: column; min-height: min-content; }
+        .stage-card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; box-shadow: 0 1px 4px rgba(0,0,0,0.04); padding: 24px; max-width: 720px; }
+        .stage-card .stage-title { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 12px; }
+        .stage-card .stage-desc { font-size: 14px; color: #606266; line-height: 1.6; margin-bottom: 20px; }
+        .stage-card .task-meta { font-size: 13px; color: #909399; margin-bottom: 20px; }
+        .header-user-block { display: flex; align-items: center; gap: 12px; }
+        .header-user-block .name { font-size: 14px; color: #303133; font-weight: 500; }
+        .header-user-block .company { font-size: 13px; color: #606266; }
+        .header-user-block .badge { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: #fff; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">供应商工作台</div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#059669" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-menu-item :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item><a href="task_list.html" style="color: inherit; text-decoration: none;">我的任务</a></el-breadcrumb-item>
+                    <el-breadcrumb-item>报告</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div class="header-user-block">
+                    <span class="name">{{ currentUser.name }}</span>
+                    <span class="company">{{ currentUser.companyName }}</span>
+                    <span class="badge">{{ currentUser.badge }}</span>
+                    <el-button link type="primary" style="margin-left: 8px;" @click="goPortal">返回门户</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    <div class="stage-card" v-if="taskInfo.taskId">
+                        <div class="stage-title">报告阶段</div>
+                        <div class="stage-desc">本任务已进入<strong>报告</strong>阶段，碳足迹报告已下发或已归档。请前往「我的碳报告」查看或下载报告。</div>
+                        <div class="task-meta">任务编号：{{ taskInfo.taskId }} · 订单号：{{ taskInfo.orderNo }} · {{ taskInfo.productName }}<template v-if="taskInfo.specs"> {{ taskInfo.specs }}</template></div>
+                        <el-button type="primary" @click="goReports">前往我的碳报告</el-button>
+                        <el-button @click="goList">返回任务列表</el-button>
+                    </div>
+                    <el-empty v-else description="未找到该任务" />
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+<script>
+    (function () {
+        var taskId = (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : '') || '';
+        var taskInfo = taskId && typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl(taskId) : {};
+        var layout = SupplierLayout.setup();
+
+        runSupplierApp({
+            setup() {
+                var taskInfoRef = Vue.ref(taskInfo);
+                function goReports() { window.location.href = 'reports.html'; }
+                function goList() { window.location.href = 'task_list.html'; }
+
+                return Object.assign({}, layout, {
+                    taskInfo: taskInfoRef,
+                    goReports,
+                    goList
+                });
+            }
+        });
+    })();
+</script>
+</body>
+</html>

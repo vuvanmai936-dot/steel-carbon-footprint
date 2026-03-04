@@ -51,8 +51,8 @@
             <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
                 <el-breadcrumb separator="/">
                     <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
-                    <el-breadcrumb-item><a href="task_list.html" style="color: inherit; text-decoration: none;">待办任务</a></el-breadcrumb-item>
-                    <el-breadcrumb-item>任务填报</el-breadcrumb-item>
+                    <el-breadcrumb-item><a href="task_list.html" style="color: inherit; text-decoration: none;">我的任务</a></el-breadcrumb-item>
+                    <el-breadcrumb-item>数据采集</el-breadcrumb-item>
                 </el-breadcrumb>
                 <div style="display: flex; align-items: center;">
                     <el-avatar :size="32" style="background: #059669;">供</el-avatar>
@@ -84,7 +84,7 @@
                     </div>
                     <div class="card">
                         <el-button type="primary" @click="submit">提交填报</el-button>
-                        <el-button @click="() => window.location.href='task_list.html'">返回列表</el-button>
+                        <el-button @click="goList">返回任务列表</el-button>
                     </div>
                 </div>
             </el-main>
@@ -93,9 +93,8 @@
 </div>
 <script>
     (function () {
-        var taskInfo = typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl('TSK-2026-889') : { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '' };
-        var taskId = taskInfo.taskId || 'TSK-2026-889';
-        var params = new URLSearchParams(window.location.search);
+        var taskId = (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : '') || 'TSK-2026-889';
+        var taskInfo = typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl(taskId) : { taskId: taskId, orderNo: 'ORD-20260203-001', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '' };
         var rejectReason = (typeof getTaskRejectReason === 'function' ? getTaskRejectReason(taskId) : '') || '';
 
         var layout = SupplierLayout.setup();
@@ -130,6 +129,9 @@
                     ElementPlus.ElMessage.success('提交成功，请等待运营审核');
                     setTimeout(function () { window.location.href = 'task_list.html'; }, 1000);
                 };
+                const goList = function () {
+                    window.location.href = 'task_list.html';
+                };
 
                 return Object.assign({}, layout, {
                     taskInfo: taskInfoRef,
@@ -137,7 +139,8 @@
                     spreadHostRef,
                     evidenceFiles,
                     onEvidenceChange,
-                    submit
+                    submit,
+                    goList
                 });
             }
         });

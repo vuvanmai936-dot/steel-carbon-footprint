@@ -31,6 +31,10 @@
                     </el-menu-item>
                 </template>
             </el-menu>
+            <div style="padding: 12px 16px; border-top: 1px solid #002140; text-align: center; flex-shrink: 0;" v-if="!sidebarCollapsed">
+                <div style="color: #fff; font-size: 13px; font-weight: 500;">{{ currentUser.sidebarCompany }}</div>
+                <div style="color: rgba(255,255,255,0.7); font-size: 12px; margin-top: 4px;">{{ currentUser.sidebarMember }}</div>
+            </div>
             <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
                 <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
                     <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
@@ -42,12 +46,13 @@
             <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
                 <el-breadcrumb separator="/">
                     <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
-                    <el-breadcrumb-item>我的报告</el-breadcrumb-item>
+                    <el-breadcrumb-item>我的碳报告</el-breadcrumb-item>
                 </el-breadcrumb>
-                <div style="display: flex; align-items: center;">
-                    <el-avatar :size="32" style="background: #059669;">供</el-avatar>
-                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
-                    <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 14px; color: #303133;">{{ currentUser.name }}</span>
+                    <span style="font-size: 13px; color: #606266;">{{ currentUser.companyName }}</span>
+                    <span style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 12px;">{{ currentUser.badge }}</span>
+                    <el-button link type="primary" @click="goPortal">返回门户</el-button>
                 </div>
             </el-header>
 

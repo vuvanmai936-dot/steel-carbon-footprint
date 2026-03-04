@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>我的订单 - 供应商工作台</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/supplier.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/mockTasks.js"></script>
+    <script src="../js/supplierLayout.js"></script>
+    <style>
+        .main-flex-wrapper { display: flex; flex-direction: column; min-height: min-content; }
+        .header-user-block { display: flex; align-items: center; gap: 12px; }
+        .header-user-block .name { font-size: 14px; color: #303133; font-weight: 500; }
+        .header-user-block .company { font-size: 13px; color: #606266; }
+        .header-user-block .badge { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: #fff; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .section-card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; box-shadow: 0 1px 4px rgba(0,0,0,0.04); overflow: hidden; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #f0f2f5; }
+        .section-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; color: #303133; padding-left: 12px; border-left: 4px solid #059669; }
+        .section-title .el-icon { color: #059669; }
+        .order-list-block { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+        .order-card {
+            background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px 20px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .order-card:hover { border-color: #a7f3d0; box-shadow: 0 2px 8px rgba(5,150,105,0.08); }
+        .order-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .order-card-title { font-size: 15px; font-weight: 600; color: #303133; }
+        .order-id-link { color: #059669; cursor: pointer; text-decoration: none; }
+        .order-id-link:hover { color: #047857; text-decoration: underline; }
+        .order-card-meta { font-size: 13px; color: #606266; }
+        .order-card-meta .label { color: #909399; margin-right: 4px; }
+        .order-empty-wrap { min-height: 280px; display: flex; align-items: center; justify-content: center; padding: 60px 0; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">供应商工作台</div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#059669" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-menu-item :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="padding: 12px 16px; border-top: 1px solid #002140; text-align: center; flex-shrink: 0;" v-if="!sidebarCollapsed">
+                <div style="color: #fff; font-size: 13px; font-weight: 500;">{{ currentUser.sidebarCompany }}</div>
+                <div style="color: rgba(255,255,255,0.7); font-size: 12px; margin-top: 4px;">{{ currentUser.sidebarMember }}</div>
+            </div>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item>我的订单</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div class="header-user-block">
+                    <span class="name">{{ currentUser.name }}</span>
+                    <span class="company">{{ currentUser.companyName }}</span>
+                    <span class="badge">{{ currentUser.badge }}</span>
+                    <el-button link type="primary" style="margin-left: 8px;" @click="goPortal">返回门户</el-button>
+                </div>
+            </el-header>
+
+            <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
+                <div class="main-flex-wrapper">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <span class="section-title">
+                                <el-icon><component :is="'Tickets'" /></el-icon>
+                                我的订单
+                            </span>
+                        </div>
+                        <div v-if="orderList.length" class="order-list-block">
+                            <div v-for="order in orderList" :key="order.orderNo" class="order-card">
+                                <div class="order-card-header">
+                                    <span class="order-card-title">
+                                        <a href="javascript:void(0)" class="order-id-link" @click.prevent="goOrderDetail(order.orderNo)">{{ order.orderNo }}</a>
+                                    </span>
+                                    <el-button type="primary" link @click.prevent="goOrderDetail(order.orderNo)">查看详情</el-button>
+                                </div>
+                                <div class="order-card-meta">
+                                    <span><span class="label">创建时间</span>{{ order.createTime }}</span>
+                                    <span style="margin-left: 16px;"><span class="label">关联任务</span>{{ order.taskCount }} 个</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="order-empty-wrap">
+                            <el-empty description="暂无订单" />
+                        </div>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+<script>
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = SupplierLayout.setup();
+    runSupplierApp({
+        setup() {
+            const supplierName = currentUser.supplierName || currentUser.companyName || currentUser.name || '南通碳素有限公司';
+            const rawOrders = typeof getSupplierOrderList === 'function' ? getSupplierOrderList(supplierName) : [];
+            const orderList = Vue.ref(rawOrders);
+            const goOrderDetail = (orderNo) => { window.location.href = 'order_detail.html?orderNo=' + encodeURIComponent(orderNo); };
+            return {
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
+                orderList,
+                goOrderDetail
+            };
+        }
+    });
+</script>
+</body>
+</html>

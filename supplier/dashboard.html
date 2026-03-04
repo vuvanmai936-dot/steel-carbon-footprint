@@ -2,37 +2,79 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>工作台 - 供应商工作台</title>
+    <title>全局驾驶舱 - 供应商工作台</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/operator.css">
     <link rel="stylesheet" href="../css/supplier.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/supplierLayout.js"></script>
     <style>
-        .main-flex-wrapper { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-        .stat-card {
-            background: #fff; border-radius: 6px; padding: 15px;
-            display: flex; align-items: center; justify-content: space-between;
-            border: 1px solid #ebeef5; box-shadow: 0 1px 4px rgba(0,0,0,0.02);
-            transition: all 0.3s; cursor: pointer; height: 80px; box-sizing: border-box;
+        .main-flex-wrapper { display: flex; flex-direction: column; min-height: min-content; }
+        .dashboard-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0; }
+        .dashboard-title { font-size: 20px; font-weight: bold; color: #303133; }
+        .dashboard-update { font-size: 13px; color: #909399; }
+        .kpi-row { display: flex; gap: 16px; margin-bottom: 20px; flex-shrink: 0; }
+        .kpi-card {
+            flex: 1; background: #fff; border-radius: 8px; padding: 20px; border: 1px solid #ebeef5;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04); display: flex; flex-direction: column; min-height: 140px;
         }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #059669; }
-        .stat-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .stat-info .label { color: #909399; font-size: 12px; margin-bottom: 4px; }
-        .stat-info .num { font-size: 22px; font-weight: bold; color: #303133; font-family: 'DIN Alternate', sans-serif; }
-        .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+        .kpi-card .kpi-label { font-size: 14px; color: #606266; margin-bottom: 8px; }
+        .kpi-card .kpi-value { font-size: 28px; font-weight: bold; color: #303133; font-family: 'DIN Alternate', sans-serif; }
+        .kpi-card .kpi-meta { font-size: 12px; color: #909399; margin-top: 8px; }
+        .kpi-card .kpi-meta .trend-down { color: #67C23A; }
+        .kpi-card .kpi-meta .trend-up { color: #67C23A; }
+        .kpi-card .kpi-progress { margin-top: 10px; }
+        .kpi-card .kpi-progress .el-progress__text { font-size: 12px !important; }
+        .kpi-card .kpi-badge { display: inline-block; margin-top: 8px; padding: 2px 10px; border-radius: 10px; font-size: 12px; background: #ecfdf5; color: #059669; }
+        .kpi-card .kpi-action { margin-top: 12px; }
+        .chart-row { display: flex; gap: 16px; margin-bottom: 20px; min-height: 320px; }
+        .chart-box {
+            flex: 1; background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 16px;
+            display: flex; flex-direction: column; min-height: 0;
+        }
+        .chart-box .chart-title { font-size: 15px; font-weight: 600; color: #303133; margin-bottom: 12px; padding-left: 10px; border-left: 4px solid #409EFF; }
+        .chart-box .chart-body { flex: 1; min-height: 0; width: 100%; }
+        .bottom-row { display: flex; gap: 16px; min-height: 280px; }
+        .todo-panel {
+            flex: 1; background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 16px;
+            display: flex; flex-direction: column; min-height: 0;
+        }
+        .todo-panel .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .todo-panel .panel-title { font-size: 15px; font-weight: 600; color: #303133; }
+        .todo-item {
+            padding: 12px 0; border-bottom: 1px solid #f0f2f5; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+        }
+        .todo-item:last-child { border-bottom: none; }
+        .todo-item .todo-main { flex: 1; min-width: 0; }
+        .todo-item .todo-title { font-size: 14px; font-weight: 500; color: #303133; margin-bottom: 4px; }
+        .todo-item .todo-desc { font-size: 12px; color: #909399; line-height: 1.5; }
+        .todo-item .todo-btn { flex-shrink: 0; }
+        .benchmark-panel {
+            flex: 1; background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 16px;
+            display: flex; flex-direction: column; min-height: 0;
+        }
+        .benchmark-panel .chart-body { flex: 1; min-height: 200px; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #002140; text-align: center; flex-shrink: 0; }
+        .sidebar-footer .company { color: #fff; font-size: 13px; font-weight: 500; }
+        .sidebar-footer .member { color: rgba(255,255,255,0.7); font-size: 12px; margin-top: 4px; }
+        .header-user-block { display: flex; align-items: center; gap: 12px; }
+        .header-user-block .name { font-size: 14px; color: #303133; font-weight: 500; }
+        .header-user-block .company { font-size: 13px; color: #606266; }
+        .header-user-block .badge { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: #fff; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
     </style>
 </head>
 <body>
 <div id="app" v-cloak>
     <el-container style="height: 100vh;">
         <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
-            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">
-                供应商工作台
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <el-icon :size="24" color="#52c41a"><component :is="'Sunny'" /></el-icon>
+                <span v-if="!sidebarCollapsed">供应商工作台</span>
             </div>
             <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#059669" style="border-right: none; flex: 1; overflow-y: auto;">
                 <template v-for="item in menuConfig" :key="item.id">
@@ -42,6 +84,10 @@
                     </el-menu-item>
                 </template>
             </el-menu>
+            <div class="sidebar-footer" v-if="!sidebarCollapsed">
+                <div class="company">{{ currentUser.sidebarCompany }}</div>
+                <div class="member">{{ currentUser.sidebarMember }}</div>
+            </div>
             <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
                 <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
                     <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
@@ -53,50 +99,106 @@
             <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
                 <el-breadcrumb separator="/">
                     <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
-                    <el-breadcrumb-item>工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item>全局驾驶舱</el-breadcrumb-item>
                 </el-breadcrumb>
-                <div style="display: flex; align-items: center;">
-                    <el-avatar :size="32" style="background: #059669;">供</el-avatar>
-                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
-                    <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+                <div class="header-user-block">
+                    <span class="name">{{ currentUser.name }}</span>
+                    <span class="company">{{ currentUser.companyName }}</span>
+                    <span class="badge">{{ currentUser.badge }}</span>
+                    <el-button link type="primary" style="margin-left: 8px;" @click="goPortal">返回门户</el-button>
                 </div>
             </el-header>
 
             <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
                 <div class="main-flex-wrapper">
-                    <el-row :gutter="15" style="margin-bottom: 20px; flex-shrink: 0;">
-                        <el-col :span="8">
-                            <div class="stat-card" @click="openPage('task_list.html')">
-                                <div class="stat-info">
-                                    <div class="label">待办任务</div>
-                                    <div class="num">{{ statTodo }}</div>
-                                </div>
-                                <div class="stat-icon" style="background: #ecfdf5; color: #059669;"><el-icon><component :is="'List'" /></el-icon></div>
+                    <div class="dashboard-header-row">
+                        <span class="dashboard-title">全局驾驶舱</span>
+                        <span class="dashboard-update">上次数据更新: {{ lastUpdateTime }}</span>
+                    </div>
+
+                    <div class="kpi-row">
+                        <div class="kpi-card">
+                            <div class="kpi-label">本年度碳排放总量 (tCO₂e)</div>
+                            <div class="kpi-value">12,450</div>
+                            <div class="kpi-meta">▼ 5.2% 较去年同期</div>
+                            <div class="kpi-progress">
+                                <el-progress :percentage="78" stroke-width="6" :show-text="true" text-inside>年度配额使用率</el-progress>
                             </div>
-                        </el-col>
-                        <el-col :span="8">
-                            <div class="stat-card" @click="openPage('task_list.html')">
-                                <div class="stat-info">
-                                    <div class="label">待澄清/待整改</div>
-                                    <div class="num" style="color: #E6A23C;">{{ statClarify }}</div>
-                                </div>
-                                <div class="stat-icon" style="background: #fdf6ec; color: #E6A23C;"><el-icon><component :is="'ChatDotRound'" /></el-icon></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">主营产品平均 PCF (t/t)</div>
+                            <div class="kpi-value">11.8</div>
+                            <div class="kpi-meta">▼ 12% 优于行业基准</div>
+                            <span class="kpi-badge">行业领跑者 Lv.2</span>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">清洁能源使用比例</div>
+                            <div class="kpi-value">35.6%</div>
+                            <div class="kpi-meta">▲ 8.4% 较上季度</div>
+                            <div class="kpi-meta">累计购买绿证 5,000张</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">预授信绿色额度</div>
+                            <div class="kpi-value">¥ 500万</div>
+                            <div class="kpi-meta">利率 2.85% 可即时提款</div>
+                            <div class="kpi-action">
+                                <el-button type="primary" size="small" link style="color: #722ed1;">前往申请→</el-button>
                             </div>
-                        </el-col>
-                        <el-col :span="8">
-                            <div class="stat-card" @click="openPage('reports.html')">
-                                <div class="stat-info">
-                                    <div class="label">我的报告</div>
-                                    <div class="num" style="color: #409EFF;">{{ statReports }}</div>
-                                </div>
-                                <div class="stat-icon" style="background: #ecf5ff; color: #409EFF;"><el-icon><component :is="'DocumentChecked'" /></el-icon></div>
+                        </div>
+                    </div>
+
+                    <div class="chart-row">
+                        <div class="chart-box" style="flex: 2;">
+                            <div class="chart-title">碳排放趋势 vs 减排目标</div>
+                            <div id="trendChart" class="chart-body"></div>
+                        </div>
+                        <div class="chart-box" style="flex: 1;">
+                            <div class="chart-title">排放范围分布 (Scope)</div>
+                            <div id="scopeChart" class="chart-body"></div>
+                        </div>
+                    </div>
+
+                    <div class="bottom-row">
+                        <div class="todo-panel">
+                            <div class="panel-head">
+                                <span class="panel-title">待办事项 & 预警</span>
+                                <el-button link type="primary" size="small" @click="openPage('task_list.html')">查看全部</el-button>
                             </div>
-                        </el-col>
-                    </el-row>
-                    <div class="quick-actions">
-                        <el-button type="primary" icon="List" @click="openPage('task_list.html')">待办任务</el-button>
-                        <el-button type="success" icon="DocumentChecked" @click="openPage('reports.html')">我的报告</el-button>
-                        <el-button icon="HomeFilled" @click="goPortal">返回门户</el-button>
+                            <div style="flex: 1; overflow-y: auto;">
+                                <div class="todo-item">
+                                    <div class="todo-main">
+                                        <div class="todo-title">普通功率石墨电极(RP)资料驳回</div>
+                                        <div class="todo-desc">SGS 审核员反馈:3月份电力凭证缺失,请尽快补充。</div>
+                                    </div>
+                                    <div class="todo-btn">
+                                        <el-button type="danger" size="small" @click="openPage('task_list.html')">去处理</el-button>
+                                    </div>
+                                </div>
+                                <div class="todo-item">
+                                    <div class="todo-main">
+                                        <div class="todo-title">超高功率石墨电极(UHP)年度复核</div>
+                                        <div class="todo-desc">距证书过期还有90天,建议提前启动复核流程。</div>
+                                    </div>
+                                    <div class="todo-btn">
+                                        <el-button size="small">预约</el-button>
+                                    </div>
+                                </div>
+                                <div class="todo-item">
+                                    <div class="todo-main">
+                                        <div class="todo-title">节能建议:余热回收改造</div>
+                                        <div class="todo-desc">根据上月能耗分析,实施改造预计可降低碳排8%。</div>
+                                    </div>
+                                    <div class="todo-btn">
+                                        <el-button size="small">查看方案</el-button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="benchmark-panel">
+                            <div class="chart-title">产品竞争力对标</div>
+                            <div id="benchmarkChart" class="chart-body"></div>
+                            <div style="font-size: 12px; color: #909399; margin-top: 8px;">基于行业平均水平(Baseline)与您的最新认证数据</div>
+                        </div>
                     </div>
                 </div>
             </el-main>
@@ -107,12 +209,67 @@
     const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = SupplierLayout.setup();
     runSupplierApp({
         setup() {
-            const statTodo = Vue.ref(3);
-            const statClarify = Vue.ref(1);
-            const statReports = Vue.ref(2);
+            const lastUpdateTime = Vue.ref('2026-01-29 14:00:00');
+
+            const initCharts = () => {
+                const trendChart = echarts.init(document.getElementById('trendChart'));
+                trendChart.setOption({
+                    tooltip: { trigger: 'axis' },
+                    legend: { data: ['实际排放 (tCO₂e)', '减排目标'], bottom: 0 },
+                    grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
+                    xAxis: { type: 'category', data: ['1月', '2月', '3月', '4月', '5月', '6月'] },
+                    yAxis: { type: 'value', min: 950, max: 1300 },
+                    series: [
+                        { name: '实际排放 (tCO₂e)', type: 'line', smooth: true, data: [1000, 1150, 1250, 1180, 1100, 1050], itemStyle: { color: '#409EFF' }, lineStyle: { width: 2 }, symbol: 'circle', symbolSize: 6 },
+                        { name: '减排目标', type: 'line', smooth: true, data: [1100, 1100, 1100, 1100, 1100, 1100], itemStyle: { color: '#909399' }, lineStyle: { type: 'dashed', width: 2 }, symbol: 'circle', symbolSize: 6 }
+                    ]
+                });
+
+                const scopeChart = echarts.init(document.getElementById('scopeChart'));
+                scopeChart.setOption({
+                    tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
+                    series: [{
+                        type: 'pie',
+                        radius: ['45%', '70%'],
+                        center: ['50%', '50%'],
+                        avoidLabelOverlap: false,
+                        label: { show: true, formatter: '{b}\n{c}%', fontSize: 12 },
+                        labelLine: { show: true },
+                        data: [
+                            { value: 58, name: '范围2 (外购电力)', itemStyle: { color: '#409EFF' } },
+                            { value: 25, name: '范围1 (直接排放)', itemStyle: { color: '#E6A23C' } },
+                            { value: 17, name: '范围3 (供应链)', itemStyle: { color: '#67C23A' } }
+                        ],
+                        emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.2)' } }
+                    }],
+                    graphic: [{ type: 'text', left: 'center', top: '45%', style: { text: '主要来源\nScope 2', fontSize: 14, fill: '#606266', textAlign: 'center' } }]
+                });
+
+                const benchmarkChart = echarts.init(document.getElementById('benchmarkChart'));
+                benchmarkChart.setOption({
+                    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                    grid: { left: '15%', right: '10%', bottom: '10%', top: '10%', containLabel: true },
+                    xAxis: { type: 'category', data: ['行业平均', '您的产品', '行业领跑者'] },
+                    yAxis: { type: 'value', max: 16 },
+                    series: [{
+                        type: 'bar',
+                        data: [
+                            { value: 13.5, itemStyle: { color: '#c0c4cc' } },
+                            { value: 11.8, itemStyle: { color: '#409EFF' } },
+                            { value: 10.2, itemStyle: { color: '#67C23A' } }
+                        ],
+                        barWidth: '50%'
+                    }]
+                });
+
+                window.addEventListener('resize', () => { trendChart.resize(); scopeChart.resize(); benchmarkChart.resize(); });
+            };
+
+            Vue.onMounted(() => { setTimeout(initCharts, 150); });
+
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal,
-                statTodo, statClarify, statReports
+                lastUpdateTime
             };
         }
     });

@@ -8,6 +8,13 @@
         'TSK-2026-888': { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '南通碳素有限公司' },
         'TSK-2026-889': { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '南通碳素有限公司' },
         'TSK-2026-890': { taskId: 'TSK-2026-890', orderNo: 'ORD-20260203-001', productName: '超高功率石墨电极接头', specs: 'T4L', supplier: '南通碳素有限公司' },
+        'TSK-2026-891': { taskId: 'TSK-2026-891', orderNo: 'ORD-20260203-001', productName: '普通功率石墨电极', specs: 'Φ300mm', supplier: '南通碳素有限公司' },
+        'TSK-2026-893': { taskId: 'TSK-2026-893', orderNo: 'ORD-20260210-003', productName: '高功率石墨电极', specs: 'Φ500mm', supplier: '南通碳素有限公司' },
+        'TSK-2026-894': { taskId: 'TSK-2026-894', orderNo: 'ORD-20260210-003', productName: '石墨块', specs: '100×100×500', supplier: '南通碳素有限公司' },
+        'TSK-2026-895': { taskId: 'TSK-2026-895', orderNo: 'ORD-20260215-004', productName: '超高功率石墨电极接头', specs: 'T2N', supplier: '南通碳素有限公司' },
+        'TSK-2026-896': { taskId: 'TSK-2026-896', orderNo: 'ORD-20260215-004', productName: '电极糊', specs: '密闭糊 25kg', supplier: '南通碳素有限公司' },
+        'TSK-2026-897': { taskId: 'TSK-2026-897', orderNo: 'ORD-20260218-005', productName: '普通功率石墨电极', specs: 'Φ350mm', supplier: '南通碳素有限公司' },
+        'TSK-2026-898': { taskId: 'TSK-2026-898', orderNo: 'ORD-20260218-005', productName: '高功率石墨电极', specs: 'Φ450mm', supplier: '南通碳素有限公司' },
         'TSK-2025-101': { taskId: 'TSK-2025-101', orderNo: 'ORD-20250315-099', productName: '热轧卷板', specs: 'Q235B 5.0mm', supplier: '南京钢铁集团' },
         'TSK-2026-892': { taskId: 'TSK-2026-892', orderNo: 'ORD-20260205-002', productName: 'HRB400E 螺纹钢', specs: 'Φ22mm', supplier: '沙钢集团' },
         'TSK-2026-870': { taskId: 'TSK-2026-870', orderNo: 'ORD-20260110-008', productName: '中厚板', specs: 'Q345B 20mm', supplier: '宝钢股份' },
@@ -63,6 +70,8 @@
     var MOCK_TASK_SUBMITTED = {};
     /** 按任务 ID 存储的采集驳回原因（运营驳回时写入，供应商待办/填报页读取；供应商再次提交后清除） */
     var MOCK_TASK_REJECT_REASON = {};
+    /** 演示用：预置一条驳回，使 TSK-2026-889 在列表中呈「采集已驳回」状态 */
+    (function () { MOCK_TASK_REJECT_REASON['TSK-2026-889'] = '请补充 M 配料表电力消耗数据及对应电费凭证。'; })();
 
     /**
      * 获取模板 Snapshot（用于任务配置选模板后加载、template_detail 初始化）
@@ -157,10 +166,95 @@
         return MOCK_TASK_REJECT_REASON[taskId] || '';
     }
 
+    var TASK_CREATE_TIMES = {
+        'TSK-2026-888': '2026-02-03 09:00', 'TSK-2026-889': '2026-02-03 09:30', 'TSK-2026-890': '2026-02-01 14:20',
+        'TSK-2026-891': '2026-02-04 10:00', 'TSK-2026-893': '2026-02-10 11:00', 'TSK-2026-894': '2026-02-11 08:30',
+        'TSK-2026-895': '2026-02-15 14:00', 'TSK-2026-896': '2026-02-16 09:00', 'TSK-2026-897': '2026-02-18 10:30',
+        'TSK-2026-898': '2026-02-18 15:00'
+    };
+    var TASK_DEADLINES = {
+        'TSK-2026-888': '2026-02-20', 'TSK-2026-889': '2026-02-18', 'TSK-2026-890': '2026-02-15',
+        'TSK-2026-891': '2026-02-22', 'TSK-2026-893': '2026-02-25', 'TSK-2026-894': '2026-02-28',
+        'TSK-2026-895': '2026-03-02', 'TSK-2026-896': '2026-02-01', 'TSK-2026-897': '2026-03-05',
+        'TSK-2026-898': '2026-03-01'
+    };
+    function getTaskCreateTime(taskId) { return TASK_CREATE_TIMES[taskId] || '2026-02-01 09:00'; }
+    function getTaskDeadline(taskId) { return TASK_DEADLINES[taskId] || ''; }
+    function getSupplierStageText(t, taskId) {
+        if (t === 'rejected_collect' || t === 'clarification') return '3. 数据提交';
+        return taskId === 'TSK-2026-888' ? '1. 订单确认' : '3. 数据提交';
+    }
+    function getSupplierStatusText(t, taskId) {
+        if (t === 'rejected_collect' || t === 'clarification') return '需补充材料';
+        return taskId === 'TSK-2026-888' ? '待开始' : '进行中';
+    }
+    function getSupplierActionText(t, taskId) {
+        if (t === 'rejected_collect' || t === 'clarification') return '去处理';
+        return taskId === 'TSK-2026-888' ? '开始' : '办理';
+    }
+    function getSupplierStatusTagType(t, taskId) {
+        if (t === 'rejected_collect' || t === 'clarification') return 'danger';
+        return taskId === 'TSK-2026-888' ? 'warning' : 'success';
+    }
+
+    /** 供应商任务当前阶段（与运营端 getStageStatusText 一致）：taskId -> { stageIndex, stageSubStatus? | reportSubStatus? } */
+    var SUPPLIER_TASK_CURRENT_STAGE = {
+        'TSK-2026-888': { stageIndex: 0, stageSubStatus: 'locked' },
+        'TSK-2026-889': { stageIndex: 1, stageSubStatus: 'waiting_update' },
+        'TSK-2026-890': { stageIndex: 2, stageSubStatus: 'clarifying' },
+        'TSK-2026-891': { stageIndex: 1, stageSubStatus: 'waiting_submit' },
+        'TSK-2026-893': { stageIndex: 3, stageSubStatus: 'pending_review' },
+        'TSK-2026-894': { stageIndex: 4, reportSubStatus: 'released' },
+        'TSK-2026-895': { stageIndex: 4, reportSubStatus: 'to_archive' },
+        'TSK-2026-896': { stageIndex: 0, stageSubStatus: 'pending' },
+        'TSK-2026-897': { stageIndex: 1, stageSubStatus: 'waiting_submit' },
+        'TSK-2026-898': { stageIndex: 2, stageSubStatus: 'submitted' }
+    };
+
+    function getSupplierTaskStageRow(taskId, supplierName) {
+        if (SUPPLIER_TASK_CURRENT_STAGE[taskId]) return Object.assign({}, SUPPLIER_TASK_CURRENT_STAGE[taskId]);
+        if (typeof MOCK_TASK_LIST !== 'undefined') {
+            for (var i = 0; i < MOCK_TASK_LIST.length; i++) {
+                if (MOCK_TASK_LIST[i].taskId === taskId && MOCK_TASK_LIST[i].supplier === supplierName)
+                    return { stageIndex: MOCK_TASK_LIST[i].stageIndex, stageSubStatus: MOCK_TASK_LIST[i].stageSubStatus, reportSubStatus: MOCK_TASK_LIST[i].reportSubStatus };
+            }
+        }
+        return { stageIndex: 0, stageSubStatus: 'pending' };
+    }
+
+    /** 当前责任方文案（与中心端 self_operated_task_list 一致） */
+    function getResponsibilityText(stageIndex, reportSubStatus) {
+        if (stageIndex === 0) return '平台运营方';
+        if (stageIndex === 1) return '供应商';
+        if (stageIndex === 2) return '平台运营方';
+        if (stageIndex === 3) return '核查机构';
+        if (stageIndex === 4) {
+            if (reportSubStatus === 'released') return '供应商';
+            if (reportSubStatus === 'to_archive') return '平台运营方';
+        }
+        return '—';
+    }
+
+    function getTaskHasAppeal(taskId) {
+        if (typeof MOCK_TASK_LIST === 'undefined') return false;
+        for (var i = 0; i < MOCK_TASK_LIST.length; i++) {
+            if (MOCK_TASK_LIST[i].taskId === taskId) return !!MOCK_TASK_LIST[i].hasAppeal;
+        }
+        return false;
+    }
+
+    function getTaskIsOverdue(taskId) {
+        if (typeof MOCK_TASK_LIST === 'undefined') return false;
+        for (var i = 0; i < MOCK_TASK_LIST.length; i++) {
+            if (MOCK_TASK_LIST[i].taskId === taskId) return !!MOCK_TASK_LIST[i].isOverdue;
+        }
+        return false;
+    }
+
     /**
-     * 供应商待办任务列表：按供应商筛选，并结合配置下发、采集驳回、澄清状态计算 taskType
+     * 供应商待办任务列表：按供应商筛选，并结合配置下发、采集驳回、澄清状态计算 taskType；返回含 stageIndex、stageStatusText（与运营端一致）。
      * @param {string} supplierName 当前登录供应商名称，与 MOCK_TASK_MAP.supplier 一致
-     * @returns {Array<{taskId, orderNo, productName, specs, taskType, rejectReason?, clarificationText?}>}
+     * @returns {Array<{taskId, orderNo, productName, specs, taskType, stageIndex, stageStatusText, rejectReason?, clarificationText?, ...}>}
      */
     function getSupplierTaskList(supplierName) {
         if (!supplierName) return [];
@@ -186,6 +280,25 @@
             } else if (rejectReason) {
                 taskType = 'rejected_collect';
             }
+            var stageRow = getSupplierTaskStageRow(taskId, supplierName);
+            var stageIndex = stageRow.stageIndex;
+            var stageSubStatus = stageRow.stageSubStatus || '';
+            if (stageIndex === 0) {
+                taskType = '';
+            } else if (stageIndex === 1) {
+                if (rejectReason) taskType = 'rejected_collect';
+                else taskType = 'pending_fill';
+            } else if (stageIndex === 2) {
+                if (openClarify && (stageSubStatus === 'clarifying' || stageSubStatus === 'waiting_supplier')) taskType = 'clarification';
+                else taskType = '';
+            } else if (stageIndex === 3 || stageIndex === 4) {
+                if (openClarify) taskType = 'clarification';
+                else taskType = '';
+            }
+            var stageStatusText = typeof getStageStatusText === 'function' ? getStageStatusText(stageRow) : getSupplierStageText(taskType, taskId);
+            var responsibilityText = getResponsibilityText(stageRow.stageIndex, stageRow.reportSubStatus);
+            var hasAppeal = getTaskHasAppeal(taskId);
+            var isOverdue = getTaskIsOverdue(taskId);
             list.push({
                 taskId: task.taskId,
                 orderNo: task.orderNo,
@@ -193,7 +306,20 @@
                 specs: task.specs,
                 taskType: taskType,
                 rejectReason: taskType === 'rejected_collect' ? rejectReason : undefined,
-                clarificationText: taskType === 'clarification' ? clarificationText : undefined
+                clarificationText: taskType === 'clarification' ? clarificationText : undefined,
+                createTime: getTaskCreateTime(taskId),
+                deadline: getTaskDeadline(taskId),
+                stageIndex: stageRow.stageIndex,
+                stageSubStatus: stageRow.stageSubStatus,
+                reportSubStatus: stageRow.reportSubStatus,
+                stageText: getSupplierStageText(taskType, taskId),
+                stageStatusText: stageStatusText,
+                statusText: getSupplierStatusText(taskType, taskId),
+                actionText: getSupplierActionText(taskType, taskId),
+                statusTagType: getSupplierStatusTagType(taskType, taskId),
+                responsibilityText: responsibilityText,
+                hasAppeal: hasAppeal,
+                isOverdue: isOverdue
             });
         }
         return list;
@@ -206,6 +332,7 @@
         { taskId: 'TSK-2026-892', orderNo: 'ORD-20260205-002', createTime: '2026-02-05', productName: 'HRB400E 螺纹钢', specs: 'Φ22mm', supplier: '沙钢集团', stageIndex: 0, stageSubStatus: 'pending', deadline: '2026-02-20', isOverdue: false },
         { taskId: 'TSK-2026-890', orderNo: 'ORD-20260203-001', createTime: '2026-02-03', productName: '超高功率石墨电极接头', specs: 'T4L', supplier: '南通碳素有限公司', stageIndex: 0, stageSubStatus: 'pending', deadline: '2026-02-15', isOverdue: false },
         { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', createTime: '2026-02-03', productName: '普通功率石墨电极', specs: 'Φ400mm', supplier: '南通碳素有限公司', stageIndex: 4, reportSubStatus: 'released', deadline: '2026-02-15', isOverdue: false, hasAppeal: true },
+        { taskId: 'TSK-2026-896', orderNo: 'ORD-20260215-004', createTime: '2026-02-16', productName: '电极糊', specs: '密闭糊 25kg', supplier: '南通碳素有限公司', stageIndex: 0, stageSubStatus: 'pending', deadline: '2026-02-01', isOverdue: true },
         { taskId: 'TSK-2026-870', orderNo: 'ORD-20260110-008', createTime: '2026-01-10', productName: '中厚板', specs: 'Q345B 20mm', supplier: '宝钢股份', stageIndex: 2, stageSubStatus: 'submitted', deadline: '2026-02-12', isOverdue: false },
         { taskId: 'TSK-2026-888', orderNo: 'ORD-20260203-001', createTime: '2026-02-03', productName: '超高功率石墨电极', specs: 'Φ600mm', supplier: '南通碳素有限公司', stageIndex: 3, stageSubStatus: 'pending_review', deadline: '2026-02-10', isOverdue: false },
         { taskId: 'TSK-2025-999', orderNo: 'ORD-20251212-015', createTime: '2025-12-12', productName: '汽车结构钢', specs: 'SAPH440', supplier: '马钢股份', stageIndex: 4, reportSubStatus: 'released', deadline: '2026-01-15', isOverdue: false },
@@ -321,5 +448,36 @@
     global.getTaskSubmittedSnapshot = getTaskSubmittedSnapshot;
     global.setTaskRejectReason = setTaskRejectReason;
     global.getTaskRejectReason = getTaskRejectReason;
+    /**
+     * 供应商订单列表：按订单号聚合该供应商的任务，供订单列表/详情页使用。
+     * @param {string} supplierName
+     * @returns {Array<{orderNo, createTime, taskCount, tasks}>}
+     */
+    function getSupplierOrderList(supplierName) {
+        var taskList = typeof getSupplierTaskList === 'function' ? getSupplierTaskList(supplierName) : [];
+        var byOrder = {};
+        for (var i = 0; i < taskList.length; i++) {
+            var t = taskList[i];
+            var ono = t.orderNo || '';
+            if (!byOrder[ono]) {
+                byOrder[ono] = { orderNo: ono, createTime: t.createTime || '', tasks: [] };
+            }
+            byOrder[ono].tasks.push(t);
+            if (t.createTime && (!byOrder[ono].createTime || t.createTime < byOrder[ono].createTime)) {
+                byOrder[ono].createTime = t.createTime;
+            }
+        }
+        var list = [];
+        for (var k in byOrder) {
+            var o = byOrder[k];
+            o.taskCount = o.tasks.length;
+            list.push(o);
+        }
+        list.sort(function (a, b) { return (b.createTime || '').localeCompare(a.createTime || ''); });
+        return list;
+    }
+
     global.getSupplierTaskList = getSupplierTaskList;
+    global.getSupplierTaskStageRow = getSupplierTaskStageRow;
+    global.getSupplierOrderList = getSupplierOrderList;
 })(typeof window !== 'undefined' ? window : this);

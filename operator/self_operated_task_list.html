@@ -255,7 +255,7 @@
                                         <el-tag v-else-if="scope.row.stageIndex === 1" type="info" effect="plain">供应商</el-tag>
                                         <el-tag v-else-if="scope.row.stageIndex === 2" type="primary" effect="plain">平台运营方</el-tag>
                                         <el-tag v-else-if="scope.row.stageIndex === 3" type="success" effect="plain">核查机构</el-tag>
-                                        <el-tag v-else-if="scope.row.stageIndex === 4 && (scope.row.reportSubStatus === 'released' || scope.row.reportSubStatus === 'to_archive')" :type="scope.row.reportSubStatus === 'released' ? 'warning' : 'primary'" effect="plain">{{ scope.row.reportSubStatus === 'released' ? '待供应商确认' : '平台运营方' }}</el-tag>
+                                        <el-tag v-else-if="scope.row.stageIndex === 4 && (scope.row.reportSubStatus === 'released' || scope.row.reportSubStatus === 'to_archive')" :type="scope.row.reportSubStatus === 'released' ? 'warning' : 'primary'" effect="plain">{{ scope.row.reportSubStatus === 'released' ? '供应商' : '平台运营方' }}</el-tag>
                                         <span v-else-if="scope.row.stageIndex === 4" style="color: #ccc;">-</span>
                                         <span v-else style="color: #ccc;">-</span>
                                     </template>
