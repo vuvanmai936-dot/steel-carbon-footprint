@@ -175,7 +175,10 @@
                                 </el-table-column>
                                 <el-table-column label="待办类型" width="120">
                                     <template #default="scope">
-                                        <span style="font-size: 12px; color: #606266;">{{ getTodoTypeLabelByValue(scope.row.taskType) }}</span>
+                                        <el-tooltip v-if="scope.row.taskType === 'rejected_collect'" content="即需重新填报" placement="top">
+                                            <span style="font-size: 12px; color: #606266;">{{ getTodoTypeLabelByValue(scope.row.taskType) }}</span>
+                                        </el-tooltip>
+                                        <span v-else style="font-size: 12px; color: #606266;">{{ getTodoTypeLabelByValue(scope.row.taskType) }}</span>
                                     </template>
                                 </el-table-column>
                                 <el-table-column label="待办说明" min-width="180" show-overflow-tooltip>
@@ -316,9 +319,18 @@
 
             var stagePages = ['task_stage_config.html', 'task_fill.html', 'task_stage_lca.html', 'task_stage_verify.html', 'task_stage_report.html'];
             const goToStagePage = (row) => {
-                var idx = typeof row.stageIndex === 'number' && row.stageIndex >= 0 && row.stageIndex <= 4 ? row.stageIndex : 0;
-                var page = stagePages[idx] || stagePages[0];
-                window.location.href = page + '?taskId=' + encodeURIComponent(row.taskId);
+                var taskId = row.taskId;
+                var stageIndex = typeof row.stageIndex === 'number' && row.stageIndex >= 0 && row.stageIndex <= 4 ? row.stageIndex : 0;
+                var targetPage;
+                if (stageIndex === 0) {
+                    var isIssued = row.stageSubStatus === 'locked' || (typeof isTaskIssuedToSupplier === 'function' && isTaskIssuedToSupplier(taskId));
+                    targetPage = isIssued ? 'task_fill.html' : 'task_stage_config.html';
+                } else if (stageIndex === 4) {
+                    targetPage = 'reports.html';
+                } else {
+                    targetPage = stagePages[stageIndex] || stagePages[0];
+                }
+                window.location.href = targetPage + '?taskId=' + encodeURIComponent(taskId);
             };
             const handleRowClick = (row) => goToStagePage(row);
 

@@ -15,6 +15,7 @@
         'TSK-2026-896': { taskId: 'TSK-2026-896', orderNo: 'ORD-20260215-004', productName: '电极糊', specs: '密闭糊 25kg', supplier: '南通碳素有限公司' },
         'TSK-2026-897': { taskId: 'TSK-2026-897', orderNo: 'ORD-20260218-005', productName: '普通功率石墨电极', specs: 'Φ350mm', supplier: '南通碳素有限公司' },
         'TSK-2026-898': { taskId: 'TSK-2026-898', orderNo: 'ORD-20260218-005', productName: '高功率石墨电极', specs: 'Φ450mm', supplier: '南通碳素有限公司' },
+        'TSK-2026-899': { taskId: 'TSK-2026-899', orderNo: 'ORD-20260218-006', productName: '普通功率石墨电极', specs: 'Φ380mm', supplier: '南通碳素有限公司' },
         'TSK-2025-101': { taskId: 'TSK-2025-101', orderNo: 'ORD-20250315-099', productName: '热轧卷板', specs: 'Q235B 5.0mm', supplier: '南京钢铁集团' },
         'TSK-2026-892': { taskId: 'TSK-2026-892', orderNo: 'ORD-20260205-002', productName: 'HRB400E 螺纹钢', specs: 'Φ22mm', supplier: '沙钢集团' },
         'TSK-2026-870': { taskId: 'TSK-2026-870', orderNo: 'ORD-20260110-008', productName: '中厚板', specs: 'Q345B 20mm', supplier: '宝钢股份' },
@@ -61,6 +62,7 @@
         for (var id in MOCK_TASK_MAP) {
             if (MOCK_TASK_MAP[id].supplier !== '南通碳素有限公司') continue;
             if (MOCK_TASK_SNAPSHOTS[id]) continue;
+            if (id === 'TSK-2026-899') continue; /* 配置中演示：无 snapshot，供应商列表可见，点进展示 task_stage_config 配置中页 */
             var base = getTemplateSnapshot('tpl_01');
             base.taskId = id;
             MOCK_TASK_SNAPSHOTS[id] = base;
@@ -98,6 +100,15 @@
     function saveTemplateSnapshot(templateId, snapshot) {
         if (!templateId) return;
         MOCK_TEMPLATE_SNAPSHOTS[templateId] = JSON.parse(JSON.stringify(snapshot));
+    }
+
+    /**
+     * 任务是否已下发至供应商（是否有任务 Snapshot）。供供应商配置阶段页判断是否应重定向至填报页。
+     * @param {string} taskId
+     * @returns {boolean}
+     */
+    function isTaskIssuedToSupplier(taskId) {
+        return !!MOCK_TASK_SNAPSHOTS[taskId];
     }
 
     /**
@@ -170,13 +181,13 @@
         'TSK-2026-888': '2026-02-03 09:00', 'TSK-2026-889': '2026-02-03 09:30', 'TSK-2026-890': '2026-02-01 14:20',
         'TSK-2026-891': '2026-02-04 10:00', 'TSK-2026-893': '2026-02-10 11:00', 'TSK-2026-894': '2026-02-11 08:30',
         'TSK-2026-895': '2026-02-15 14:00', 'TSK-2026-896': '2026-02-16 09:00', 'TSK-2026-897': '2026-02-18 10:30',
-        'TSK-2026-898': '2026-02-18 15:00'
+        'TSK-2026-898': '2026-02-18 15:00', 'TSK-2026-899': '2026-02-19 10:00'
     };
     var TASK_DEADLINES = {
         'TSK-2026-888': '2026-02-20', 'TSK-2026-889': '2026-02-18', 'TSK-2026-890': '2026-02-15',
         'TSK-2026-891': '2026-02-22', 'TSK-2026-893': '2026-02-25', 'TSK-2026-894': '2026-02-28',
         'TSK-2026-895': '2026-03-02', 'TSK-2026-896': '2026-02-01', 'TSK-2026-897': '2026-03-05',
-        'TSK-2026-898': '2026-03-01'
+        'TSK-2026-898': '2026-03-01', 'TSK-2026-899': '2026-03-08'
     };
     function getTaskCreateTime(taskId) { return TASK_CREATE_TIMES[taskId] || '2026-02-01 09:00'; }
     function getTaskDeadline(taskId) { return TASK_DEADLINES[taskId] || ''; }
@@ -208,7 +219,8 @@
         'TSK-2026-895': { stageIndex: 4, reportSubStatus: 'to_archive' },
         'TSK-2026-896': { stageIndex: 0, stageSubStatus: 'pending' },
         'TSK-2026-897': { stageIndex: 1, stageSubStatus: 'waiting_submit' },
-        'TSK-2026-898': { stageIndex: 2, stageSubStatus: 'submitted' }
+        'TSK-2026-898': { stageIndex: 2, stageSubStatus: 'submitted' },
+        'TSK-2026-899': { stageIndex: 0, stageSubStatus: 'draft' }
     };
 
     function getSupplierTaskStageRow(taskId, supplierName) {
@@ -261,7 +273,10 @@
         var list = [];
         for (var taskId in MOCK_TASK_MAP) {
             if (MOCK_TASK_MAP[taskId].supplier !== supplierName) continue;
-            if (!MOCK_TASK_SNAPSHOTS[taskId]) continue;
+            if (!MOCK_TASK_SNAPSHOTS[taskId]) {
+                var row0 = getSupplierTaskStageRow(taskId, supplierName);
+                if (row0.stageIndex !== 0) continue;
+            }
             var task = MOCK_TASK_MAP[taskId];
             var rejectReason = getTaskRejectReason(taskId);
             var clarifications = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(taskId, 'supplier') : [];
@@ -448,6 +463,7 @@
     global.getTaskSubmittedSnapshot = getTaskSubmittedSnapshot;
     global.setTaskRejectReason = setTaskRejectReason;
     global.getTaskRejectReason = getTaskRejectReason;
+    global.isTaskIssuedToSupplier = isTaskIssuedToSupplier;
     /**
      * 供应商订单列表：按订单号聚合该供应商的任务，供订单列表/详情页使用。
      * @param {string} supplierName

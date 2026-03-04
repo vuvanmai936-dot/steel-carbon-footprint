@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>任务详情 - 配置阶段 - 供应商工作台</title>
+    <title>任务详情 - 配置阶段（配置中） - 供应商工作台</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/operator.css">
@@ -50,7 +50,7 @@
                 <el-breadcrumb separator="/">
                     <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
                     <el-breadcrumb-item><a href="task_list.html" style="color: inherit; text-decoration: none;">我的任务</a></el-breadcrumb-item>
-                    <el-breadcrumb-item>配置</el-breadcrumb-item>
+                    <el-breadcrumb-item>配置（配置中）</el-breadcrumb-item>
                 </el-breadcrumb>
                 <div class="header-user-block">
                     <span class="name">{{ currentUser.name }}</span>
@@ -63,10 +63,10 @@
             <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
                 <div class="main-flex-wrapper">
                     <div class="stage-card" v-if="taskInfo.taskId">
-                        <div class="stage-title">配置阶段</div>
-                        <div class="stage-desc">本阶段由平台配置模板与下发，<strong>无需您操作</strong>。已下发后您可在<strong>采集</strong>阶段填写工序数据并上传凭证。请点击下方按钮进入数据填报。</div>
+                        <div class="stage-title">配置阶段（配置中）</div>
+                        <div class="stage-desc">本任务正处于<strong>配置阶段</strong>，由平台配置模板与下发。<strong>请稍候</strong>，配置完成后您将可进行数据填报。</div>
                         <div class="task-meta">任务编号：{{ taskInfo.taskId }} · 订单号：{{ taskInfo.orderNo }} · {{ taskInfo.productName }}<template v-if="taskInfo.specs"> {{ taskInfo.specs }}</template></div>
-                        <el-button type="primary" @click="goCollect">进入数据采集</el-button>
+                        <el-button @click="refreshState">刷新状态</el-button>
                         <el-button @click="goList">返回任务列表</el-button>
                     </div>
                     <el-empty v-else description="未找到该任务" />
@@ -84,13 +84,19 @@
         runSupplierApp({
             setup() {
                 var taskInfoRef = Vue.ref(taskInfo);
-                function goCollect() { window.location.href = 'task_fill.html?taskId=' + encodeURIComponent(taskId); }
                 function goList() { window.location.href = 'task_list.html'; }
-
+                function refreshState() { window.location.reload(); }
+                function checkRedirectToFill() {
+                    if (!taskId) return;
+                    if (typeof isTaskIssuedToSupplier === 'function' && isTaskIssuedToSupplier(taskId)) {
+                        window.location.href = 'task_fill.html?taskId=' + encodeURIComponent(taskId);
+                    }
+                }
+                Vue.onMounted(function () { checkRedirectToFill(); });
                 return Object.assign({}, layout, {
                     taskInfo: taskInfoRef,
-                    goCollect,
-                    goList
+                    goList,
+                    refreshState
                 });
             }
         });

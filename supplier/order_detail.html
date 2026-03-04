@@ -126,9 +126,18 @@
                 };
                 var stagePages = ['task_stage_config.html', 'task_fill.html', 'task_stage_lca.html', 'task_stage_verify.html', 'task_stage_report.html'];
                 var goTaskStage = function (row) {
-                    var idx = typeof row.stageIndex === 'number' && row.stageIndex >= 0 && row.stageIndex <= 4 ? row.stageIndex : 0;
-                    var page = stagePages[idx] || stagePages[0];
-                    window.location.href = page + '?taskId=' + encodeURIComponent(row.taskId);
+                    var taskId = row.taskId;
+                    var stageIndex = typeof row.stageIndex === 'number' && row.stageIndex >= 0 && row.stageIndex <= 4 ? row.stageIndex : 0;
+                    var targetPage;
+                    if (stageIndex === 0) {
+                        var isIssued = row.stageSubStatus === 'locked' || (typeof isTaskIssuedToSupplier === 'function' && isTaskIssuedToSupplier(taskId));
+                        targetPage = isIssued ? 'task_fill.html' : 'task_stage_config.html';
+                    } else if (stageIndex === 4) {
+                        targetPage = 'reports.html';
+                    } else {
+                        targetPage = stagePages[stageIndex] || stagePages[0];
+                    }
+                    window.location.href = targetPage + '?taskId=' + encodeURIComponent(taskId);
                 };
                 var goList = function () { window.location.href = 'order_list.html'; };
 

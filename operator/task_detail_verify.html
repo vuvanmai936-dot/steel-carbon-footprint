@@ -163,12 +163,24 @@
                         </div>
                     </div>
                     <div class="task-info-dashboard__status-bar">
-                        <div class="dash-block">
+                        <div class="dash-block dash-block-status">
                             <div class="dash-title">核查状态</div>
-                            <div class="dash-content"><el-tag type="info">{{ getStageStatusText(taskRow) || '待运营验收' }}</el-tag></div>
+                            <div class="dash-content">
+                                <el-tag :type="verifyStatusTagType">{{ getStageStatusText(taskRow) || getStatusDesc() }}</el-tag>
+                                <div v-if="verifyRejectReason" :class="['status-reason', 'status-reason--danger']">
+                                    请按以下说明修改后重新提交 {{ verifyRejectReason }}
+                                </div>
+                            </div>
                         </div>
                         <div class="dash-sep">
                             <el-tooltip content="截止剩余时间" placement="bottom"><div class="sla-capsule"><el-icon><Timer /></el-icon> 12:30:05</div></el-tooltip>
+                        </div>
+                        <div class="dash-sep">
+                            <el-tooltip content="本页面仅限在线查看与填报，受数字合约保护；禁止下载或截图。" placement="bottom">
+                                <span style="display: inline-flex; align-items: center; color: #047857; font-size: 12px; cursor: help;">
+                                    <el-icon style="margin-right: 4px;"><Lock /></el-icon>安全说明
+                                </span>
+                            </el-tooltip>
                         </div>
                         <div class="dash-sep">
                             <el-badge v-if="hasClarifyBadge" is-dot class="msg-badge">
@@ -400,6 +412,7 @@
             const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-889'));
             const taskRow = Vue.ref(typeof getTaskByTaskId === 'function' ? getTaskByTaskId(getTaskIdFromUrl() || taskInfo.taskId, 3) : null);
             const verifyState = Vue.ref('pending_review'); 
+            const verifyRejectReason = Vue.ref('');
             const activeTab = Vue.ref('decl'); // 默认看声明
             const events = Vue.ref([
                 { type: 'sys', user: '系统', time: '10:00', content: 'LCA 计算完成，SGS 已上传核查文档' }
@@ -422,6 +435,7 @@
                     cancelButtonText: '取消',
                 }).then(({ value }) => {
                     verifyState.value = 'rejected';
+                    verifyRejectReason.value = value || '';
                     pushEvent('rej', '我', `驳回了核查文档: ${value}`);
                 });
             };
@@ -431,6 +445,7 @@
                 setTimeout(() => {
                     loading.close();
                     verifyState.value = 'pending_review';
+                    verifyRejectReason.value = '';
                     pushEvent('sys', 'SGS', '已重新提交核查报告 v1.2');
                 }, 1000);
             };
@@ -446,6 +461,12 @@
                 if(verifyState.value==='rejected') return '等待认证机构修正';
                 return '已上链，准备发证';
             };
+            const verifyStatusTagType = Vue.computed(function () {
+                if (verifyState.value === 'rejected') return 'danger';
+                if (verifyState.value === 'pending_review') return 'warning';
+                if (verifyState.value === 'verified') return 'success';
+                return 'info';
+            });
 
             const goBack = () => { window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html'; };
             const openPage = (p) => window.location.href = p;
@@ -544,7 +565,7 @@
                 taskMessageDrawerVisible, messageActiveTab, hasClarifyBadge, clarifyTaskId,
                 clarificationList, selectedClarId, selectedClarDetail, replyContent, showNewClarify, newClarifyForm, clarifyTypes,
                 formatClarifyTime, roleAvatar, clarifyIsSelf, clarifyShouldShowTimeDivider, loadClarifications, selectClarification, submitClarifyReply, closeClarifyItem, submitNewClarify, assignClarifyToSupplier,
-                verifyState, activeTab, events,
+                verifyState, verifyRejectReason, verifyStatusTagType, activeTab, events,
                 confirmAndMint, rejectDocs, simulateReSubmit,
                 goBack, viewOrder, viewSupplier, navigateTo, getStatusDesc, openReportDetail,
                 messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime
