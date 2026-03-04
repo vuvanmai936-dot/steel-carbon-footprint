@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "sync-help": "node scripts/sync-help-from-doc.js",
+    "sync-help:supplier": "node scripts/sync-help-from-doc.js supplier",
+    "sync-help:operator": "node scripts/sync-help-from-doc.js operator",
+    "sync-help:certifier": "node scripts/sync-help-from-doc.js certifier"
   },
   "devDependencies": {
     "rimraf": "^6.1.2",

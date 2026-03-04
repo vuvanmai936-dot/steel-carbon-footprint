@@ -26,7 +26,8 @@
                 { id: '2', title: '核查任务列表', icon: 'List', path: 'task_list.html', match: ['task_detail.html'] },
                 { id: '3', title: '证书颁发管理', icon: 'Medal', path: 'certificates.html' },
                 { id: '4', title: '结算中心', icon: 'Money', path: 'settlement.html' },
-                { id: '5', title: '机构管理', icon: 'Setting', path: 'admin.html' }
+                { id: '5', title: '机构管理', icon: 'Setting', path: 'admin.html' },
+                { id: '6', title: '知识库与帮助', icon: 'QuestionFilled', path: 'help.html' }
             ];
 
             const currentUser = reactive({

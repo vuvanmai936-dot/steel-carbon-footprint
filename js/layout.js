@@ -33,7 +33,8 @@ const SharedLayout = {
             { id: '7', title: '模板中心', icon: 'Files', path: 'templates_mgt.html' },
             { id: '10', title: '碳数据资产', icon: 'Coin', path: 'assets_bridge.html' },
             { id: '8', title: '结算中心', icon: 'Wallet', path: 'settlement.html' },
-            { id: '9', title: '系统管理', icon: 'Setting', path: 'system_mgt.html' }
+            { id: '9', title: '系统管理', icon: 'Setting', path: 'system_mgt.html' },
+            { id: '11', title: '知识库与帮助', icon: 'QuestionFilled', path: 'help.html' }
         ];
 
         const currentUser = reactive({

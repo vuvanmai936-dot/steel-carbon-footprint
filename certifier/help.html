@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>知识库与帮助 - 认证机构工作台</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/certifier.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/certifierLayout.js"></script>
+    <style>
+        .help-wrap { display: flex; gap: 24px; min-height: calc(100vh - 140px); }
+        .help-nav { width: 220px; flex-shrink: 0; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 16px; height: fit-content; position: sticky; top: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .help-nav-title { font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+        .help-nav-list { list-style: none; padding: 0; margin: 0; }
+        .help-nav-list li { margin-bottom: 4px; }
+        .help-nav-list a { display: block; padding: 8px 12px; border-radius: 6px; color: #64748b; text-decoration: none; font-size: 14px; transition: all 0.2s; }
+        .help-nav-list a:hover { background: #f0f9ff; color: #1e40af; }
+        .help-nav-list a.active { background: #f0f9ff; color: #1e40af; font-weight: 500; }
+        .help-content { flex: 1; min-width: 0; }
+        .help-section { background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .help-section h2 { font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
+        .help-section h3 { font-size: 15px; font-weight: 600; color: #1e293b; margin: 16px 0 10px 0; }
+        .help-section p, .help-section li { color: #64748b; font-size: 14px; line-height: 1.7; margin: 0 0 10px 0; }
+        .help-section ul { padding-left: 22px; margin: 0 0 12px 0; }
+        .help-section .step-list { padding-left: 0; list-style: none; }
+        .help-section .step-list li { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+        .help-section .step-num { width: 24px; height: 24px; border-radius: 50%; background: #1e40af; color: #fff; text-align: center; line-height: 24px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+        .help-section .tip-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 12px 16px; margin: 12px 0; font-size: 14px; color: #1e40af; }
+        .help-section table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+        .help-section th, .help-section td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; }
+        .help-section th { background: #f8fafc; color: #1e293b; font-weight: 600; }
+        .help-section td { color: #64748b; }
+        .faq-collapse .el-collapse-item__header { font-weight: 500; }
+        .faq-collapse .el-collapse-item__content { color: #64748b; font-size: 14px; line-height: 1.6; }
+        @media (max-width: 992px) { .help-wrap { flex-direction: column; } .help-nav { width: 100%; position: static; } .help-nav-list { display: flex; flex-wrap: wrap; gap: 4px; } .help-nav-list li { margin-bottom: 0; } }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <el-container style="height: 100vh;">
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #1e3a5f; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 16px; border-bottom: 1px solid #2d4a6f; flex-shrink: 0;">第三方核查机构</div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#1e3a5f" text-color="#e2e8f0" active-text-color="#60a5fa" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-menu-item :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon>
+                        <span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #2d4a6f; text-align: center;">
+                <el-button link style="color: #e2e8f0; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+        <el-container style="display: flex; flex-direction: column; overflow: hidden;">
+            <el-header style="background: #fff; border-bottom: 1px solid #e4e7ed; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>认证机构工作台</el-breadcrumb-item>
+                    <el-breadcrumb-item>知识库与帮助</el-breadcrumb-item>
+                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-avatar :size="32" style="background: #1e40af;">核</el-avatar>
+                    <span style="margin-left: 8px; font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+                    <el-button link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+                </div>
+            </el-header>
+            <el-main style="padding: 20px; overflow: auto; background: #f8fafc;">
+                <div class="help-wrap">
+                    <nav class="help-nav">
+                        <div class="help-nav-title">目录</div>
+                        <ul class="help-nav-list">
+                            <li v-for="item in navItems" :key="item.id">
+                                <a :href="'#' + item.id" :class="{ active: activeSection === item.id }" @click.prevent="scrollTo(item.id)">{{ item.title }}</a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <div class="help-content" ref="contentRef">
+                        <!-- HELP-CONTENT-START -->
+                        <!-- section-quickstart -->
+                        <section id="section-quickstart" class="help-section">
+                        <h2>快速开始</h2>
+                        <p>本系统为<strong>钢铁行业产业链可信数据空间产品碳足迹数据服务系统</strong>的认证机构端，即「第三方核查机构工作台」。您在此接收运营派发的待核查任务，查看供应商证照与填报数据、核算报告与凭证，并完成通过/驳回或发起澄清。</p>
+                        <h3>您在本系统中的角色</h3>
+                        <p>您作为 <strong>L4 核查机构</strong>，核心工作包括：在「核查任务列表」中领取/查看待核查任务，在任务详情中<strong>穿透查看</strong>供应商证照、工序数据与凭证、核算报告草稿，并执行<strong>通过</strong>、<strong>驳回</strong>或<strong>发起澄清</strong>（对报告草稿的澄清仅与运营可见；对供应商数据/凭证的疑问可经运营转派给供应商）。</p>
+                        <h3>典型操作路径（三步）</h3>
+                        <ul class="step-list">
+                        <li><span class="step-num">1</span><span>在「核查仪表盘」或「核查任务列表」中查看待核查任务，点击进入<strong>核查任务详情</strong>。</span></li>
+                        <li><span class="step-num">2</span><span>在详情页查看<strong>供应商证照</strong>（只读）、<strong>核算报告与凭证</strong>（只读），必要时对报告草稿或供应商数据发起<strong>澄清</strong>；完成核查后选择<strong>通过</strong>或<strong>驳回</strong>，并上传核查报告与核查声明证书。</span></li>
+                        <li><span class="step-num">3</span><span>在「证书颁发管理」「结算中心」中查看证书记录与结算单；顶部「返回门户」可返回产品碳足迹应用门户。</span></li>
+                        </ul>
+                        <div class="tip-box">侧栏可切换核查仪表盘、核查任务列表、证书颁发管理、结算中心、机构管理、知识库与帮助；顶部「返回门户」可返回产品碳足迹应用门户。</div>
+                        </section>
+
+                        <!-- section-background -->
+                        <section id="section-background" class="help-section">
+                        <h2>业务与背景</h2>
+                        <h3>产品碳足迹 (PCF) 与核查</h3>
+                        <ul>
+                        <li><strong>产品碳足迹（PCF）</strong>：产品全生命周期温室气体排放的量化与报告。</li>
+                        <li><strong>第三方核查</strong>：对运营侧提交的核算报告与支撑数据、凭证进行独立核查，出具核查报告与核查声明证书，保障结果可信。</li>
+                        <li><strong>核查机构职责</strong>：在任务详情中穿透查看数据与凭证（只读）、对疑点发起澄清、完成通过/驳回并上传核查报告与声明证书。</li>
+                        </ul>
+                        <h3>可信数据空间 (TDS) 与本系统</h3>
+                        <ul>
+                        <li>本系统运行在<strong>钢铁行业产业链可信数据空间</strong>上；核查机构通过接入连接器与平台对接。</li>
+                        <li>您查看的供应商证照、填报数据与凭证来源于可信数据空间或运营端同步数据，仅限在线查看，受使用控制约束。</li>
+                        </ul>
+                        <h3>任务从哪来</h3>
+                        <p>待核查任务由<strong>中心运营端</strong>在任务进入核查阶段后派发；任务编号（taskId）与运营端、供应商端一致，便于全链路追溯。</p>
+                        
+                        </section>
+
+                        <!-- section-guide -->
+                        <section id="section-guide" class="help-section">
+                        <h2>功能使用指南</h2>
+                        <table>
+                        <thead>
+                        <tr><th>模块</th><th>说明</th></tr>
+                        </thead>
+                        <tbody>
+                        <tr><td><strong>核查仪表盘</strong></td><td>KPI（即将超时/新回复/待办总数/本周完成）、高优先级任务、消息通知。</td></tr>
+                        <tr><td><strong>核查任务列表</strong></td><td>待核查任务列表；点击进入任务详情进行穿透查看与通过/驳回/澄清。</td></tr>
+                        <tr><td><strong>核查任务详情</strong></td><td>任务与产品信息、<strong>供应商证照（只读）</strong>、核算报告与凭证（只读）；操作：通过、驳回、发起澄清。对核算报告草稿的澄清仅运营可见；对供应商数据/凭证的疑问先发往运营，运营可转派给供应商。</td></tr>
+                        <tr><td><strong>证书颁发管理</strong></td><td>证书记录列表、查看。</td></tr>
+                        <tr><td><strong>结算中心</strong></td><td>结算单列表、筛选、确认结算。</td></tr>
+                        <tr><td><strong>机构管理</strong></td><td>人员列表、添加成员、编辑。</td></tr>
+                        </tbody>
+                        </table>
+                        </section>
+
+                        <!-- section-flow -->
+                        <section id="section-flow" class="help-section">
+                        <h2>流程与状态</h2>
+                        <h3>任务在核查阶段</h3>
+                        <p>任务由运营侧进入核查阶段后，您端可见该任务；您需在 SLA 内完成穿透查看、澄清（如需要）与通过/驳回，并上传<strong>核查报告</strong>与<strong>核查声明证书</strong>。上传完成后，该任务在任务管理侧结束，后续报告下发与归档在运营端报告管理中处理。</p>
+                        <h3>澄清的两类处理</h3>
+                        <ul>
+                        <li><strong>核算报告草稿相关</strong>：您对报告内容、结论、格式等有疑问时，发起澄清仅与<strong>运营</strong>可见，供应商不可见。</li>
+                        <li><strong>供应商数据/凭证相关</strong>：您对供应商填报数据或凭证有疑问时，澄清先发往<strong>运营</strong>，运营确认后可选「自己回复」或「转发给供应商」，转发后供应商才可见并参与回复。</li>
+                        </ul>
+                        <h3>通过与驳回</h3>
+                        <p><strong>通过</strong>：核查通过后上传核查报告与核查声明证书，任务进入报告阶段。<strong>驳回</strong>：验收不通过时选择驳回，责任方为核查机构，需补充或重新核查后由运营再次验收。</p>
+                        
+                        </section>
+
+                        <!-- section-security -->
+                        <section id="section-security" class="help-section">
+                        <h2>安全与合规</h2>
+                        <h3>数据使用控制</h3>
+                        <p>您仅能<strong>在线查看</strong>供应商证照、填报数据与凭证、核算报告，受「使用可信」约束；禁止下载、截图、导出。正式环境由策略引擎/连接器执行。</p>
+                        <h3>证照与数据来源</h3>
+                        <p>供应商证照与任务数据来源于可信数据空间或运营端同步，仅供本次核查使用，请勿外泄或用于其他目的。</p>
+                        
+                        </section>
+
+                        <!-- section-faq -->
+                        <section id="section-faq" class="help-section">
+                        <h2>常见问题 (FAQ)</h2>
+                        <el-collapse v-model="activeFaq" class="faq-collapse">
+                        <el-collapse-item name="1">
+                        <template #title><span style="font-weight: 500;">待核查任务从哪里来？</span></template>
+                        <div>由中心运营端在任务进入核查阶段后派发；任务 ID 与运营端、供应商端一致。</div>
+                        </el-collapse-item>
+                        <el-collapse-item name="2">
+                        <template #title><span style="font-weight: 500;">对报告草稿有疑问怎么办？</span></template>
+                        <div>发起澄清，该澄清仅运营可见，您与运营沟通即可。</div>
+                        </el-collapse-item>
+                        <el-collapse-item name="3">
+                        <template #title><span style="font-weight: 500;">对供应商数据/凭证有疑问怎么办？</span></template>
+                        <div>发起澄清，首接收方为运营；运营可转派给供应商后，供应商才可见并回复。</div>
+                        </el-collapse-item>
+                        <el-collapse-item name="4">
+                        <template #title><span style="font-weight: 500;">通过/驳回后还要做什么？</span></template>
+                        <div>通过后须上传<strong>核查报告</strong>与<strong>核查声明证书</strong>，运营端据此进行报告下发与归档。</div>
+                        </el-collapse-item>
+                        <el-collapse-item name="5">
+                        <template #title><span style="font-weight: 500;">供应商证照从哪里来？</span></template>
+                        <div>来自可信数据空间或运营端已同步数据，按任务关联供应商展示，只读。</div>
+                        </el-collapse-item>
+                        </el-collapse>
+                        </section>
+
+                        <!-- section-contact -->
+                        <section id="section-contact" class="help-section">
+                        <h2>联系与支持</h2>
+                        <p>如遇系统异常、任务或权限疑问，请联系运营管理员或见门户公示的联系方式。</p>
+                        </section>
+                        <!-- HELP-CONTENT-END -->
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+<script>
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal } = CertifierLayout.setup();
+    const sectionIds = ['section-quickstart', 'section-background', 'section-guide', 'section-flow', 'section-security', 'section-faq', 'section-contact'];
+    runCertifierApp({
+        setup() {
+            const activeFaq = Vue.ref(['1']);
+            const activeSection = Vue.ref('section-quickstart');
+            const navItems = [
+                { id: 'section-quickstart', title: '快速开始' },
+                { id: 'section-background', title: '业务与背景' },
+                { id: 'section-guide', title: '功能指南' },
+                { id: 'section-flow', title: '流程与状态' },
+                { id: 'section-security', title: '安全与合规' },
+                { id: 'section-faq', title: '常见问题' },
+                { id: 'section-contact', title: '联系与支持' }
+            ];
+            function scrollTo(id) {
+                const el = document.getElementById(id);
+                if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); activeSection.value = id; }
+            }
+            function onScroll() {
+                const main = document.querySelector('.el-main');
+                if (!main) return;
+                const mainRect = main.getBoundingClientRect();
+                for (let i = sectionIds.length - 1; i >= 0; i--) {
+                    const el = document.getElementById(sectionIds[i]);
+                    if (el && el.getBoundingClientRect().top - mainRect.top <= 120) {
+                        activeSection.value = sectionIds[i];
+                        break;
+                    }
+                }
+            }
+            Vue.onMounted(() => { const main = document.querySelector('.el-main'); if (main) main.addEventListener('scroll', onScroll); });
+            return { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, activeFaq, activeSection, navItems, scrollTo };
+        }
+    });
+</script>
+</body>
+</html>
