@@ -260,3 +260,150 @@
   color: #909399;
   font-size: 13px;
 }
+
+/* 任务动态 / 协作日志：系统消息卡片（钉钉式，与澄清气泡同区展示） */
+.clarify-log-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e6ebf0;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.clarify-log-card-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e4e7ed;
+  color: #606266;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.clarify-log-card-avatar[data-type='sys'] {
+  background: #f0f9ff;
+  color: #409eff;
+}
+.clarify-log-card-avatar[data-type='sub'] {
+  background: #f0f9eb;
+  color: #67c23a;
+}
+.clarify-log-card-avatar[data-type='rej'] {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+.clarify-log-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.clarify-log-card-meta {
+  font-size: 11px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+.clarify-log-card-content {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #303133;
+  word-break: break-word;
+}
+
+/* 单一日志流：标题区 + 导出 PDF */
+.rfi-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ebeef5;
+  background: #fff;
+  flex-shrink: 0;
+}
+.rfi-log-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #303133;
+}
+.rfi-log-export-btn {
+  flex-shrink: 0;
+}
+
+/* 消息气泡内附件列表 */
+.clarify-msg-attachments {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e4e7ed;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.clarify-msg-attachment-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #409eff;
+  text-decoration: none;
+  max-width: 100%;
+}
+.clarify-msg-attachment-item:hover {
+  background: #ecf5ff;
+  border-color: #b3d8ff;
+}
+.clarify-msg-attachment-item .el-icon {
+  flex-shrink: 0;
+}
+/* 单一日志流主区（无左侧列表时） */
+.rfi-log-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.rfi-log-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.clarify-input-with-attach {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.clarify-input-attach-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #606266;
+}
+.clarify-input-attach-list .attach-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: #f5f7fa;
+  border-radius: 4px;
+}
+.clarify-input-attach-list .attach-tag .el-icon {
+  cursor: pointer;
+  color: #909399;
+}
+.clarify-input-attach-list .attach-tag .el-icon:hover {
+  color: #f56c6c;
+}

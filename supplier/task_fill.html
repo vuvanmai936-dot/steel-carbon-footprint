@@ -87,45 +87,36 @@
 
             <div class="task-info-dashboard">
                 <div class="task-info-dashboard__row">
-                    <div class="task-info-dashboard__main">
-                        <div class="dash-block" style="flex: 1.5;">
-                            <div class="dash-title">任务与上下文</div>
-                            <div class="dash-content">
-                                <div class="prod-info">
-                                    <div class="prod-primary">
-                                        <span class="prod-name">{{ taskInfo.productName }}</span>
-                                        <span class="prod-id">{{ taskInfo.taskId }}</span>
-                                    </div>
-                                    <div class="prod-meta">
-                                        <div class="prod-meta-row">
-                                            <span class="prod-label">规格</span>
-                                            <span class="prod-value">{{ taskInfo.specs }}</span>
-                                        </div>
-                                        <div class="prod-meta-row">
-                                            <span class="prod-label">订单</span>
-                                            <span class="prod-value">
-                                                <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div class="task-info-dashboard__main task-info-dashboard__info">
+                        <div class="dash-info-col dash-info-col--ids">
+                            <div class="dash-info-item">
+                                <span class="prod-label">任务编号</span>
+                                <span class="prod-id">{{ taskInfo.taskId }}</span>
+                            </div>
+                            <div class="dash-info-item">
+                                <span class="prod-label">订单</span>
+                                <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
+                            </div>
+                        </div>
+                        <div class="dash-info-col dash-info-col--detail">
+                            <div class="dash-info-item">
+                                <span class="prod-name">{{ taskInfo.productName }}</span>
+                            </div>
+                            <div class="dash-info-item">
+                                <span class="prod-label">规格</span>
+                                <span class="prod-value">{{ taskInfo.specs }}</span>
                             </div>
                         </div>
                     </div>
                     <div class="task-info-dashboard__status-bar">
                         <div class="dash-block dash-block-status">
-                            <div class="dash-title">填报状态</div>
                             <div class="dash-content">
                                 <el-tag :type="statusTagType">{{ fillStatusText || '待提交' }}</el-tag>
+                                <div class="status-todo">待办：完成数据填报与凭证上传并提交；若被驳回请按说明修正后重提</div>
                                 <div v-if="rejectReason" :class="['status-reason', 'status-reason--' + statusTagType]">
                                     请按以下说明修改后重新提交 {{ rejectReason }}
                                 </div>
                             </div>
-                        </div>
-                        <div class="dash-sep">
-                            <el-tooltip content="填报截止时间" placement="bottom">
-                                <div class="sla-capsule"><el-icon><component :is="'Timer'" /></el-icon> {{ fillDeadline || '—' }}</div>
-                            </el-tooltip>
                         </div>
                     </div>
                     <div class="task-info-dashboard__actions">
@@ -133,12 +124,16 @@
                     </div>
                 </div>
                 <div class="task-info-dashboard__tds">
-                    <el-icon><component :is="'Lock'" /></el-icon>
-                    <span>可信数据空间：本任务数据仅限授权范围内使用，禁止未授权下载、截图与传播；数据安全与隐私受数字合约保护。</span>
+                    <el-tooltip placement="top" :show-after="300">
+                        <template #content>可信数据空间：本任务数据仅限授权范围内使用，禁止未授权下载、截图与传播；数据安全与隐私受数字合约保护。</template>
+                        <span class="task-info-dashboard__tds-inner"><el-icon><component :is="'Lock'" /></el-icon> 数据受权与合约保护</span>
+                    </el-tooltip>
                 </div>
             </div>
 
-            <div class="fill-body-wrap">
+            <div class="fill-body-wrap task-detail-content" style="min-height: 0;">
+                <el-tabs v-model="mainActiveTab" class="task-detail-tabs" style="min-height: 0;">
+                    <el-tab-pane label="填报" name="fill" style="height: 100%; overflow: hidden;">
                 <el-row :gutter="0" style="flex: 1; min-height: 0;">
                     <el-col :span="14" style="height: 100%; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #dcdfe6;">
                         <div style="padding: 10px 20px; border-bottom: 1px solid #eee; background: #fafafa; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
@@ -188,6 +183,16 @@
                         </div>
                     </el-col>
                 </el-row>
+                    </el-tab-pane>
+                    <el-tab-pane label="沟通" name="communicate" style="height: 100%; overflow: auto;">
+                        <div style="padding: 24px; max-width: 560px; margin: 0 auto;">
+                            <el-alert type="info" :closable="false" show-icon>
+                                <template #title>沟通</template>
+                                本任务的澄清与回复可在「我的任务」中「待澄清/待整改」类型下处理；运营或核查方发起的澄清会出现在该任务中，您可在彼处查看并回复。
+                            </el-alert>
+                        </div>
+                    </el-tab-pane>
+                </el-tabs>
             </div>
         </el-container>
     </el-container>
@@ -209,6 +214,7 @@
                 const spreadHostRef = Vue.ref(null);
                 const spreadInstance = Vue.ref(null);
                 const evidenceFiles = Vue.ref([]);
+                const mainActiveTab = Vue.ref('fill');
 
                 var supplierName = (layout.currentUser && (layout.currentUser.supplierName || layout.currentUser.name)) || '南通碳素有限公司';
                 var supplierList = typeof getSupplierTaskList === 'function' ? getSupplierTaskList(supplierName) : [];
@@ -355,6 +361,7 @@
                 }
 
                 return Object.assign({}, layout, {
+                    mainActiveTab,
                     taskInfo: taskInfoRef,
                     rejectReason: rejectReasonRef,
                     evidenceRequirements: evidenceRequirementsRef,

@@ -94,7 +94,33 @@
         ],
       },
     ];
+    // 单一日志流用默认会话：所有「在一个对话框内」的沟通都归入此会话，不单独设澄清标题
+    var rfiId = 'rfi_' + taskId.replace(/-/g, '_');
+    base.unshift({
+      id: rfiId,
+      subject: '沟通记录',
+      type: '其他',
+      subjectType: 'general',
+      initiator: 'operator',
+      initiatorName: '运营',
+      status: 'open',
+      stageIndex: 0,
+      participants: ['operator', 'supplier', 'verifier'],
+      createdAt: '2026-03-01T08:00:00',
+      updatedAt: '2026-03-01T08:00:00',
+      messages: [],
+    });
     return base;
+  }
+
+  /**
+   * 单一日志流下发送消息时使用的默认会话 ID（沟通内容都在此对话框内处理，不单独设澄清标题）
+   * @param {string} taskId
+   * @returns {string}
+   */
+  function getDefaultRfiSessionId(taskId) {
+    if (!taskId) return '';
+    return 'rfi_' + taskId.replace(/-/g, '_');
   }
 
   function ensureTaskStore(taskId) {
@@ -180,6 +206,7 @@
       authorName: name,
       content: payload.firstMessage || '(无内容)',
       createdAt: now,
+      attachments: payload.attachments && payload.attachments.length ? payload.attachments.slice() : [],
     };
     var participants = payload.participants || [role, 'operator'];
     if (participants.indexOf('operator') === -1) participants.unshift('operator');
@@ -222,6 +249,7 @@
           authorName: authorName || '运营',
           content: payload.content,
           createdAt: now,
+          attachments: payload.attachments && payload.attachments.length ? payload.attachments.slice() : [],
         };
         list[i].messages.push(msg);
         list[i].updatedAt = now;
@@ -274,6 +302,7 @@
 
   global.getClarificationsByTaskId = getClarificationsByTaskId;
   global.getClarificationDetail = getClarificationDetail;
+  global.getDefaultRfiSessionId = getDefaultRfiSessionId;
   global.createClarification = createClarification;
   global.replyClarification = replyClarification;
   global.closeClarification = closeClarification;

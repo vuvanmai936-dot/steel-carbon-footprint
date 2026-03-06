@@ -42,6 +42,37 @@ body,
   border-color: #f56c6c;
 }
 
+/* === 阶段条（Stepper）：配置 → 采集 → 计算 → 核查 → 报告 === */
+.task-stage-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: #fafbfc;
+  border-bottom: 1px solid #ebeef5;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.task-stage-stepper__item {
+  color: #909399;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.task-stage-stepper__item:hover {
+  color: #409eff;
+}
+.task-stage-stepper__item.is-active {
+  color: #409eff;
+  font-weight: 600;
+  cursor: default;
+  pointer-events: none;
+}
+.task-stage-stepper__sep {
+  color: #dcdfe6;
+  user-select: none;
+  font-size: 12px;
+}
+
 /* === 2. 任务富信息仪表盘 (Info Dashboard) ===
    统一三块布局：Block1 信息聚合 | Block2 状态与待办 | Block3 操作 */
 .task-info-dashboard {
@@ -62,25 +93,58 @@ body,
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  padding: 16px 24px;
-  gap: 24px;
+  padding: 14px 24px;
+  gap: 28px;
   min-height: 0;
 }
+/* 三区视觉分区：信息区 / 状态区 / 操作区 */
 .task-info-dashboard__main {
   flex: 1;
   min-width: 0;
   display: flex;
-  gap: 24px;
-  align-items: stretch;
+  gap: 20px;
+  align-items: center;
 }
-.task-info-dashboard__status-bar {
+/* 信息区：第一列 任务编号&订单 第二列 公司&产品&规格 */
+.task-info-dashboard__info {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+}
+.dash-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.dash-info-col--ids {
+  flex-shrink: 0;
+}
+.dash-info-col--detail {
+  flex: 1;
+  min-width: 0;
+}
+.dash-info-item {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.dash-info-item .prod-label { color: #909399; font-size: 12px; }
+.dash-info-item .prod-name { font-weight: 700; color: #303133; }
+.dash-info-item .prod-id { font-family: monospace; font-size: 12px; color: #606266; background: #f4f4f5; padding: 2px 6px; border-radius: 4px; }
+/* 状态区：纵向 当前状态 & 待办事项，浅底区分 */
+.task-info-dashboard__status-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   flex-wrap: nowrap;
-  padding-left: 20px;
+  padding: 8px 16px 8px 24px;
   margin-left: 0;
   border-left: 1px solid #ebeef5;
+  border-radius: 0 8px 8px 0;
+  background: #fafbfc;
 }
 .task-info-dashboard__status-bar .dash-block {
   flex: none;
@@ -96,41 +160,49 @@ body,
   display: flex;
   align-items: center;
 }
-/* Block 3: 主操作区（按端展示不同按钮或待办说明） */
+/* 操作区：按钮纵向排列，浅底区分 */
 .task-info-dashboard__actions {
   display: flex;
-  flex-direction: row;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 10px;
-  flex-wrap: wrap;
-  padding-left: 20px;
-  margin-left: 20px;
+  padding: 8px 16px 8px 24px;
+  margin-left: 0;
   border-left: 1px solid #ebeef5;
+  border-radius: 0 8px 8px 0;
+  background: #f5f9ff;
   flex-shrink: 0;
 }
 .task-info-dashboard__actions .el-button {
   margin: 0;
+  width: auto;
 }
 .task-info-dashboard__actions.task-info-dashboard__actions--text {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
 }
-/* 可信数据空间（TDS）说明条：数据安全与隐私 */
+/* 可信数据空间（TDS）说明条：精简展示，完整说明见 tooltip */
 .task-info-dashboard__tds {
-  padding: 8px 24px;
+  padding: 6px 20px;
   background: #f0f9ff;
   border-top: 1px solid #e6f4ff;
-  font-size: 12px;
+  font-size: 11px;
   color: #1677b3;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 .task-info-dashboard__tds .el-icon {
-  font-size: 14px;
+  font-size: 12px;
   flex-shrink: 0;
+}
+.task-info-dashboard__tds-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: help;
 }
 
 /* 状态块内嵌驳回原因（与供应商填报页一致） */
@@ -167,6 +239,200 @@ body,
   border: 1px solid #e1f3d8;
 }
 
+/* 状态块：纵向排列 当前状态 & 待办事项，区域内内容有间距 */
+.task-info-dashboard__status-bar .dash-content {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.status-todo {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #606266;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+  background: #fafafa;
+  max-width: 320px;
+}
+
+/* 配置页：初始化模板配置卡片（减少留白、层次清晰） */
+.config-init-wrap {
+  height: 100%;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.config-init-card {
+  background: #fff;
+  padding: 28px 32px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #ebeef5;
+}
+.config-init-head {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.config-init-icon {
+  font-size: 40px;
+  color: #409eff;
+  display: block;
+  margin-bottom: 12px;
+}
+.config-init-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+.config-init-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.5;
+}
+.config-init-form {
+  text-align: left;
+}
+.config-init-form .el-form-item {
+  margin-bottom: 16px;
+}
+.config-init-template-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.config-init-selected {
+  color: #606266;
+  font-size: 14px;
+}
+.config-init-submit {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* === 内容区 Tabs：统一容器与间距（任务详情页） === */
+.task-detail-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #f0f2f5;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+}
+.task-detail-tabs {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.task-detail-tabs > .el-tabs__header {
+  margin: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid #ebeef5;
+  background: #fff;
+}
+.task-detail-tabs > .el-tabs__header .el-tabs__nav-wrap::after {
+  height: 0;
+}
+.task-detail-tabs > .el-tabs__content {
+  flex: 1;
+  min-height: 0;
+}
+.task-detail-tabs .el-tab-pane {
+  height: 100%;
+  min-height: 0;
+}
+
+/* verify 页：单块 Tabs 内业务 Tab 左右分栏（文档 + 侧栏） */
+.verify-tab-body {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.verify-tab-doc {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background: #fff;
+  padding: 20px;
+}
+.verify-tab-doc .pdf-sheet {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border-radius: 6px;
+  position: relative;
+}
+.verify-tab-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-left: 1px solid #ebeef5;
+}
+.verify-tab-sidebar .panel-footer {
+  padding: 16px;
+  border-top: 1px solid #ebeef5;
+  background: #fafbfc;
+}
+.file-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background: #fff;
+}
+.file-list-item .file-icon { font-size: 20px; color: #909399; }
+.file-list-item .file-info { flex: 1; min-width: 0; }
+.file-list-item .file-name { font-size: 13px; color: #303133; }
+.file-list-item .file-meta { font-size: 11px; color: #909399; margin-top: 2px; }
+.stamp-seal {
+  position: absolute;
+  bottom: 40px;
+  right: 60px;
+  width: 100px;
+  height: 100px;
+  border: 3px solid #c0c4cc;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.3;
+}
+.stamp-seal .stamp-inner { border: none; }
+
+/* verify 等页面的顶部导航 Tabs（仅美化 header，不改变布局容器） */
+.task-detail-tabs-nav > .el-tabs__header {
+  margin: 0;
+}
+.task-detail-tabs-nav > .el-tabs__header .el-tabs__nav-wrap::after {
+  height: 0;
+}
+
 /* 模块 A: 核心身份 */
 .dash-block {
   display: flex;
@@ -187,17 +453,38 @@ body,
   gap: 4px;
 }
 
-/* 产品与任务区块：统一层级与字体，保留全部内容 */
+/* 产品与任务区块：单行紧凑，信息流清晰 */
 .prod-info {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
+  flex-wrap: wrap;
 }
+/* 分组布局：第一行 产品名+公司名，第二行 任务编号+订单号+规格 */
+.prod-info-grouped .prod-info {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.prod-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.prod-line--name { font-weight: 700; }
+.prod-sep {
+  color: #c0c4cc;
+  font-size: 12px;
+  user-select: none;
+}
+.prod-supplier { font-weight: 600; font-size: 14px; }
 .prod-primary {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 .prod-name {
@@ -211,14 +498,16 @@ body,
   font-family: monospace;
   color: #909399;
   background: #f4f4f5;
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
   flex-shrink: 0;
 }
 .prod-meta {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 .prod-meta-row {
   display: flex;
@@ -227,9 +516,14 @@ body,
   font-size: 12px;
   flex-wrap: wrap;
 }
+.prod-meta-row .prod-label {
+  color: #909399;
+  font-size: 12px;
+  flex-shrink: 0;
+}
 .prod-label {
   color: #909399;
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 .prod-value {
