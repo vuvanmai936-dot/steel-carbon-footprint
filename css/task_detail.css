@@ -42,18 +42,29 @@ body,
   border-color: #f56c6c;
 }
 
-/* === 2. 任务富信息仪表盘 (Info Dashboard) === 
-   左信息区 + 右状态栏，分区清晰、不换行 */
+/* === 2. 任务富信息仪表盘 (Info Dashboard) ===
+   统一三块布局：Block1 信息聚合 | Block2 状态与待办 | Block3 操作 */
 .task-info-dashboard {
   flex: none;
   background: #fff;
   border-bottom: 1px solid #dcdfe6;
   padding: 16px 24px;
   display: flex;
-  align-items: stretch;
-  justify-content: space-between;
+  flex-direction: column;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   z-index: 10;
+}
+/* 使用 __row 时由 row 提供内边距 */
+.task-info-dashboard:has(.task-info-dashboard__row) {
+  padding: 0;
+}
+.task-info-dashboard__row {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  padding: 16px 24px;
+  gap: 24px;
+  min-height: 0;
 }
 .task-info-dashboard__main {
   flex: 1;
@@ -68,7 +79,7 @@ body,
   gap: 16px;
   flex-wrap: nowrap;
   padding-left: 20px;
-  margin-left: 20px;
+  margin-left: 0;
   border-left: 1px solid #ebeef5;
 }
 .task-info-dashboard__status-bar .dash-block {
@@ -84,6 +95,42 @@ body,
   border-left: 1px solid #ebeef5;
   display: flex;
   align-items: center;
+}
+/* Block 3: 主操作区（按端展示不同按钮或待办说明） */
+.task-info-dashboard__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-left: 20px;
+  margin-left: 20px;
+  border-left: 1px solid #ebeef5;
+  flex-shrink: 0;
+}
+.task-info-dashboard__actions .el-button {
+  margin: 0;
+}
+.task-info-dashboard__actions.task-info-dashboard__actions--text {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+/* 可信数据空间（TDS）说明条：数据安全与隐私 */
+.task-info-dashboard__tds {
+  padding: 8px 24px;
+  background: #f0f9ff;
+  border-top: 1px solid #e6f4ff;
+  font-size: 12px;
+  color: #1677b3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.task-info-dashboard__tds .el-icon {
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 /* 状态块内嵌驳回原因（与供应商填报页一致） */

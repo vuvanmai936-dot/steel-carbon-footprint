@@ -86,53 +86,55 @@
             </el-drawer>
 
             <div class="task-info-dashboard">
-                <div class="task-info-dashboard__main">
-                    <div class="dash-block" style="flex: 1.5;">
-                        <div class="dash-title">产品与任务</div>
-                        <div class="dash-content">
-                            <div class="prod-info">
-                                <div class="prod-primary">
-                                    <span class="prod-name">{{ taskInfo.productName }}</span>
-                                    <span class="prod-id">{{ taskInfo.taskId }}</span>
-                                </div>
-                                <div class="prod-meta">
-                                    <div class="prod-meta-row">
-                                        <span class="prod-label">规格</span>
-                                        <span class="prod-value">{{ taskInfo.specs }}</span>
+                <div class="task-info-dashboard__row">
+                    <div class="task-info-dashboard__main">
+                        <div class="dash-block" style="flex: 1.5;">
+                            <div class="dash-title">任务与上下文</div>
+                            <div class="dash-content">
+                                <div class="prod-info">
+                                    <div class="prod-primary">
+                                        <span class="prod-name">{{ taskInfo.productName }}</span>
+                                        <span class="prod-id">{{ taskInfo.taskId }}</span>
                                     </div>
-                                    <div class="prod-meta-row">
-                                        <span class="prod-label">订单</span>
-                                        <span class="prod-value">
-                                            <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
-                                        </span>
+                                    <div class="prod-meta">
+                                        <div class="prod-meta-row">
+                                            <span class="prod-label">规格</span>
+                                            <span class="prod-value">{{ taskInfo.specs }}</span>
+                                        </div>
+                                        <div class="prod-meta-row">
+                                            <span class="prod-label">订单</span>
+                                            <span class="prod-value">
+                                                <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    <div class="task-info-dashboard__status-bar">
+                        <div class="dash-block dash-block-status">
+                            <div class="dash-title">填报状态</div>
+                            <div class="dash-content">
+                                <el-tag :type="statusTagType">{{ fillStatusText || '待提交' }}</el-tag>
+                                <div v-if="rejectReason" :class="['status-reason', 'status-reason--' + statusTagType]">
+                                    请按以下说明修改后重新提交 {{ rejectReason }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dash-sep">
+                            <el-tooltip content="填报截止时间" placement="bottom">
+                                <div class="sla-capsule"><el-icon><component :is="'Timer'" /></el-icon> {{ fillDeadline || '—' }}</div>
+                            </el-tooltip>
+                        </div>
+                    </div>
+                    <div class="task-info-dashboard__actions">
+                        <el-button type="primary" @click="submit">提交</el-button>
                     </div>
                 </div>
-                <div class="task-info-dashboard__status-bar">
-                    <div class="dash-block dash-block-status">
-                        <div class="dash-title">填报状态</div>
-                        <div class="dash-content">
-                            <el-tag :type="statusTagType">{{ fillStatusText || '待提交' }}</el-tag>
-                            <div v-if="rejectReason" :class="['status-reason', 'status-reason--' + statusTagType]">
-                                请按以下说明修改后重新提交 {{ rejectReason }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="dash-sep">
-                        <el-tooltip content="填报截止时间" placement="bottom">
-                            <div class="sla-capsule"><el-icon><component :is="'Timer'" /></el-icon> {{ fillDeadline || '—' }}</div>
-                        </el-tooltip>
-                    </div>
-                    <div class="dash-sep">
-                        <el-tooltip content="本页面仅限在线填报，受数字合约保护；禁止下载或截图。" placement="bottom">
-                            <span style="display: inline-flex; align-items: center; color: #047857; font-size: 12px; cursor: help;">
-                                <el-icon style="margin-right: 4px;"><component :is="'Lock'" /></el-icon>安全说明
-                            </span>
-                        </el-tooltip>
-                    </div>
+                <div class="task-info-dashboard__tds">
+                    <el-icon><component :is="'Lock'" /></el-icon>
+                    <span>可信数据空间：本任务数据仅限授权范围内使用，禁止未授权下载、截图与传播；数据安全与隐私受数字合约保护。</span>
                 </div>
             </div>
 

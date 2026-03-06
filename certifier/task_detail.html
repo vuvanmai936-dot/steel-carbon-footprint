@@ -86,45 +86,65 @@
             </el-drawer>
             <el-main style="padding: 0; overflow: auto; background: #f8fafc;">
                 <div class="task-info-dashboard">
-                    <div class="task-info-dashboard__main">
-                        <div class="dash-block" style="flex: 1.5;">
-                            <div class="dash-title">产品与任务</div>
-                            <div class="dash-content">
-                                <div class="prod-info">
-                                    <div class="prod-primary">
-                                        <span class="prod-name">{{ taskInfo.productName }}</span>
-                                        <span class="prod-id">{{ taskInfo.taskId }}</span>
+                    <div class="task-info-dashboard__row">
+                        <div class="task-info-dashboard__main">
+                            <div class="dash-block" style="flex: 1.5;">
+                                <div class="dash-title">任务与上下文</div>
+                                <div class="dash-content">
+                                    <div class="prod-info">
+                                        <div class="prod-primary">
+                                            <span class="prod-name">{{ taskInfo.productName }}</span>
+                                            <span class="prod-id">{{ taskInfo.taskId }}</span>
+                                        </div>
+                                        <div class="prod-meta">
+                                            <div class="prod-meta-row">
+                                                <span class="prod-label">规格</span>
+                                                <span class="prod-value">{{ taskInfo.specs }}</span>
+                                            </div>
+                                            <div class="prod-meta-row">
+                                                <span class="prod-label">订单</span>
+                                                <span class="prod-value">
+                                                    <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
+                                                </span>
+                                            </div>
+                                            <div class="prod-meta-row" v-if="taskInfo.did">
+                                                <span class="prod-label">DID</span>
+                                                <span class="prod-value" style="font-family:monospace;font-size:11px;">{{ taskInfo.did }}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="prod-meta">
-                                        <div class="prod-meta-row">
-                                            <span class="prod-label">规格</span>
-                                            <span class="prod-value">{{ taskInfo.specs }}</span>
-                                        </div>
-                                        <div class="prod-meta-row">
-                                            <span class="prod-label">订单</span>
-                                            <span class="prod-value">
-                                                <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
-                                            </span>
-                                        </div>
+                                </div>
+                            </div>
+                            <div class="dash-block" style="flex: 1.2;">
+                                <div class="dash-title">来源供应商</div>
+                                <div class="dash-content">
+                                    <div style="display:flex; align-items:center;">
+                                        <el-avatar :size="24" style="background:#dbeafe; color:#2563eb; font-size:12px; margin-right:8px;">{{ (taskInfo.supplier || '')[0] }}</el-avatar>
+                                        <el-link type="primary" :underline="false" style="font-weight:bold; font-size:14px;" @click="viewSupplier">{{ taskInfo.supplier }}</el-link>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="dash-block" style="flex: 1.2;">
-                            <div class="dash-title">来源供应商</div>
-                            <div class="dash-content">
-                                <div style="display:flex; align-items:center;">
-                                    <el-avatar :size="24" style="background:#dbeafe; color:#2563eb; font-size:12px; margin-right:8px;">{{ (taskInfo.supplier || '')[0] }}</el-avatar>
-                                    <el-link type="primary" :underline="false" style="font-weight:bold; font-size:14px;" @click="viewSupplier">{{ taskInfo.supplier }}</el-link>
-                                </div>
+                        <div class="task-info-dashboard__status-bar">
+                            <div class="dash-block">
+                                <div class="dash-title">核查状态</div>
+                                <div class="dash-content"><el-tag type="warning">待核查</el-tag></div>
                             </div>
+                            <div class="dash-sep">
+                                <el-tooltip content="SLA 剩余时间" placement="bottom">
+                                    <div class="sla-capsule"><el-icon><Timer /></el-icon> 4h 30m</div>
+                                </el-tooltip>
+                            </div>
+                        </div>
+                        <div class="task-info-dashboard__actions">
+                            <el-button type="warning" plain @click="handleSuspend">挂起</el-button>
+                            <el-button type="danger" @click="handleReject">驳回</el-button>
+                            <el-button type="success" @click="handlePass">核验通过 & 签发</el-button>
                         </div>
                     </div>
-                    <div class="task-info-dashboard__status-bar">
-                        <div class="dash-block">
-                            <div class="dash-title">核查状态</div>
-                            <div class="dash-content"><el-tag type="warning">待核查</el-tag></div>
-                        </div>
+                    <div class="task-info-dashboard__tds">
+                        <el-icon><Lock /></el-icon>
+                        <span>可信数据空间：本任务数据仅限授权范围内使用，禁止未授权下载、截图与传播；数据安全与隐私受数字合约保护。</span>
                     </div>
                 </div>
                 <div class="certifier-detail-main" style="padding: 24px;">
@@ -152,10 +172,8 @@
                         </div>
                     </div>
                     <div class="card">
-                        <div class="section-title">操作</div>
-                        <el-button type="success" @click="handlePass">通过</el-button>
-                        <el-button type="danger" @click="handleReject">驳回</el-button>
-                        <el-button type="warning" @click="clarifyDrawerVisible = true">澄清</el-button>
+                        <div class="section-title">澄清与沟通</div>
+                        <el-button type="warning" @click="clarifyDrawerVisible = true">发起澄清</el-button>
                     </div>
                 </div>
             </el-main>
@@ -247,6 +265,7 @@
                 const goBack = () => { window.location.href = 'task_list.html'; };
                 const viewOrder = () => { ElementPlus.ElMessage.info('订单详情由运营端管理'); };
                 const viewSupplier = () => { ElementPlus.ElMessage.info('供应商信息由运营端管理'); };
+                const handleSuspend = () => { ElementPlus.ElMessage.warning('任务已挂起'); };
                 const handlePass = () => { ElementPlus.ElMessage.success('已反馈：通过'); };
                 const handleReject = () => { ElementPlus.ElMessageBox.prompt('请输入驳回原因', '驳回').then(() => ElementPlus.ElMessage.success('已反馈：驳回')).catch(() => {}); };
                 const clarifyDrawerVisible = Vue.ref(false);
@@ -312,7 +331,7 @@
                     menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader,
                     messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime,
                     taskInfo: taskInfoRef, supplierProfile: supplierProfileRef, supplierCerts: supplierCertsRef,
-                    goBack, viewOrder, viewSupplier, handlePass, handleReject,
+                    goBack, viewOrder, viewSupplier, handleSuspend, handlePass, handleReject,
                     clarifyDrawerVisible,
                     clarificationList, selectedClarId, selectedClarDetail, replyContent, showNewClarify, newClarifyForm, clarifyTypes,
                     formatClarifyTime, roleAvatar, clarifyIsSelf, clarifyShouldShowTimeDivider, loadClarifications, selectClarification, submitClarifyReply, submitNewClarify

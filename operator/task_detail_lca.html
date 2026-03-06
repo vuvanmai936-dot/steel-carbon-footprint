@@ -105,54 +105,64 @@
 
             <el-main style="padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column;">
                 <div class="task-info-dashboard">
-                    <div class="task-info-dashboard__main">
-                        <div class="dash-block" style="flex: 1.5;">
-                            <div class="dash-title">产品与任务</div>
-                            <div class="dash-content">
-                                <div class="prod-info">
-                                    <div class="prod-primary">
-                                        <span class="prod-name">{{ taskInfo.productName }}</span>
-                                        <span class="prod-id">{{ taskInfo.taskId }}</span>
+                    <div class="task-info-dashboard__row">
+                        <div class="task-info-dashboard__main">
+                            <div class="dash-block" style="flex: 1.5;">
+                                <div class="dash-title">任务与上下文</div>
+                                <div class="dash-content">
+                                    <div class="prod-info">
+                                        <div class="prod-primary">
+                                            <span class="prod-name">{{ taskInfo.productName }}</span>
+                                            <span class="prod-id">{{ taskInfo.taskId }}</span>
+                                        </div>
+                                        <div class="prod-meta">
+                                            <div class="prod-meta-row">
+                                                <span class="prod-label">规格</span>
+                                                <span class="prod-value">{{ taskInfo.specs }}</span>
+                                            </div>
+                                            <div class="prod-meta-row">
+                                                <span class="prod-label">订单</span>
+                                                <span class="prod-value">
+                                                    <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="prod-meta">
-                                        <div class="prod-meta-row">
-                                            <span class="prod-label">规格</span>
-                                            <span class="prod-value">{{ taskInfo.specs }}</span>
-                                        </div>
-                                        <div class="prod-meta-row">
-                                            <span class="prod-label">订单</span>
-                                            <span class="prod-value">
-                                                <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
-                                            </span>
-                                        </div>
+                                </div>
+                            </div>
+                            <div class="dash-block" style="flex: 1.2;">
+                                <div class="dash-title">来源供应商</div>
+                                <div class="dash-content">
+                                    <div style="display:flex; align-items:center;">
+                                        <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
+                                        <el-link type="primary" :underline="false" style="font-weight:bold; font-size:14px;" @click="viewSupplier">{{ taskInfo.supplier }}</el-link>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="dash-block" style="flex: 1.2;">
-                            <div class="dash-title">来源供应商</div>
-                            <div class="dash-content">
-                                <div style="display:flex; align-items:center;">
-                                    <el-avatar :size="24" style="background:#e6f7ff; color:#1890ff; font-size:12px; margin-right:8px;">{{ taskInfo.supplier[0] }}</el-avatar>
-                                    <el-link type="primary" :underline="false" style="font-weight:bold; font-size:14px;" @click="viewSupplier">{{ taskInfo.supplier }}</el-link>
-                                </div>
+                        <div class="task-info-dashboard__status-bar">
+                            <div class="dash-block">
+                                <div class="dash-title">计算状态</div>
+                                <div class="dash-content"><el-tag type="info">{{ getStageStatusText(taskRow) || '草稿待提交' }}</el-tag></div>
                             </div>
+                            <div class="dash-sep">
+                                <el-tooltip content="SLA 剩余时间" placement="bottom"><div class="sla-capsule"><el-icon><Timer /></el-icon> 18:05:22</div></el-tooltip>
+                            </div>
+                            <div class="dash-sep">
+                                <el-badge v-if="hasClarifyBadge" is-dot class="msg-badge">
+                                    <el-button type="primary" link size="small" icon="ChatLineSquare" @click="taskMessageDrawerVisible = true">消息与澄清</el-button>
+                                </el-badge>
+                                <el-button v-else type="primary" link size="small" icon="ChatLineSquare" @click="taskMessageDrawerVisible = true">消息与澄清</el-button>
+                            </div>
+                        </div>
+                        <div class="task-info-dashboard__actions task-info-dashboard__actions--text">
+                            <span class="dash-title" style="margin-bottom:0;">待办</span>
+                            <span style="font-size:12px;color:#606266;">提交 LCA 计算或查看结果</span>
                         </div>
                     </div>
-                    <div class="task-info-dashboard__status-bar">
-                        <div class="dash-block">
-                            <div class="dash-title">计算状态</div>
-                            <div class="dash-content"><el-tag type="info">{{ getStageStatusText(taskRow) || '草稿待提交' }}</el-tag></div>
-                        </div>
-                        <div class="dash-sep">
-                            <el-tooltip content="截止剩余时间" placement="bottom"><div class="sla-capsule"><el-icon><Timer /></el-icon> 18:05:22</div></el-tooltip>
-                        </div>
-                        <div class="dash-sep">
-                            <el-badge v-if="hasClarifyBadge" is-dot class="msg-badge">
-                                <el-button type="primary" link size="small" icon="ChatLineSquare" @click="taskMessageDrawerVisible = true">消息与澄清</el-button>
-                            </el-badge>
-                            <el-button v-else type="primary" link size="small" icon="ChatLineSquare" @click="taskMessageDrawerVisible = true">消息与澄清</el-button>
-                        </div>
+                    <div class="task-info-dashboard__tds">
+                        <el-icon><Lock /></el-icon>
+                        <span>可信数据空间：本任务数据仅限授权范围内使用，禁止未授权下载、截图与传播；数据安全与隐私受数字合约保护。</span>
                     </div>
                 </div>
 
