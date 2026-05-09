@@ -3,11 +3,11 @@ const { readdirSync } = require('fs');
 const { defineConfig } = require('vite');
 const { syncOnce } = require('./scripts/sync-public-js');
 
-// 收集所有 HTML 作为多页面入口（根目录 + operator / supplier / certifier）
+// 收集所有 HTML 作为多页面入口（根目录 + operator / supplier / certifier + prototype/flows 黄金动线）
 function collectHtmlInputs() {
   const root = resolve(__dirname);
   const input = {};
-  const dirs = ['', 'operator', 'supplier', 'certifier'];
+  const dirs = ['', 'operator', 'supplier', 'certifier', 'prototype/flows'];
   for (const dir of dirs) {
     const fullDir = resolve(root, dir);
     let entries;

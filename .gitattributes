@@ -1,0 +1,20 @@
+# 行尾归一化
+* text=auto eol=lf
+
+# 二进制资源（避免被 diff 与误转换）
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.zip binary
+
+# git archive 默认排除（外发场景仅打包"原型 + 设计 SoT"，商务材料另行脱敏）
+# 触发：git archive HEAD --format=zip > release.zip
+客户商务/                                 export-ignore
+docs/00_迭代计划/第一次设计快照封板说明_20260509.md  export-ignore
+docs/_archive/                            export-ignore

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>5 分钟黄金动线 - 钢铁碳足迹数据服务系统</title>
+  <link rel="stylesheet" href="../../css/common.css">
+  <style>
+    :root {
+      --c-bg: #f6f8fb;
+      --c-card: #ffffff;
+      --c-border: #e4e7ed;
+      --c-text: #2c3e50;
+      --c-muted: #909399;
+      --c-primary: #2461c5;
+      --c-primary-soft: #e8f0fc;
+      --c-supplier: #67c23a;
+      --c-supplier-soft: #eaf5e1;
+      --c-certifier: #e6a23c;
+      --c-certifier-soft: #fdf6ec;
+      --c-system: #909399;
+      --c-system-soft: #f4f4f5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
+      line-height: 1.6;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(90deg, #1d4ea1, #2461c5);
+      color: #fff;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .topbar .meta { font-size: 13px; opacity: 0.9; }
+    .topbar a {
+      color: #fff;
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.6);
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      margin-left: 12px;
+    }
+    .topbar a:hover { background: rgba(255,255,255,0.12); }
+    main {
+      max-width: 1180px;
+      margin: 24px auto 64px;
+      padding: 0 24px;
+    }
+    .intro {
+      background: var(--c-card);
+      border: 1px solid var(--c-border);
+      border-radius: 6px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .intro h2 { margin: 0 0 8px; font-size: 18px; }
+    .intro p { margin: 6px 0; color: #5b6470; }
+    .intro ul { margin: 6px 0; padding-left: 22px; color: #5b6470; }
+    .stage-track {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 12px 0 4px;
+      font-size: 13px;
+      color: var(--c-muted);
+    }
+    .stage-track span.dot {
+      display: inline-block;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--c-primary);
+      margin-right: 4px;
+    }
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .step {
+      background: var(--c-card);
+      border: 1px solid var(--c-border);
+      border-radius: 6px;
+      padding: 18px 22px;
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .step .num {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: var(--c-primary-soft);
+      color: var(--c-primary);
+      font-size: 24px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step--supplier .num { background: var(--c-supplier-soft); color: var(--c-supplier); }
+    .step--certifier .num { background: var(--c-certifier-soft); color: var(--c-certifier); }
+    .step--system .num { background: var(--c-system-soft); color: var(--c-system); }
+    .step h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .badge--operator { background: var(--c-primary-soft); color: var(--c-primary); }
+    .badge--supplier { background: var(--c-supplier-soft); color: var(--c-supplier); }
+    .badge--certifier { background: var(--c-certifier-soft); color: var(--c-certifier); }
+    .badge--system { background: var(--c-system-soft); color: var(--c-system); }
+    .badge--time { background: #f4f4f5; color: #5b6470; font-weight: 400; }
+    .step .desc { color: #5b6470; font-size: 14px; margin: 6px 0 10px; }
+    .step .actions { font-size: 13px; color: #5b6470; }
+    .step .actions strong { color: var(--c-text); }
+    .step .links {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .step .links a {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 4px;
+      background: var(--c-primary);
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .step--supplier .links a { background: var(--c-supplier); }
+    .step--certifier .links a { background: var(--c-certifier); }
+    .step--system .links a { background: var(--c-system); }
+    .step .links a.secondary {
+      background: transparent;
+      color: var(--c-text);
+      border: 1px solid var(--c-border);
+    }
+    .checks {
+      background: #fffbe6;
+      border: 1px solid #faecd8;
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin: 24px 0 8px;
+    }
+    .checks h3 { margin: 0 0 8px; font-size: 15px; color: #b88e22; }
+    .checks ul { margin: 4px 0; padding-left: 22px; color: #66510a; font-size: 13px; }
+    footer {
+      text-align: center;
+      color: var(--c-muted);
+      margin-top: 32px;
+      font-size: 13px;
+    }
+    footer a { color: var(--c-primary); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div>
+      <h1>5 分钟黄金动线 · 钢铁产品碳足迹核算与核查闭环</h1>
+      <div class="meta">任务 TSK-2026-888 · 报告 RPT-2026-0001 · 演示态 Mock 数据</div>
+    </div>
+    <div>
+      <a href="../../index.html">系统门户</a>
+      <a href="../../pcf.html">PCF 应用门户</a>
+      <a href="README.md" target="_blank" rel="noopener">脚本 README</a>
+    </div>
+  </div>
+
+  <main>
+    <section class="intro">
+      <h2>本动线的用法</h2>
+      <p>对外评审/客户演示请只跑本页串起的 8 步；其它 60+ 页留作内部走查。涉及的页面为现有原型，URL 已带好 <code>taskId</code>/<code>reportId</code>，浏览器刷新即可重置 Mock 状态。</p>
+      <p><strong>对接说明</strong>：本动线只讲业务故事；接口契约请以 <a href="../../docs/02_功能与对接/11_接口与互操作设计（实施期）.md" target="_blank" rel="noopener"><code>docs/.../11 §7 最小 OpenAPI</code></a> 为准；规则 SoT 见 <a href="../../docs/SoT_MAP.md" target="_blank" rel="noopener"><code>docs/SoT_MAP.md</code></a>。</p>
+      <div class="stage-track">
+        <span><span class="dot"></span>0 配置</span>
+        <span><span class="dot"></span>1 采集（含审核）</span>
+        <span><span class="dot"></span>2 计算（LCA）</span>
+        <span><span class="dot"></span>3 核查</span>
+        <span><span class="dot"></span>4 报告（下发→确认→归档）</span>
+      </div>
+    </section>
+
+    <section class="step-list">
+
+      <article class="step">
+        <div class="num">0</div>
+        <div>
+          <h3>起点 · 介绍 1+4 生态 <span class="badge badge--time">0:00</span></h3>
+          <p class="desc">从系统门户进入 PCF 应用门户，向客户讲清"四大支柱"（DID / 数字合约 / 使用控制 / VC）与三端工作台。</p>
+          <p class="actions"><strong>关键动作</strong>：① 在 PCF 门户介绍 L3/L4；② 点击「运营管理端」进入工作台。</p>
+          <div class="links">
+            <a href="../../index.html">系统门户</a>
+            <a href="../../pcf.html">PCF 应用门户</a>
+            <a href="../../operator/dashboard.html" class="secondary">运营驾驶舱</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="num">1</div>
+        <div>
+          <h3>运营 · 选订单 → 拆任务 <span class="badge badge--operator">运营</span> <span class="badge badge--time">0:30</span></h3>
+          <p class="desc">在订单管理选定 <code>ORD-20260203-001</code>，看到自动拆出的任务 <code>TSK-2026-888</code>。</p>
+          <p class="actions"><strong>关键动作</strong>：进入订单详情，确认订单与任务对应关系；点「进入配置」。</p>
+          <div class="links">
+            <a href="../../operator/order.html">订单管理</a>
+            <a href="../../operator/self_operated_task_list.html" class="secondary">自营任务列表</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="num">2</div>
+        <div>
+          <h3>运营 · 配置模板与下发 <span class="badge badge--operator">运营</span> <span class="badge badge--time">1:00</span></h3>
+          <p class="desc">在配置页选择模板、设置必填项与凭证要求，点击「下发」给供应商。</p>
+          <p class="actions"><strong>关键动作</strong>：① 选定模板（与"模板中心"对齐）；② 下发后任务进入 stage 1。</p>
+          <div class="links">
+            <a href="../../operator/task_detail_config.html?taskId=TSK-2026-888">任务配置（TSK-2026-888）</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="step step--supplier">
+        <div class="num">3</div>
+        <div>
+          <h3>供应商 · 接收 → SpreadJS 填报 → 提交 <span class="badge badge--supplier">供应商</span> <span class="badge badge--time">1:30</span></h3>
+          <p class="desc">供应商工作台收到任务（顶栏消息红点），打开填报页，使用 SpreadJS 表填入能耗与排放数据，上传凭证后提交。</p>
+          <p class="actions"><strong>关键动作</strong>：① 顶栏消息进入任务；② 填表关键单元格；③ 上传 1 个附件凭证；④ 提交。</p>
+          <div class="links">
+            <a href="../../supplier/task_list.html">任务列表</a>
+            <a href="../../supplier/task_fill.html?taskId=TSK-2026-888">填报（TSK-2026-888）</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="num">4</div>
+        <div>
+          <h3>运营 · 采集审核 → 通过 <span class="badge badge--operator">运营</span> <span class="badge badge--time">2:30</span></h3>
+          <p class="desc">运营在采集页查看供应商提交，点击「通过」推进到 LCA 阶段；如有问题可走"沟通 Tab"驳回回流（本动线略过）。</p>
+          <p class="actions"><strong>关键动作</strong>：① 看主表与凭证；② 通过 → 任务进入 stage 2。</p>
+          <div class="links">
+            <a href="../../operator/task_detail_collect.html?taskId=TSK-2026-888">采集审核（TSK-2026-888）</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="step step--system">
+        <div class="num">5</div>
+        <div>
+          <h3>系统 · LCA 计算（自动） <span class="badge badge--system">自动</span> <span class="badge badge--time">3:00</span></h3>
+          <p class="desc">LCA 计算节点在演示态自动跳过；介绍后端会调用计算引擎并把结果写入任务 Snapshot。</p>
+          <p class="actions"><strong>关键动作</strong>：在 LCA 任务详情页解释「计算结果与碳因子来源」；任务进入 stage 3。</p>
+          <div class="links">
+            <a href="../../operator/task_detail_lca.html?taskId=TSK-2026-888">LCA 详情（TSK-2026-888）</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="step step--certifier">
+        <div class="num">6</div>
+        <div>
+          <h3>核查机构 · 沟通澄清 → 通过 <span class="badge badge--certifier">核查</span> <span class="badge badge--time">3:15</span></h3>
+          <p class="desc">核查机构（如 SGS）在沟通 Tab 走一条澄清示意"使用控制"理念；随后点「通过」，任务进入 stage 4。</p>
+          <p class="actions"><strong>关键动作</strong>：① 切沟通 Tab，发 1 条澄清；② 通过 → 报告子状态：待处理。</p>
+          <div class="links">
+            <a href="../../certifier/task_list.html">核查任务列表</a>
+            <a href="../../certifier/task_detail_verify.html?taskId=TSK-2026-888">核查详情（TSK-2026-888）</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="num">7</div>
+        <div>
+          <h3>运营 · 报告下发 <span class="badge badge--operator">运营</span> <span class="badge badge--time">3:45</span></h3>
+          <p class="desc">在报告管理勾选 <code>RPT-2026-0001</code> → 下发到供应商；报告子状态：已下发。</p>
+          <p class="actions"><strong>关键动作</strong>：勾选 → 下发；解释 VC 凭证生成与上链占位。</p>
+          <div class="links">
+            <a href="../../operator/report_mgt.html">报告管理</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="step step--supplier">
+        <div class="num">8</div>
+        <div>
+          <h3>供应商 · 确认接收 → 归档 <span class="badge badge--supplier">供应商</span> <span class="badge badge--time">4:15</span></h3>
+          <p class="desc">供应商在「我的报告」预览，确认接收（演示申诉窗口在此处但不点）。报告子状态：待归档 → 已归档。</p>
+          <p class="actions"><strong>关键动作</strong>：① 预览；② 确认接收；③ 闭环完成。</p>
+          <div class="links">
+            <a href="../../supplier/reports.html">我的报告</a>
+            <a href="../../operator/report_detail.html?reportId=RPT-2026-0001" class="secondary">报告详情</a>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <section class="checks">
+      <h3>演示前检查（30 秒）</h3>
+      <ul>
+        <li>浏览器开 <code>localhost:5173</code>（已运行 <code>npm run dev</code>）或最新 <code>dist/</code> 部署。</li>
+        <li><code>TSK-2026-888</code> 起始阶段为 0；如已被前一次演示推进，刷新或重启 dev server 即可重置 Mock。</li>
+        <li>SpreadJS CDN 评估版可加载（控制台无 license 报错）。</li>
+        <li>顶栏消息中心可见 1–2 条「任务分配」消息，不影响主线。</li>
+      </ul>
+    </section>
+
+    <footer>
+      规则 SoT：<a href="../../docs/SoT_MAP.md">docs/SoT_MAP.md</a> · 接口契约：<a href="../../docs/02_功能与对接/11_接口与互操作设计（实施期）.md">11 §7 最小 OpenAPI</a> · 状态机：<a href="../../docs/01_业务与流程/04_任务调度与状态机.md">04 任务调度与状态机</a>
+    </footer>
+  </main>
+</body>
+</html>

@@ -9,6 +9,8 @@
 
 **内网开发环境（SoT）**：GitLab 组 [`blockchain-future`](http://192.168.11.226/blockchain-future)（ID 278）下 **6 个 PCF 仓库**（center / supplier / audit 的前后端）；运行入口与 clone 约定、各仓 **baseline-commit** 填表见封板说明 **§5**（需内网与权限访问上述地址）。
 
+**对外评审/演示**：跑 [`prototype/flows/golden_5min.html`](prototype/flows/golden_5min.html) 一条 5 分钟黄金动线即可，其它 60+ 页留作内部走查。规则 SoT 总览见 [`docs/SoT_MAP.md`](docs/SoT_MAP.md)。
+
 ---
 
 ## 业务概览
