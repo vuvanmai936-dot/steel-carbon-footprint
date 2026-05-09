@@ -33,11 +33,12 @@
 
 **共享资源**
 - `css/task_detail.css` — 任务详情页通用样式
-- `css/task_detail_refactor.css` — 若有，重构用样式
 - `js/taskDetailLayout.js` — 任务详情布局与通用逻辑
+- 历史样式 `docs/_archive/refactor_example/task_detail_refactor.css` — 仅作历史参考，不再纳入主路径
 
 **参考文档（仅作背景，不替代代码审查）**
-- `docs/03_任务详情/任务详情页采集页审查与修改方案.md` — 采集页已有问题与方案，可对照是否在其他页面复现或已修复
+- `docs/03_任务详情/14_任务详情页_UI_UE_走查修改清单.md` — 现行走查结论与修改优先级
+- `docs/_archive/legacy_docs/任务详情页采集页审查与修改方案.md` — 采集页历史审查（已并入 12 + 14）
 
 ---
 

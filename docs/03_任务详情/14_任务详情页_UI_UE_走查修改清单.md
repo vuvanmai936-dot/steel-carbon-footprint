@@ -32,11 +32,10 @@
 - **影响**：用户在阶段间跳转缺少一致锚点；与 `TaskDetailLayout.getStageSteps` 仅两阶段（verify/report）的叙事不矛盾，但**页面骨架**未统一。
 - **建议**：为 `task_detail_certify` 增加与其它认证详情页一致的顶栏（面包屑保留）+ 两格步骤条 + 精简任务摘要（taskId 只读），再放置 `el-result` 说明文案。
 
-### U3 — 重构骨架与样式仅停留在示例页（UE · **P1**）
+### U3 — 重构骨架与样式仅停留在示例页（UE · **P1**·已归档治理）
 
-- **现象**：[`operator/task_detail_collect_refactor_example.html`](../../operator/task_detail_collect_refactor_example.html) 引入 [`task_detail_refactor.css`](../../css/task_detail_refactor.css) 与 `el-page-header`、`task-detail-scroll-body`；正式 [`task_detail_collect.html`](../../operator/task_detail_collect.html) 仍用 `task-detail-unified` + `task_detail.css`。
-- **影响**：提示词中关于「页头统一、吸底留白」的优化未收敛到主路径，评审易混淆「哪一版为准」。
-- **建议**：在 [`12_任务详情页统一实施方案`](12_任务详情页统一实施方案.md) 中明确里程碑：将 refactor 验证项合并入 `task_detail_collect` 或宣布示例页仅为参考并限制入口。
+- **现象**：原 `operator/task_detail_collect_refactor_example.html` 引入 `task_detail_refactor.css`、`el-page-header`、`task-detail-scroll-body`；正式 [`task_detail_collect.html`](../../operator/task_detail_collect.html) 仍用 `task-detail-unified` + `task_detail.css`。
+- **2026-05-09 处置**：示例页与样式已迁入 [`docs/_archive/refactor_example/`](../_archive/refactor_example/)；后续若需推进重构，请在 [`12_任务详情页统一实施方案`](12_任务详情页统一实施方案.md) 中明确里程碑后再恢复。
 
 ### U4 — 供应商阶段页与 `taskDetailLayout.js` 未统一接入（UE · **P2**）
 
@@ -61,10 +60,10 @@
 | `operator/task_detail_config.html` | UI | P1 | 见 U1 |
 | `operator/task_detail_collect.html` | UE | P2 | 见 U5；主内容区已用 `task-detail-unified` + `padding-bottom` 由内部滚动区承担，需对照长页面是否所有 Tab 内滚动区均有足够底部留白（与提示词 ≥72px 对齐） |
 | `operator/task_detail_lca.html` | UI | P2 | 与 collect/verify 统一为 `task-detail-unified__top` 时核对 `task-info-dashboard` 与步骤条间距是否与其它页一致（抽查结构已接近） |
-| `operator/task_detail_verify.html` | UI | P2 | `verify-tab-sidebar` 底区为 `panel-footer`，确认窄屏下 TDS/长按钮是否与 [`task_detail_refactor.css`](../../css/task_detail_refactor.css) 中 `.task-action-tds-bar` 折行策略对齐 |
+| `operator/task_detail_verify.html` | UI | P2 | `verify-tab-sidebar` 底区为 `panel-footer`，确认窄屏下 TDS/长按钮折行策略；原 `task_detail_refactor.css` 已归档至 [`_archive/refactor_example/`](../_archive/refactor_example/)，可作历史参考 |
 | `operator/task_detail_certify.html` | UE | P2 | 「报告」阶段在业务上跳转报告管理，步骤条最后一项点击行为需在页内说明（避免用户以为仍在任务详情完成归档） |
-| `operator/task_detail_collect_refactor_example.html` | — | P3 | 示例页；建议在页首增加醒目「仅示例」或从构建入口排除，避免对外演示误链 |
-| `operator/task_detail.html` | — | P3 | 已标记废弃，保留跳转即可；检查菜单是否仍链接到此页 |
+| ~~`operator/task_detail_collect_refactor_example.html`~~ | — | 已归档 | 已迁至 [`_archive/refactor_example/`](../_archive/refactor_example/) |
+| ~~`operator/task_detail.html`~~ | — | 已删除 | 仅为废弃跳转页，2026-05-09 物理删除（详情请用各阶段 `task_detail_*.html` 直接进入） |
 
 ### 认证机构端
 
@@ -87,13 +86,13 @@
 |------|------|------|-------------|
 | `js/taskDetailLayout.js` | UE | P2 | `initRightPanel` 较薄，各页右栏标题仍不统一（如「澄清与日志」vs Tab 文案）；建议与 [`19_驳回澄清与消息实施方案`](../04_澄清与消息/19_驳回澄清与消息实施方案.md) 对齐命名 |
 | `css/task_detail.css` | UI | P2 | `.task-detail-scroll-body` 已设 `padding-bottom: 80px`；凡未使用该类的吸底页需逐页补齐 |
-| `css/task_detail_refactor.css` | — | P3 | 与主 CSS 并存期间，在本文档或 12 实施方案中注明「适用 class 前缀」避免双写 |
+| ~~`css/task_detail_refactor.css`~~ | — | 已归档 | 已迁至 [`_archive/refactor_example/`](../_archive/refactor_example/) |
 
 ### 其它
 
 | 文件 | 类型 | 级别 | 说明 |
 |------|------|------|------|
-| `task_detail_template.html` | — | P3 | 与现网骨架可能不同步，仅作拷贝模板时对照 |
+| ~~`task_detail_template.html`~~ | — | 已归档 | 已迁至 [`_archive/`](../_archive/) |
 
 ---
 
@@ -120,4 +119,4 @@
 
 - [UI_UE_任务详情页全局审查提示词](UI_UE_任务详情页全局审查提示词.md)
 - [12_任务详情页统一实施方案](12_任务详情页统一实施方案.md)
-- [任务详情页采集页审查与修改方案](任务详情页采集页审查与修改方案.md)
+- 历史背景：[`_archive/legacy_docs/任务详情页采集页审查与修改方案.md`](../_archive/legacy_docs/任务详情页采集页审查与修改方案.md)、[`_archive/legacy_docs/模板配置页优化说明.md`](../_archive/legacy_docs/模板配置页优化说明.md)、[`_archive/legacy_docs/任务详情页文件与样式说明.md`](../_archive/legacy_docs/任务详情页文件与样式说明.md)
