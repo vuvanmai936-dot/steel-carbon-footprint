@@ -2,6 +2,8 @@
  * 运营端 Mock：订单→任务→报告 共用同一套 taskId/orderNo，与 js/mockTasks.js 的 MOCK_TASK_MAP 对齐。
  * 报告 taskNo = 任务 taskId；仅「待归档/已归档」阶段任务在报告列表中存在对应记录。
  * 报告管理页使用 getReportList() 获取同一引用，下发/确认接收/申诉均直接修改 MOCK_REPORTS，与供应商端闭环。
+ *
+ * 所属"逻辑包"：js/mocks/（详见 js/mocks/README.md）
  */
 (function (global) {
   // 与 mockTasks.js MOCK_TASK_MAP 一致的任务号；报告仅包含 stageIndex 4 或 5 的 taskId

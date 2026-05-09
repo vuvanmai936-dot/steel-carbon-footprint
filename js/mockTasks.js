@@ -2,6 +2,9 @@
  * 共享 Mock 任务表：与订单 Mock、自营任务列表的 taskId/orderNo 一致，供 task_detail_* 按 URL taskId 加载。
  * 含模板/任务 Snapshot 持久化 Mock，保证「选模板→下发→填报→采集审核」数据链可验证。
  * 后续接真实接口时可替换为 API 请求。
+ *
+ * 所属"逻辑包"：js/mocks/（详见 js/mocks/README.md）
+ * 与 mockOperator.js / mockMessages.js / mockClarifications.js 的互依硬约束在 README §2 列明。
  */
 (function (global) {
   var MOCK_TASK_MAP = {

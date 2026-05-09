@@ -1,6 +1,8 @@
 /**
  * 用户级消息 Mock（与 docs/04_澄清与消息/18_驳回澄清与消息全局规划.md 一致）
  * 提供 getMyMessages、markRead、markAllRead；消息类型：任务分配、SLA预警、澄清、驳回/整改、报告/证书、系统通知
+ *
+ * 所属"逻辑包"：js/mocks/（详见 js/mocks/README.md）
  */
 (function (global) {
   'use strict';

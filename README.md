@@ -45,8 +45,8 @@
 | `supplier/` | 供应商工作台：任务列表、填报、澄清、**我的报告**（预览、确认接收、申诉）等 |
 | `certifier/` | 认证机构工作台：任务列表、任务详情、证书等 |
 | `css/` | 全局与按角色样式：`common.css`、`operator.css`、`supplier.css`、`certifier.css`、`task_detail.css` 等 |
-| `js/` | 根目录脚本：`layout.js`（运营端通用布局）、`mockOperator.js`、`mockTasks.js`、`spreadUtils.js` 等。**修改 `layout.js` 时需同步更新 `public/js/layout.js`**，构建产物使用 public 副本，否则开发与构建后行为可能不一致。 |
-| `public/` | 构建时原样拷贝到 `dist/`：`js/layout.js`、`js/utils.js`，以及图片、字体等静态资源（引用时不加 `public/` 前缀，如 `/logo.png`） |
+| `js/` | 根目录脚本：`layout.js`（运营端通用布局，**唯一权威源**）、`mockOperator.js`、`mockTasks.js`、`mockMessages.js`、`mockClarifications.js`、`spreadUtils.js` 等；Mock 文件分域说明见 [`js/mocks/README.md`](js/mocks/README.md)。 |
+| `public/` | 构建时原样拷贝到 `dist/`；其中 `public/js/layout.js` **由 [`scripts/sync-public-js.js`](scripts/sync-public-js.js) 自动从 `js/layout.js` 同步**（`vite.config.js` 在 dev/build 时自动执行，亦可手动 `npm run sync:public`）。 |
 | `docs/` | 业务与设计文档（见下表） |
 | `vite.config.js` | Vite 多页面配置（根目录 + operator / supplier / certifier 下 HTML 均为入口） |
 | `package.json` | npm 依赖与脚本 |
@@ -80,9 +80,9 @@
 | 01_业务与流程 | `01_整体业务与产品设计审查.md` | 整体业务总览（建议首读） |
 | | `02_全局数据字典与枚举.md`、`03_订单管理逻辑.md`、`04_任务调度与状态机.md` | 数据字典、订单、任务调度 |
 | 02_功能与对接 | `05_模板引擎解析逻辑.md`、`06_供应商工作台功能清单与信息结构.md`、`07_Mock数据说明.md` | 模板、供应商、Mock |
-| | `08_PR_任务与报告边界设计方案.md`、`09_核查机构端功能清单与入口说明.md`、`10_线下样表对接说明.md`、`11_接口与互操作设计（实施期）.md` | 报告边界、核查端、样表、接口与互操作 |
-| 03_任务详情 | `11~13` | 任务详情页问题、方案、阶段说明 |
-| 04_澄清与消息 | `16~19` | 钉钉式对话设计/实施、驳回澄清与消息全局规划/实施方案 |
+| | `09_核查机构端功能清单与入口说明.md`、`10_线下样表对接说明.md`、`11_接口与互操作设计（实施期）.md`、`12_系统管理_RBAC与审计日志范围.md` | 核查端、样表、接口与互操作（含最小 OpenAPI）、系统管理 |
+| 03_任务详情 | `11~14` | 任务详情页问题、统一实施、阶段说明、UI/UE 走查清单 |
+| 04_澄清与消息 | `18~19` | 驳回澄清与消息全局规划/实施方案；历史 16/17 已归档 |
 | 05_标准与合规 | `20_可信数据空间标准索引与理念摘要.md`、`21_与空间技术理念不一致项记录.md`、`22_TDS_架构与合规设计说明.md` | 可信数据空间标准、不一致项、TDS 架构与合规 |
 
 ---
@@ -128,7 +128,7 @@ npm run preview
 
 ## 当前实现要点
 
-- **统一布局与 Vue 启动**：运营端通过 `runOperatorApp(component)`（`public/js/layout.js`）统一完成 `createApp`、Element Plus + 图标、`mount('#app')`；公共基础样式在 `css/common.css`（全高布局、`[v-cloak]` 等），各页脚本精简。
+- **统一布局与 Vue 启动**：运营端通过 `runOperatorApp(component)`（源文件 `js/layout.js`，构建产物由 `scripts/sync-public-js.js` 自动同步至 `public/js/layout.js`）统一完成 `createApp`、Element Plus + 图标、`mount('#app')`；公共基础样式在 `css/common.css`（全高布局、`[v-cloak]` 等），各页脚本精简。
 - **SpreadJS 模板与填报表**：模板详情、任务配置、供应商填报、采集审核等页统一使用 SpreadJS 16.x 展示模板/采集表；`js/spreadUtils.js` 提供 Snapshot 加载/导出、可编辑列、只读控制；凭证与工作簿绑定，无行级关联。详见 `docs/02_功能与对接/05_模板引擎解析逻辑.md`。
 - **任务 5 段与报告**：自营/委托任务列表展示 配置 / 采集 / 计算 / 核查 / **报告**（阶段 4 可带子状态：待处理/已下发/待归档/已归档/已作废）；阶段 4 点击跳转报告管理，报告管理支持勾选报告/证书执行「下发」至供应商。
 - **报告详情与申诉**：运营端 `report_detail.html` 查看报告；待归档/已归档不展示申诉按钮。供应商端「我的报告」支持预览、**确认接收**与**申诉**窗口（仅下发后、确认接收前可申诉）。

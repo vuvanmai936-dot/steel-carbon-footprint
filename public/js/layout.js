@@ -1,5 +1,5 @@
 // js/layout.js
-const { createApp, ref, reactive, computed } = Vue;
+const { createApp, ref, reactive, computed, watch } = Vue;
 
 function findActiveMenuId(menuConfig, path) {
   for (const item of menuConfig) {
@@ -34,6 +34,7 @@ const SharedLayout = {
       { id: '10', title: '碳数据资产', icon: 'Coin', path: 'assets_bridge.html' },
       { id: '8', title: '结算中心', icon: 'Wallet', path: 'settlement.html' },
       { id: '9', title: '系统管理', icon: 'Setting', path: 'system_mgt.html' },
+      { id: '11', title: '知识库与帮助', icon: 'QuestionFilled', path: 'help.html' },
     ];
 
     const currentUser = reactive({
@@ -61,14 +62,68 @@ const SharedLayout = {
       window.location.href = '../index.html';
     };
 
+    const goPortal = () => {
+      window.location.href = '../pcf.html';
+    };
+
+    /** 一级入口页（仅这些页顶栏展示「返回门户」） */
+    const OPERATOR_PORTAL_PAGES = [
+      'dashboard.html', 'order.html', 'self_operated_task_list.html', 'entrusted_task_list.html',
+      'report_mgt.html', 'supplier_mgt.html', 'certifier_mgt.html', 'templates_mgt.html',
+      'assets_bridge.html', 'settlement.html', 'system_mgt.html', 'help.html',
+    ];
+    const showPortalInHeader = computed(function () {
+      var base = path && path.endsWith('.html') ? path : (path || '') + '.html';
+      return OPERATOR_PORTAL_PAGES.indexOf(base) !== -1 || OPERATOR_PORTAL_PAGES.indexOf(path) !== -1;
+    });
+
+    // 消息中心（用户级消息，与 docs/15 一致；未加载 mockMessages 时返回空实现）
+    const hasMessageAPI =
+      typeof getMyMessages === 'function' && typeof getUnreadCount === 'function';
+    const messageCenterVisible = ref(false);
+    const messageList = ref([]);
+    const messageUnreadCount = computed(function () {
+      return hasMessageAPI ? getUnreadCount(currentUser.name || 'operator', 'operator') : 0;
+    });
+    const loadMessages = function () {
+      messageList.value = hasMessageAPI
+        ? getMyMessages(currentUser.name || 'operator', {}, 'operator')
+        : [];
+    };
+    const goMessage = function (m) {
+      if (m && m.jumpUrl) window.location.href = m.jumpUrl;
+    };
+    const formatMessageTime = function (iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      var now = new Date();
+      var diff = (now - d) / 60000;
+      if (diff < 1) return '刚刚';
+      if (diff < 60) return Math.floor(diff) + '分钟前';
+      if (diff < 1440) return Math.floor(diff / 60) + '小时前';
+      if (diff < 43200) return Math.floor(diff / 1440) + '天前';
+      return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    };
+    watch(messageCenterVisible, function (v) {
+      if (v) loadMessages();
+    });
+
     return {
       menuConfig,
       currentUser,
       handleLogout,
+      goPortal,
+      showPortalInHeader,
       openPage,
       sidebarCollapsed,
       toggleSidebar,
       activeMenuId,
+      messageCenterVisible,
+      messageList,
+      messageUnreadCount,
+      loadMessages,
+      goMessage,
+      formatMessageTime,
     };
   },
 };

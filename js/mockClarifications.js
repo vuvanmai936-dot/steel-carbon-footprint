@@ -1,6 +1,8 @@
 /**
  * 任务澄清功能 Mock 数据与接口（与 docs/04_澄清与消息/18_驳回澄清与消息全局规划 一致）
  * 支持 role: operator | supplier | verifier；会话含 participants（可见范围）、subjectType（report_draft/supplier_data/general）
+ *
+ * 所属"逻辑包"：js/mocks/（详见 js/mocks/README.md）
  */
 (function (global) {
   'use strict';

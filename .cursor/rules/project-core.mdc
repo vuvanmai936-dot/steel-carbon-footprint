@@ -17,11 +17,12 @@ alwaysApply: true
 
 ## 工程易错点
 
-- 修改 **`js/layout.js`** 后必须 **同步 `public/js/layout.js`**，否则 Vite 构建后的 `dist` 与本地开发行为不一致。
+- **`js/layout.js` 是唯一权威源**；`public/js/layout.js` 由 [`scripts/sync-public-js.js`](../../scripts/sync-public-js.js) 自动同步。`vite dev` / `vite build` 均通过 `vite.config.js` 的 `viteSyncPublicJsPlugin` 自动调用，也可手动 `npm run sync:public`。
+- 因此**禁止直接编辑 `public/js/layout.js`**；提交前若不确定一致性，跑一次 `npm run sync:public` 即可。
 
 ```text
-✅ 改 layout 后：同时提交 js/layout.js 与 public/js/layout.js
-❌ 只改其一
+✅ 改 js/layout.js → 自动同步到 public/js/
+❌ 直接改 public/js/layout.js（会被下一次同步覆盖）
 ```
 
 ## 语言与范围
