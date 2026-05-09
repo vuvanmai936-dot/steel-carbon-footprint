@@ -209,9 +209,36 @@
     return false;
   }
 
+  /**
+   * 核查端证书记录列表：与 MOCK_REPORTS 对齐，便于与运营端报告管理、07 推荐演示路径 taskNo 一致
+   * @param {string} [verifierName] 核查机构名称，与 MOCK_REPORTS.verifier 一致；不传则返回全部
+   * @returns {Array<{certId, taskNo, productName, supplier, issueDate, carbonFootprint, status}>}
+   */
+  function getCertifierCertificates(verifierName) {
+    var list = [];
+    for (var i = 0; i < MOCK_REPORTS.length; i++) {
+      var r = MOCK_REPORTS[i];
+      if (verifierName && r.verifier !== verifierName) continue;
+      if (!r.docs || !r.docs.calc) continue; /* 至少有核算报告才视为可发证 */
+      var certDoc = r.docs.cert || {};
+      var issueDate = (certDoc.expire && certDoc.expire.slice(0, 10)) || (r.docs.calc && r.docs.calc.date) || (r.archiveTime && r.archiveTime.slice(0, 10)) || '—';
+      list.push({
+        certId: 'VC-' + (r.taskNo || '').replace(/^TSK-/, ''),
+        taskNo: r.taskNo,
+        productName: r.productName,
+        supplier: r.supplierName,
+        issueDate: issueDate,
+        carbonFootprint: '—',
+        status: r.status === 'revoked' ? '已作废' : '有效',
+      });
+    }
+    return list;
+  }
+
   global.MOCK_REPORTS = MOCK_REPORTS;
   global.getReportList = getReportList;
   global.getSupplierReports = getSupplierReports;
+  global.getCertifierCertificates = getCertifierCertificates;
   global.confirmReceive = confirmReceive;
   global.submitAppeal = submitAppeal;
 })(typeof window !== 'undefined' ? window : this);

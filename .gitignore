@@ -8,8 +8,14 @@ pnpm-lock.yaml
 
 .DS_Store
 
-.cursor/
+# Cursor：忽略本地缓存，但将 .cursor/rules 纳入仓库供团队与 AI 使用
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 .env
 .env.*
+
+.venv_quotation/
+.venv_docx/
 

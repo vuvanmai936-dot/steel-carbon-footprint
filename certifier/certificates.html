@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
     <script src="../js/mockMessages.js"></script>
+    <script src="../js/mockOperator.js"></script>
     <script src="../js/certifierLayout.js"></script>
     <style>
         .card { background: #fff; border-radius: 8px; border: 1px solid #ebeef5; padding: 20px; margin-bottom: 16px; }
@@ -67,6 +68,7 @@
                     <el-input v-model="searchCert" placeholder="搜索证书编号 / 产品名称" clearable style="width: 280px; margin-bottom: 16px;" />
                     <el-table :data="certList" border stripe style="width: 100%;" :header-cell-style="{background:'#f5f7fa', color:'#606266', fontWeight:'600'}">
                         <el-table-column prop="certId" label="证书编号" width="160" />
+                        <el-table-column prop="taskNo" label="任务号" width="140" show-overflow-tooltip />
                         <el-table-column prop="productName" label="产品名称" min-width="140" />
                         <el-table-column prop="supplier" label="供应商" width="140" />
                         <el-table-column prop="issueDate" label="签发日期" width="120" />
@@ -94,10 +96,18 @@
     runCertifierApp({
         setup() {
             const searchCert = Vue.ref('');
-            const certList = Vue.ref([
-                { certId: 'VC-202510-0212', productName: '钢丝绳芯输送带', supplier: 'XXXXX 带有限公司', issueDate: '2025-10-15', carbonFootprint: '1.11 kgCO₂e', status: '有效' },
-                { certId: 'VC-202510-0198', productName: '超高功率石墨电极', supplier: '南通碳素', issueDate: '2025-10-12', carbonFootprint: '2.84 kgCO₂e', status: '有效' }
-            ]);
+            const rawCerts = typeof getCertifierCertificates === 'function' ? getCertifierCertificates() : [
+                { certId: 'VC-202510-0212', taskNo: 'TSK-2025-101', productName: '热轧卷板', supplier: '南京钢铁集团', issueDate: '2026-02-06', carbonFootprint: '—', status: '有效' },
+                { certId: 'VC-2026-889', taskNo: 'TSK-2026-889', productName: '普通功率石墨电极', supplier: '南通碳素有限公司', issueDate: '2026-02-08', carbonFootprint: '—', status: '有效' }
+            ];
+            const certList = Vue.computed(function () {
+                const list = rawCerts.filter(function (c) {
+                    if (!searchCert.value) return true;
+                    const kw = (searchCert.value || '').trim().toLowerCase();
+                    return ((c.certId || '') + (c.taskNo || '') + (c.productName || '') + (c.supplier || '')).toLowerCase().indexOf(kw) !== -1;
+                });
+                return list;
+            });
             return {
                 menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader,
                 messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime,

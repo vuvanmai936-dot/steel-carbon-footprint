@@ -1,0 +1,18 @@
+---
+description: Vite 多入口静态 HTML、相对路径与无前端路由默认
+globs: "**/*.html"
+alwaysApply: false
+---
+
+# Vite 多页原型
+
+- `vite.config.js` 将根目录及 `operator/`、`supplier/`、`certifier/` 下所有 `.html` 作为构建入口；新增页面时放在上述目录即可被收集。
+- `base` 为 `'./'`，资源与跳转优先使用 **相对路径**（如 `../js/`、`../css/`），避免硬编码绝对域名。
+- **默认不引入 vue-router**：阶段切换用静态链接（`task_detail_*.html?taskId=`），与现有任务详情一致。
+
+```html
+<!-- ✅ 同目录内跳转 -->
+<a href="task_detail_collect.html?taskId=TSK-2026-xxx">采集</a>
+
+<!-- ❌ 非必要不要默认上 SPA 路由 -->
+```

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<!-- Deprecated: 重构示例文件，已由 task_detail_collect.html 取代，后续可删除。 -->
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>任务详情 - 数据采集（重构示例）</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/task_detail_refactor.css">
+    <link rel="stylesheet" href="../css/clarify_panel.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+    <script src="../js/clarifyUtils.js"></script>
+    <script src="../js/mockTasks.js"></script>
+    <script src="../js/mockClarifications.js"></script>
+    <script src="../js/mockMessages.js"></script>
+    <script src="../js/layout.js"></script>
+    <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.16.0.0.css">
+    <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/gc.spread.sheets.all.16.0.0.min.js"></script>
+    <script src="../js/spreadUtils.js"></script>
+</head>
+<body>
+<div id="app">
+    <el-container style="height: 100vh;">
+        <!-- 侧栏保持不变 -->
+        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">碳足迹数据服务</div>
+            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
+                <template v-for="item in menuConfig" :key="item.id">
+                    <el-sub-menu v-if="item.children" :index="item.id">
+                        <template #title>
+                            <el-icon><component :is="item.icon" /></el-icon>
+                            <span>{{ item.title }}</span>
+                        </template>
+                        <el-menu-item v-for="child in item.children" :key="child.id" :index="child.id" @click="openPage(child.path)">
+                            {{ child.title }}
+                        </el-menu-item>
+                    </el-sub-menu>
+                    <el-menu-item v-else :index="item.id" @click="openPage(item.path)">
+                        <el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span>
+                    </el-menu-item>
+                </template>
+            </el-menu>
+            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+                </el-button>
+            </div>
+        </el-aside>
+
+        <!-- 主区：4 区块重构布局 -->
+        <el-main style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+            <div class="task-detail-page-refactor with-aside" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                <!-- 区块 1: 全局头部导航 (固定顶部) -->
+                <header class="task-detail-page-header">
+                    <el-page-header @back="goBack">
+                        <template #content>
+                            <el-breadcrumb separator="/">
+                                <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
+                                <el-breadcrumb-item>任务管理</el-breadcrumb-item>
+                                <el-breadcrumb-item>数据采集</el-breadcrumb-item>
+                            </el-breadcrumb>
+                        </template>
+                        <template #extra>
+                            <el-tag type="danger" effect="light" round class="task-detail-sla-tag">
+                                <el-icon><component :is="'Clock'" /></el-icon>
+                                SLA 剩余 {{ slaRemaining }}
+                            </el-tag>
+                            <div class="task-detail-header-user">
+                                <el-avatar :size="32" style="background: #409EFF;">{{ currentUser.name ? currentUser.name.slice(0,1) : '运' }}</el-avatar>
+                                <span class="user-name">{{ currentUser.name }}</span>
+                            </div>
+                        </template>
+                    </el-page-header>
+                </header>
+
+                <div class="task-detail-scroll-body">
+                    <!-- 区块 2: 任务全景信息盘 (el-card + el-descriptions) -->
+                    <div class="task-info-dashboard-card">
+                        <el-card shadow="never">
+                            <el-descriptions :column="4" border>
+                                <el-descriptions-item label="任务规格">
+                                    <div class="task-desc-task-spec">
+                                        <span class="product-name">{{ taskInfo.productName }}</span>
+                                        <el-tag size="small" type="info" class="task-id-tag">{{ taskInfo.taskId }}</el-tag>
+                                        <el-link type="primary" :underline="false" class="task-desc-order-link" @click="viewOrder">
+                                            <el-icon><component :is="'Tickets'" /></el-icon>
+                                            订单 {{ taskInfo.orderNo }}
+                                        </el-link>
+                                    </div>
+                                    <div style="font-size: 12px; color: #909399; margin-top: 4px;">规格 {{ taskInfo.specs }}</div>
+                                </el-descriptions-item>
+                                <el-descriptions-item label="来源供应商">
+                                    <div class="task-desc-supplier">
+                                        <el-link type="primary" :underline="false" @click="viewSupplier">{{ taskInfo.supplier }}</el-link>
+                                        <el-tag type="success" size="small" effect="light" class="task-desc-credit-tag">Level A 信用良好</el-tag>
+                                    </div>
+                                </el-descriptions-item>
+                                <el-descriptions-item label="流转状态">
+                                    <div class="task-desc-status">
+                                        <el-tag :type="collectStatusTagType">{{ getStageStatusText(taskRow) || '待提交' }}</el-tag>
+                                        <div v-if="collectRejectReason" style="font-size: 12px; color: #f56c6c; margin-top: 4px;">{{ collectRejectReason }}</div>
+                                    </div>
+                                </el-descriptions-item>
+                                <el-descriptions-item label="关键统计">
+                                    <div class="task-desc-stats">
+                                        <span>填报进度：{{ totalItems }} 项</span>
+                                        <span>凭证：{{ uploadedFiles.length }} 个</span>
+                                    </div>
+                                </el-descriptions-item>
+                            </el-descriptions>
+                        </el-card>
+                    </div>
+
+                    <!-- 区块 3: 核心工作台 (el-tabs type="border-card") -->
+                    <div class="task-workspace">
+                        <el-tabs v-model="workspaceTab" type="border-card">
+                            <!-- Tab 1: 数据表单 (SpreadJS) -->
+                            <el-tab-pane label="数据表单" name="data">
+                                <div class="task-workspace-tab-data">
+                                    <div v-if="collectionState === 'waiting_submit'" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #909399; padding: 40px;">
+                                        <el-icon size="64" color="#dcdfe6"><component :is="'Loading'" /></el-icon>
+                                        <h3 style="margin: 20px 0 10px; color: #606266;">等待供应商提交数据...</h3>
+                                        <el-button type="primary" plain style="margin-top: 24px;" @click="simulateSupplierSubmit('initial')">模拟：供应商首次提交</el-button>
+                                    </div>
+                                    <div v-else class="task-collect-split">
+                                        <div class="task-collect-data">
+                                            <div style="padding: 10px 16px; border-bottom: 1px solid #ebeef5; background: #fafbfc; font-weight: 600; font-size: 14px;">数据详情 (只读)</div>
+                                            <div ref="spreadHostRef" class="spread-host"></div>
+                                        </div>
+                                        <div class="task-collect-evidence">
+                                            <div style="padding: 10px 16px; border-bottom: 1px solid #ebeef5; font-weight: 600; font-size: 14px;">凭证审核</div>
+                                            <div class="evidence-list">
+                                                <div v-for="(file, idx) in uploadedFiles" :key="idx" class="evidence-card-refactor">
+                                                    <div style="font-weight: 600; font-size: 13px; margin-bottom: 6px;">{{ file.name }}</div>
+                                                    <div style="display: flex; gap: 8px; font-size: 12px; align-items: center;">
+                                                        <el-icon color="#409EFF"><component :is="'Document'" /></el-icon>
+                                                        <span style="color: #409EFF; cursor: pointer;">{{ file.fileName }}</span>
+                                                    </div>
+                                                    <div style="margin-top: 8px; display: flex; gap: 8px;">
+                                                        <el-button size="small" link type="primary">下载</el-button>
+                                                        <el-button size="small" link type="primary">预览</el-button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div v-if="collectionState === 'auditing'" class="panel-footer">
+                                                <el-button type="success" size="default" @click="passAudit" style="width: 100%;">审核通过，进入 LCA 计算</el-button>
+                                                <el-button type="primary" plain size="default" @click="openClarifyIssueDialog">提出疑点</el-button>
+                                                <el-button type="danger" plain size="default" @click="openRejectDialog">驳回</el-button>
+                                            </div>
+                                            <div v-if="collectionState === 'passed'" class="panel-footer">
+                                                <el-button type="primary" size="default" @click="navigateTo('lca')">前往 LCA 计算</el-button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </el-tab-pane>
+                            <!-- Tab 2: 凭证与附件 -->
+                            <el-tab-pane label="凭证与附件" name="evidence">
+                                <div class="task-workspace-tab-evidence">
+                                    <div v-for="(file, idx) in uploadedFiles" :key="idx" class="evidence-card-refactor">
+                                        <div style="font-weight: 600; margin-bottom: 6px;">{{ file.name }}</div>
+                                        <div style="font-size: 12px; color: #606266;">{{ file.fileName }}</div>
+                                        <el-button size="small" type="primary" link style="margin-top: 8px;">下载</el-button>
+                                    </div>
+                                    <el-empty v-if="!uploadedFiles.length" description="暂无凭证" :image-size="80"></el-empty>
+                                </div>
+                            </el-tab-pane>
+                            <!-- Tab 3: 澄清与日志（0 未读不显示 Badge，与各端一致） -->
+                            <el-tab-pane name="clarify">
+                                <template #label>
+                                    <el-badge :value="clarifyUnreadCount" :hidden="clarifyUnreadCount === 0">
+                                        <span>澄清与日志</span>
+                                    </el-badge>
+                                </template>
+                                <div class="task-workspace-tab-clarify">
+                                    <div class="rfi-log-main" ref="rfiLogPrintable">
+                                        <div class="rfi-log-header">
+                                            <span class="rfi-log-title">澄清与沟通记录 (RFI Log)</span>
+                                            <el-button type="primary" link class="rfi-log-export-btn" @click="exportRfiPdf">
+                                                <el-icon><component :is="'Download'" /></el-icon> 导出记录 (PDF)
+                                            </el-button>
+                                        </div>
+                                        <div class="rfi-log-messages" id="timelineStream">
+                                            <template v-for="(item, idx) in rfiLogMessages" :key="item._rfiType === 'log' ? 'log-'+idx : item.id">
+                                                <div v-if="item._rfiType === 'log'" class="clarify-log-card">
+                                                    <div class="clarify-log-card-avatar" :data-type="item.type || 'sys'">{{ (item.user || '系统').slice(0,1) }}</div>
+                                                    <div class="clarify-log-card-body">
+                                                        <div class="clarify-log-card-meta">{{ item.user || '系统' }} · {{ item.time }}</div>
+                                                        <div class="clarify-log-card-content">{{ item.content }}</div>
+                                                    </div>
+                                                </div>
+                                                <div v-else class="clarify-msg" :class="{ self: clarifyIsSelf(item.role) }">
+                                                    <div class="clarify-msg-avatar" :data-role="item.role">{{ roleAvatar(item.role) }}</div>
+                                                    <div class="clarify-msg-content">
+                                                        <div class="clarify-msg-meta">{{ item.authorName }} · {{ formatClarifyTime(item.createdAt) }}</div>
+                                                        <div class="clarify-msg-bubble">
+                                                            <span>{{ item.content }}</span>
+                                                            <div v-if="item.attachments && item.attachments.length" class="clarify-msg-attachments">
+                                                                <a v-for="(att, ai) in item.attachments" :key="ai" class="clarify-msg-attachment-item" :href="att.url" target="_blank">
+                                                                    <el-icon><component :is="'Document'" /></el-icon>{{ att.name }}
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                            <el-empty v-if="!rfiLogMessages.length" description="暂无沟通记录" :image-size="60"></el-empty>
+                                        </div>
+                                        <div class="clarify-input-wrap">
+                                            <div class="clarify-input-with-attach">
+                                                <el-input v-model="replyContent" type="textarea" :rows="2" placeholder="输入澄清问题..."></el-input>
+                                                <div v-if="rfiUploadFileList.length" class="clarify-input-attach-list">
+                                                    <span v-for="(f, fi) in rfiUploadFileList" :key="fi" class="attach-tag">
+                                                        <el-icon><component :is="'Document'" /></el-icon>{{ f.name }}
+                                                        <el-icon @click="removeRfiAttachment(fi)"><component :is="'Close'" /></el-icon>
+                                                    </span>
+                                                </div>
+                                                <div class="clarify-input-actions" style="display:flex; align-items:center; gap:8px;">
+                                                    <el-upload :show-file-list="false" :auto-upload="false" :on-change="onRfiFileChange" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif">
+                                                        <el-button size="small"><el-icon><component :is="'Upload'" /></el-icon> 附件</el-button>
+                                                    </el-upload>
+                                                    <el-button type="primary" size="small" @click="submitRfiMessage">发送</el-button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </el-tab-pane>
+                        </el-tabs>
+                    </div>
+                </div>
+
+                <!-- 区块 4: 操作区与 TDS 合规底座 (吸底) -->
+                <div class="task-action-tds-bar">
+                    <div class="task-action-tds-bar-inner">
+                        <div class="task-action-buttons">
+                            <template v-if="collectionState === 'waiting_submit'">
+                                <el-tooltip content="等待供应商提交后可在此通过或驳回" placement="top">
+                                    <span><el-button type="success" disabled>通过</el-button></span>
+                                </el-tooltip>
+                                <el-button type="danger" disabled>驳回</el-button>
+                            </template>
+                            <template v-else-if="collectionState === 'auditing'">
+                                <el-button type="success" @click="passAudit">通过并流转</el-button>
+                                <el-button type="primary" plain @click="openClarifyIssueDialog">要求澄清</el-button>
+                                <el-button type="danger" plain @click="openRejectDialog">驳回</el-button>
+                            </template>
+                            <template v-else-if="collectionState === 'passed'">
+                                <el-button type="primary" @click="navigateTo('lca')">前往 LCA 计算</el-button>
+                            </template>
+                        </div>
+                        <div class="task-tds-alert">
+                            <el-alert type="info" show-icon :closable="false"
+                                title="可信数据空间保障：本任务数据仅限数字合约授权范围内使用，全程可验证、可审计。"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </el-main>
+    </el-container>
+
+    <el-dialog v-model="rejectDialogVisible" title="驳回" width="500px">
+        <el-form label-position="top">
+            <el-form-item label="整改要求描述">
+                <el-input type="textarea" :rows="3" v-model="rejectForm.desc" placeholder="请详细描述问题..."></el-input>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="rejectDialogVisible = false">取消</el-button>
+            <el-button type="danger" @click="submitReject">确认驳回</el-button>
+        </template>
+    </el-dialog>
+</div>
+
+<script>
+    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader } = SharedLayout.setup();
+
+    const { ElMessage, ElMessageBox } = ElementPlus;
+
+    runOperatorApp({
+        setup() {
+            const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-889'));
+            const taskId = (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : '') || taskInfo.taskId || '';
+            const taskRow = Vue.ref(typeof getTaskByTaskId === 'function' ? getTaskByTaskId(taskId || taskInfo.taskId, 1) : null);
+            const slaRemaining = Vue.ref('24:00:00');
+            const collectRejectReason = (typeof getTaskRejectReason === 'function' ? getTaskRejectReason(taskId) : '') || '';
+            function getCollectStatusTagType(text) {
+                if (!text) return 'info';
+                if (/整改中|已驳回/.test(text)) return 'danger';
+                if (/审核中|待补充/.test(text)) return 'warning';
+                if (/已通过|已提交/.test(text)) return 'success';
+                return 'info';
+            }
+            const getStageStatusText = (t) => (typeof window.getStageStatusText === 'function' ? window.getStageStatusText(t) : '');
+            const collectStatusTagType = Vue.computed(function () { return getCollectStatusTagType(getStageStatusText(taskRow.value)); });
+            const collectionState = Vue.ref('waiting_submit');
+            const workspaceTab = Vue.ref('data');
+            const supplierData = Vue.reactive({});
+            const uploadedFiles = Vue.ref([]);
+            const events = Vue.ref([{ type: 'sys', user: '系统', time: '09:30', content: '配置下发', createdAt: '2026-03-04T09:30:00' }]);
+            const spreadHostRef = Vue.ref(null);
+            const rejectDialogVisible = Vue.ref(false);
+            const rejectForm = Vue.reactive({ desc: '' });
+            const clarifyTaskId = Vue.computed(function () { return taskInfo.taskId || taskId || ''; });
+            const clarificationList = Vue.ref([]);
+            const replyContent = Vue.ref('');
+            const rfiUploadFileList = Vue.ref([]);
+            const formatClarifyTime = typeof window.formatClarifyTime === 'function' ? window.formatClarifyTime : function (t) { return t || ''; };
+            const roleAvatar = typeof window.roleAvatar === 'function' ? window.roleAvatar : function (r) { return '?'; };
+            function clarifyIsSelf(role) { return role === 'operator'; }
+            const defaultRfiSessionId = Vue.computed(function () { return typeof getDefaultRfiSessionId === 'function' ? getDefaultRfiSessionId(clarifyTaskId.value) : ''; });
+            const clarifyUnreadCount = Vue.ref(0);
+            const rfiLogMessages = Vue.computed(function () {
+                var list = [];
+                (events.value || []).forEach(function (ev) {
+                    list.push({ _rfiType: 'log', type: ev.type, user: ev.user, content: ev.content, time: ev.time, createdAt: ev.createdAt || ev.time || '' });
+                });
+                (clarificationList.value || []).forEach(function (c) {
+                    var detail = typeof getClarificationDetail === 'function' ? getClarificationDetail(clarifyTaskId.value, c.id) : null;
+                    if (detail && detail.messages) detail.messages.forEach(function (m) {
+                        list.push({ _rfiType: 'msg', id: m.id, role: m.role, authorName: m.authorName, content: m.content, createdAt: m.createdAt, attachments: m.attachments || [] });
+                    });
+                });
+                list.sort(function (a, b) { return (a.createdAt ? new Date(a.createdAt).getTime() : 0) - (b.createdAt ? new Date(b.createdAt).getTime() : 0); });
+                return list;
+            });
+            const totalItems = Vue.computed(() => { let c = 0; for (let k in supplierData) c += supplierData[k].length; return c; });
+            function loadClarifications() {
+                var tid = clarifyTaskId.value;
+                if (!tid) return;
+                clarificationList.value = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(tid, 'operator') : [];
+            }
+            function onRfiFileChange(file) { if (file && file.raw) rfiUploadFileList.value.push({ name: file.name, url: URL.createObjectURL(file.raw), raw: file.raw }); }
+            function removeRfiAttachment(i) { rfiUploadFileList.value.splice(i, 1); }
+            function submitRfiMessage() {
+                var content = (replyContent.value || '').trim();
+                if (!content && !rfiUploadFileList.value.length) { ElMessage.warning('请输入内容或添加附件'); return; }
+                var tid = clarifyTaskId.value, rfiId = defaultRfiSessionId.value;
+                if (!tid || !rfiId) { ElMessage.warning('无法发送'); return; }
+                var attachments = (rfiUploadFileList.value || []).map(function (f) { return { name: f.name, url: f.url || '#' }; });
+                if (typeof replyClarification === 'function') {
+                    replyClarification(tid, rfiId, { content: content || '(附件)', attachments: attachments }, 'operator', '运营');
+                    loadClarifications();
+                }
+                replyContent.value = ''; rfiUploadFileList.value = []; ElMessage.success('已发送');
+            }
+            function exportRfiPdf() { window.print(); }
+            const simulateSupplierSubmit = (type) => {
+                if (type === 'initial') {
+                    Object.assign(supplierData, { 'M配料': [{ category: '能源', item: '电力消耗', unit: 'kWh', guide: '', value: '27200.32', remark: '' }], 'M焙烧': [] });
+                    uploadedFiles.value = [{ name: '电力采购结算单', fileName: '2025Q4_Power_Bill.pdf' }];
+                    events.value.push({ type: 'sub', user: '供应商', time: 'Now', content: '提交数据 v1.0' });
+                }
+                collectionState.value = 'auditing';
+            };
+            const openClarifyIssueDialog = () => { workspaceTab.value = 'clarify'; if (clarifyTaskId.value) loadClarifications(); };
+            const openRejectDialog = () => { rejectDialogVisible.value = true; };
+            const submitReject = () => {
+                rejectDialogVisible.value = false;
+                collectionState.value = 'waiting_update';
+                events.value.push({ type: 'rej', user: '我', time: 'Now', content: '驳回: ' + (rejectForm.desc || '') });
+                ElMessage.success('已驳回');
+            };
+            const passAudit = () => {
+                ElMessageBox.confirm('确认数据无误？').then(() => { collectionState.value = 'passed'; events.value.push({ type: 'sys', user: '系统', time: 'Now', content: '审核通过' }); });
+            };
+            const goBack = () => { window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html'; };
+            const q = () => { const tid = taskInfo.taskId || getTaskIdFromUrl(); const from = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? '&from=order' : ''; return '?taskId=' + tid + from; };
+            const navigateTo = (p) => { if (p === 'lca' && collectionState.value === 'passed') window.location.href = 'task_detail_lca.html' + q(); };
+            const viewOrder = () => window.location.href = 'order.html';
+            const viewSupplier = () => window.location.href = 'supplier_mgt_detail.html';
+            Vue.onMounted(function () {
+                if (clarifyTaskId.value) loadClarifications();
+            });
+            return {
+                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader,
+                taskInfo, taskRow, slaRemaining, collectRejectReason, collectStatusTagType, getStageStatusText,
+                collectionState, workspaceTab, supplierData, uploadedFiles, events, spreadHostRef,
+                clarifyTaskId, clarificationList, clarifyUnreadCount, replyContent, rfiUploadFileList, formatClarifyTime, roleAvatar, clarifyIsSelf,
+                rfiLogMessages, defaultRfiSessionId, totalItems,
+                loadClarifications, onRfiFileChange, removeRfiAttachment, submitRfiMessage, exportRfiPdf,
+                simulateSupplierSubmit, openClarifyIssueDialog, openRejectDialog, submitReject, passAudit,
+                goBack, navigateTo, viewOrder, viewSupplier,
+                rejectDialogVisible, rejectForm
+            };
+        }
+    });
+</script>
+</body>
+</html>

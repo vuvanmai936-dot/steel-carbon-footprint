@@ -1,673 +1,552 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>任务详情 - 模板配置</title>
-    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
-    <link rel="stylesheet" href="../css/common.css">
-    <link rel="stylesheet" href="../css/operator.css">
-    <link rel="stylesheet" href="../css/task_detail.css">
-    <link rel="stylesheet" href="../css/clarify_panel.css">
-    
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/element-plus"></script>
-    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
-    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
-    <script src="../js/clarifyUtils.js"></script>
-    <script src="../js/mockTasks.js"></script>
-    <script src="../js/mockClarifications.js"></script>
-    <script src="../js/mockMessages.js"></script>
-    <script src="../js/layout.js"></script>
-    <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.16.0.0.css">
-    <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/gc.spread.sheets.all.16.0.0.min.js"></script>
-    <script src="../js/spreadUtils.js"></script>
-    
-    <style>
-        /* === Excel 仿真样式 === */
-        .excel-tabs-header { background: #f5f7fa; border-bottom: 1px solid #e4e7ed; padding: 0 10px; }
-        .el-tabs__item { height: 36px; line-height: 36px; font-size: 13px; }
-        .spreadsheet-table { width: 100%; border-collapse: collapse; border-right: 1px solid #dcdfe6; border-bottom: 1px solid #dcdfe6; table-layout: fixed; }
-        .spreadsheet-table th { background: #f5f7fa; color: #606266; font-weight: bold; padding: 5px; border-right: 1px solid #dcdfe6; border-bottom: 1px solid #dcdfe6; text-align: center; font-size: 12px; }
-        .spreadsheet-table td { padding: 0; border-right: 1px solid #dcdfe6; border-bottom: 1px solid #dcdfe6; height: 32px; font-size: 12px;}
-        .cell-input { width: 100%; height: 100%; border: none; outline: none; padding: 0 8px; font-size: 12px; color: #333; background: transparent; }
-        .cell-input:focus { border: 2px solid #409EFF; background: #fff; }
-        .cell-readonly { background: #fafafa; color: #909399; display: flex; align-items: center; padding: 0 8px; height: 100%; }
-        .spread-host { width: 100%; flex: 1; min-height: 300px; }
-        
-        /* 凭证卡片 */
-        .evidence-card { 
-            border: 1px dashed #dcdfe6; background: #fff; padding: 12px; border-radius: 4px; margin-bottom: 10px; 
-            transition: all 0.3s; position: relative;
-        }
-        .evidence-card:hover { border-color: #409EFF; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .card-actions { position: absolute; right: 10px; top: 10px; opacity: 0; transition: opacity 0.3s; }
-        .evidence-card:hover .card-actions { opacity: 1; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>任务详情 - 模板配置</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <link rel="stylesheet" href="../css/common.css">
+  <link rel="stylesheet" href="../css/operator.css">
+  <link rel="stylesheet" href="../css/task_detail.css">
+  <link rel="stylesheet" href="../css/clarify_panel.css">
+  <!-- SpreadJS 16.x 模板预览 -->
+  <link rel="stylesheet" href="https://cdn.grapecity.com/spreadjs/hosted/css/gc.spread.sheets.excel2013white.16.0.0.css">
+  <script src="https://cdn.grapecity.com/spreadjs/hosted/scripts/gc.spread.sheets.all.16.0.0.min.js"></script>
 
-        /* 右侧面板底部操作栏 (固定底部) */
-        .panel-footer {
-            padding: 15px 20px; background: #fff; border-top: 1px solid #e4e7ed;
-            display: flex; flex-direction: column; gap: 10px; margin-top: auto;
-        }
-    </style>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+  <script src="../js/taskDetailLayout.js"></script>
+  <script src="../js/mockTasks.js"></script>
+  <script src="../js/layout.js"></script>
+
+  <style>
+    /* 主题色：主色 #1989fa，警告色 #f56c6c */
+    :root {
+      --config-primary: #1989fa;
+      --config-warning: #f56c6c;
+    }
+    .config-form-row { margin-bottom: 16px; }
+    /* 阶段进度条：当前配置阶段加粗蓝色，未完成置灰，下发后采集待激活浅蓝 */
+    .config-stage-bar {
+      display: flex;
+      align-items: center;
+      padding: 16px 24px;
+      gap: 0;
+      background: #fff;
+      border-bottom: 1px solid #ebeef5;
+    }
+    .config-stage-bar .stage-item {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      color: #909399;
+    }
+    .config-stage-bar .stage-item::after {
+      content: '';
+      width: 32px;
+      height: 2px;
+      background: #e4e7ed;
+      margin: 0 4px;
+    }
+    .config-stage-bar .stage-item:last-child::after { display: none; }
+    .config-stage-bar .stage-item.is-current {
+      color: var(--config-primary);
+      font-weight: 700;
+    }
+    .config-stage-bar .stage-item.is-pending-activate {
+      color: #79bbff;
+      font-weight: 500;
+    }
+    /* 任务信息卡片：核心字段加粗高亮 */
+    .config-task-card .task-field--highlight {
+      font-weight: 700;
+      color: #303133;
+    }
+    .config-task-card .task-field--highlight.prod-id { color: var(--config-primary); }
+    /* 协作日志区：拓宽、表格纵向滚动 */
+    .config-log-panel {
+      width: 420px;
+      flex-shrink: 0;
+      background: #fff;
+      border-left: 1px solid #ebeef5;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .config-log-panel .config-log-table-wrap {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+    .config-log-panel .config-log-table {
+      width: 100%;
+      font-size: 12px;
+      border-collapse: collapse;
+    }
+    .config-log-panel .config-log-table th {
+      text-align: left;
+      padding: 10px 12px;
+      background: #fafbfc;
+      color: #606266;
+      font-weight: 600;
+      border-bottom: 1px solid #ebeef5;
+      white-space: nowrap;
+    }
+    .config-log-panel .config-log-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #606266;
+      vertical-align: top;
+    }
+    .config-log-panel .config-log-table .col-time { width: 56px; }
+    .config-log-panel .config-log-table .col-operator { width: 80px; }
+    /* SpreadJS 只读预览标签 */
+    .config-spread-wrap {
+      position: relative;
+      margin-top: 8px;
+    }
+    .config-spread-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 10;
+      background: var(--config-warning);
+      color: #fff;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .config-spread-wrap #ss {
+      width: 100%;
+      height: 380px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+    }
+    /* 隐藏 SpreadJS 评估版水印（原型阶段） */
+    .config-spread-wrap .gc-watermark,
+    .config-spread-wrap [class*="watermark"],
+    .config-spread-wrap [class*="eval"] {
+      display: none !important;
+    }
+    /* 中央区表单卡片 */
+    .config-center-card {
+      padding: 20px 24px;
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #ebeef5;
+      margin-bottom: 16px;
+    }
+    .config-buttons {
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+  </style>
 </head>
 <body>
 <div id="app">
-    <el-container style="height: 100vh;">
-        <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
-            <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">碳足迹数据服务</div>
-            <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#409EFF" style="border-right: none; flex: 1; overflow-y: auto;">
-                <template v-for="item in menuConfig" :key="item.id">
-                    <el-sub-menu v-if="item.children" :index="item.id">
-                        <template #title>
-                            <el-icon><component :is="item.icon" /></el-icon>
-                            <span>{{ item.title }}</span>
-                        </template>
-                        <el-menu-item v-for="child in item.children" :key="child.id" :index="child.id" @click="openPage(child.path)">
-                            {{ child.title }}
-                        </el-menu-item>
-                    </el-sub-menu>
-                    <el-menu-item v-else :index="item.id" @click="openPage(item.path)">
-                        <el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span>
-                    </el-menu-item>
-                </template>
-            </el-menu>
-            <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
-                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
-                    <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
-                </el-button>
-            </div>
-        </el-aside>
-
-        <el-container>
-            <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
-                <div style="display: flex; align-items: center;">
-                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
-                    <el-breadcrumb separator="/">
-                        <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
-                        <el-breadcrumb-item>任务管理</el-breadcrumb-item>
-                        <el-breadcrumb-item>模板配置</el-breadcrumb-item>
-                    </el-breadcrumb>
-                </div>
-                <div style="display: flex; align-items: center;">
-                    <el-badge :value="messageUnreadCount" :hidden="messageUnreadCount === 0" class="msg-badge">
-                        <el-button link type="primary" @click="messageCenterVisible = true" style="padding: 8px;">
-                            <el-icon :size="20"><component :is="'Bell'"></component></el-icon>
-                        </el-button>
-                    </el-badge>
-                    <el-avatar :size="32" style="background: #409EFF; margin-right:8px">运营</el-avatar>
-                    <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
-                    <el-button v-if="showPortalInHeader" link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
-                </div>
-            </el-header>
-            <el-drawer v-model="messageCenterVisible" title="消息中心" direction="rtl" size="400" destroy-on-close>
-                <div class="message-center-list">
-                    <div v-for="m in messageList" :key="m.messageId" class="message-item" :class="{ unread: !m.read }" @click="goMessage(m)">
-                        <div class="msg-item-title">{{ m.title }}</div>
-                        <div class="msg-item-desc">{{ m.body }}</div>
-                        <div class="msg-item-time">{{ formatMessageTime(m.createdAt) }}</div>
-                    </div>
-                    <el-empty v-if="!messageList.length" description="暂无消息" :image-size="60"></el-empty>
-                </div>
-            </el-drawer>
-
-            <el-main style="padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column;">
-                <div class="task-stage-stepper">
-                    <template v-for="(s, i) in stageSteps" :key="s.key">
-                        <a v-if="i > 0" class="task-stage-stepper__sep">→</a>
-                        <a :href="s.href" class="task-stage-stepper__item" :class="{ 'is-active': s.key === currentStage }">{{ s.label }}</a>
-                    </template>
-                </div>
-                <div class="task-info-dashboard">
-                    <div class="task-info-dashboard__row">
-                        <div class="task-info-dashboard__main task-info-dashboard__info">
-                            <div class="dash-info-col dash-info-col--ids">
-                                <div class="dash-info-item">
-                                    <span class="prod-label">任务编号</span>
-                                    <span class="prod-id">{{ taskInfo.taskId }}</span>
-                                </div>
-                                <div class="dash-info-item">
-                                    <span class="prod-label">订单</span>
-                                    <el-link type="primary" :underline="false" @click="viewOrder">{{ taskInfo.orderNo }}</el-link>
-                                </div>
-                            </div>
-                            <div class="dash-info-col dash-info-col--detail">
-                                <div class="dash-info-item">
-                                    <el-avatar :size="22" style="background:#e6f7ff; color:#1890ff; font-size:11px; flex-shrink:0;">{{ taskInfo.supplier[0] }}</el-avatar>
-                                    <el-link type="primary" :underline="false" class="prod-supplier" @click="viewSupplier">{{ taskInfo.supplier }}</el-link>
-                                </div>
-                                <div class="dash-info-item">
-                                    <span class="prod-name">{{ taskInfo.productName }}</span>
-                                </div>
-                                <div class="dash-info-item">
-                                    <span class="prod-label">规格</span>
-                                    <span class="prod-value">{{ taskInfo.specs }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="task-info-dashboard__status-bar">
-                            <div class="dash-block">
-                                <div class="dash-content">
-                                    <el-tag type="info">{{ configStatusText }}</el-tag>
-                                    <div class="status-todo" v-if="configTodoText">{{ configTodoText }}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="task-info-dashboard__actions">
-                            <template v-if="snapshotGenerated && !isLocked">
-                                <el-button type="primary" icon="Position" @click="issueTask">确认配置并下发 (Lock & Issue)</el-button>
-                                <el-button link type="danger" @click="resetConfig">重置回初始状态</el-button>
-                            </template>
-                            <template v-else-if="isLocked">
-                                <el-tooltip content="进入数据采集页查看与审核" placement="bottom">
-                                    <el-button type="primary" size="small" @click="navigateToCollect">前往数据采集</el-button>
-                                </el-tooltip>
-                            </template>
-                        </div>
-                    </div>
-                    <div class="task-info-dashboard__tds">
-                        <el-tooltip placement="top" :show-after="300">
-                            <template #content>可信数据空间：本任务数据仅限授权范围内使用，禁止未授权下载、截图与传播；数据安全与隐私受数字合约保护。</template>
-                            <span class="task-info-dashboard__tds-inner"><el-icon><Lock /></el-icon> 数据受权与合约保护</span>
-                        </el-tooltip>
-                    </div>
-                </div>
-
-                <div class="task-detail-content">
-                    <el-tabs v-model="mainActiveTab" class="task-detail-tabs">
-                        <el-tab-pane label="配置" name="config" style="height: 100%; overflow: hidden;">
-                    <div v-if="!snapshotGenerated" class="config-init-wrap">
-                        <div class="config-init-card">
-                            <div class="config-init-head">
-                                <el-icon class="config-init-icon"><SetUp /></el-icon>
-                                <h3 class="config-init-title">初始化模板配置</h3>
-                                <p class="config-init-desc">选择行业模版后，核算标准与边界将自动带入。</p>
-                            </div>
-                            <el-form label-position="top" class="config-init-form">
-                                <el-form-item label="1. 行业模版 (来源：模板中心 · 已启用)">
-                                    <div class="config-init-template-row">
-                                        <span v-if="selectedTemplate" class="config-init-selected">已选：{{ selectedTemplate.name }}</span>
-                                        <el-button type="primary" @click="openTemplatePicker">从模板中心选择</el-button>
-                                        <el-button v-if="selectedTemplate" link type="info" @click="clearSelectedTemplate">清空</el-button>
-                                    </div>
-                                </el-form-item>
-                                <el-form-item label="2. 核算标准 (Standard)" v-if="selectedTemplate">
-                                    <el-input :model-value="selectedTemplate.standard" disabled placeholder="由所选模版确定"></el-input>
-                                </el-form-item>
-                                <el-form-item label="3. 核算边界（系统边界）" v-if="selectedTemplate">
-                                    <el-input :model-value="selectedTemplate.boundary" disabled placeholder="由所选模版确定"></el-input>
-                                </el-form-item>
-                                <el-button type="primary" size="large" class="config-init-submit"
-                                    :disabled="!wizard.templateId" @click="generateSnapshot" icon="MagicStick">
-                                    确认并实例化模版 (Instantiate)
-                                </el-button>
-                            </el-form>
-                        </div>
-                    </div>
-
-                    <el-row v-else :gutter="0" style="height: 100%;">
-                        
-                        <el-col :span="14" style="height: 100%; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #dcdfe6;">
-                            <div style="padding: 10px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-                                <span style="font-weight: bold; font-size: 14px; color: #303133;">
-                                    <el-icon style="vertical-align: -2px; margin-right: 5px;"><Grid /></el-icon> 
-                                    Excel 采集结构实例化 (Instance)
-                                </span>
-                                <el-tag v-if="!isLocked" size="small" type="warning">可编辑</el-tag>
-                                <el-tag v-else size="small" type="info"><el-icon><Lock /></el-icon> Read-only</el-tag>
-                            </div>
-                            
-                            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                                <div ref="spreadHostRef" class="spread-host"></div>
-                            </div>
-                        </el-col>
-
-                        <el-col :span="10" style="height: 100%; display: flex; flex-direction: column; background: #f9f9f9; border-left: 1px solid #dcdfe6;">
-                            <div style="padding: 10px 20px; border-bottom: 1px solid #dcdfe6; background: #fff; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: bold; font-size: 14px; color: #303133;">
-                                    <el-icon style="vertical-align: -2px; margin-right: 5px;"><Files /></el-icon> 
-                                    凭证要求配置
-                                </span>
-                                <el-button v-if="!isLocked" type="primary" link icon="Plus" size="small" @click="addRequirement">新增要求</el-button>
-                            </div>
-
-                            <div style="flex: 1; overflow-y: auto; padding: 15px;">
-                                <div v-if="evidenceRequirements.length > 0">
-                                    <div v-for="(req, idx) in evidenceRequirements" :key="idx" class="evidence-card">
-                                        <div class="card-actions" v-if="!isLocked">
-                                            <el-button link type="danger" icon="Delete" @click="removeRequirement(idx)"></el-button>
-                                        </div>
-                                        
-                                        <el-form label-position="top" size="small">
-                                            <el-form-item label="凭证名称">
-                                                <el-input v-model="req.name" :disabled="isLocked" placeholder="凭证名称"></el-input>
-                                            </el-form-item>
-                                            <el-form-item label="特殊说明">
-                                                <el-input type="textarea" v-model="req.desc" :rows="2" :disabled="isLocked"></el-input>
-                                            </el-form-item>
-                                        </el-form>
-                                    </div>
-                                </div>
-                                <el-empty v-else description="暂无凭证要求"></el-empty>
-                            </div>
-
-                        </el-col>
-                    </el-row>
-                        </el-tab-pane>
-                        <el-tab-pane label="沟通" name="communicate" style="height: 100%; overflow: hidden;">
-                            <div class="communicate-panel" style="flex:1; overflow:hidden; display:flex; flex-direction:column; background:#fff;">
-                                <div class="clarify-layout" style="flex:1; overflow:hidden;">
-                                    <div class="rfi-log-main" ref="rfiLogPrintable">
-                                        <div class="rfi-log-header">
-                                            <span class="rfi-log-title">澄清与沟通记录 (RFI Log)</span>
-                                            <el-button type="primary" link class="rfi-log-export-btn" @click="exportRfiPdf">
-                                                <el-icon><Download /></el-icon> 导出记录 (PDF)
-                                            </el-button>
-                                        </div>
-                                        <div class="rfi-log-messages" ref="rfiLogMessagesEl" id="timelineStream">
-                                            <template v-for="(item, idx) in rfiLogMessages" :key="item._rfiType === 'log' ? 'log-'+idx : item.id">
-                                                <div v-if="item._rfiType === 'log'" class="clarify-log-card">
-                                                    <div class="clarify-log-card-avatar" :data-type="item.type || 'sys'">{{ (item.user || '系统').slice(0,1) }}</div>
-                                                    <div class="clarify-log-card-body">
-                                                        <div class="clarify-log-card-meta">{{ item.user || '系统' }} · {{ item.time }}</div>
-                                                        <div class="clarify-log-card-content">{{ item.content }}</div>
-                                                    </div>
-                                                </div>
-                                                <div v-else class="clarify-msg" :class="{ self: clarifyIsSelf(item.role) }">
-                                                    <div class="clarify-msg-avatar" :data-role="item.role">{{ roleAvatar(item.role) }}</div>
-                                                    <div class="clarify-msg-content">
-                                                        <div class="clarify-msg-meta">{{ item.authorName }} · {{ formatClarifyTime(item.createdAt) }}</div>
-                                                        <div class="clarify-msg-bubble">
-                                                            <span>{{ item.content }}</span>
-                                                            <div v-if="item.attachments && item.attachments.length" class="clarify-msg-attachments">
-                                                                <a v-for="(att, ai) in item.attachments" :key="ai" class="clarify-msg-attachment-item" :href="att.url" target="_blank" :download="att.name">
-                                                                    <el-icon><Document /></el-icon>{{ att.name }}
-                                                                </a>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                            <el-empty v-if="!rfiLogMessages.length" description="暂无沟通记录" :image-size="60"></el-empty>
-                                        </div>
-                                        <div class="clarify-input-wrap">
-                                            <div class="clarify-input-with-attach">
-                                                <el-input v-model="replyContent" type="textarea" :rows="2" placeholder="输入澄清问题..."></el-input>
-                                                <div v-if="rfiUploadFileList.length" class="clarify-input-attach-list">
-                                                    <span v-for="(f, fi) in rfiUploadFileList" :key="fi" class="attach-tag">
-                                                        <el-icon><Document /></el-icon>{{ f.name }}
-                                                        <el-icon @click="removeRfiAttachment(fi)"><Close /></el-icon>
-                                                    </span>
-                                                </div>
-                                                <div class="clarify-input-actions" style="display:flex; align-items:center; gap:8px;">
-                                                    <el-upload :show-file-list="false" :auto-upload="false" :on-change="onRfiFileChange" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif">
-                                                        <el-button size="small"><el-icon><Upload /></el-icon> 附件</el-button>
-                                                    </el-upload>
-                                                    <el-button type="primary" size="small" @click="submitRfiMessage">发送</el-button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </el-tab-pane>
-                    </el-tabs>
-                </div>
-
-            </el-main>
-        </el-container>
-    </el-container>
-
-    <!-- 从模板中心选择行业模版 弹窗 -->
-    <el-dialog v-model="templatePickerVisible" title="从模板中心选择行业模版" width="720px" destroy-on-close @open="onTemplatePickerOpen" @closed="onTemplatePickerClosed">
-        <div style="margin-bottom: 12px;">
-            <el-input v-model="templatePickerQuery" placeholder="模版名称" clearable style="width: 240px;"></el-input>
-        </div>
-        <el-table
-            ref="templatePickerTableRef"
-            :data="filteredTemplateList"
-            highlight-current-row
-            border
-            stripe
-            style="width: 100%; max-height: 360px; overflow-y: auto;"
-            :header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: '600' }"
-            @current-change="onTemplatePickerCurrentChange"
-        >
-            <el-table-column label="模版信息" min-width="200" show-overflow-tooltip>
-                <template #default="scope">
-                    <div style="font-weight: 600;">{{ scope.row.name }}</div>
-                    <div style="font-size: 12px; color: #909399;">Code: {{ scope.row.code }}</div>
-                </template>
-            </el-table-column>
-            <el-table-column prop="version" label="版本" width="90" align="center">
-                <template #default="scope">
-                    <el-tag size="small" type="info" effect="plain" round>v{{ scope.row.version }}</el-tag>
-                </template>
-            </el-table-column>
-            <el-table-column prop="productCategory" label="适用产品" width="140" show-overflow-tooltip></el-table-column>
-            <el-table-column prop="standard" label="核算标准" width="140" show-overflow-tooltip></el-table-column>
-            <el-table-column prop="boundary" label="核算边界" width="120" show-overflow-tooltip></el-table-column>
-        </el-table>
-        <template #footer>
-            <span class="dialog-footer">
-                <el-button @click="templatePickerVisible = false">取消</el-button>
-                <el-button type="primary" :disabled="!pickedTemplateRow" @click="confirmTemplatePick">确定</el-button>
-            </span>
+  <el-container style="height: 100vh;">
+    <!-- 左侧：运营端主导航 -->
+    <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #001529; display: flex; flex-direction: column;">
+      <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 18px; border-bottom: 1px solid #002140; flex-shrink: 0;">碳足迹数据服务</div>
+      <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#001529" text-color="#fff" active-text-color="#1989fa" style="border-right: none; flex: 1; overflow-y: auto;">
+        <template v-for="item in menuConfig" :key="item.id">
+          <el-sub-menu v-if="item.children" :index="item.id">
+            <template #title><el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span></template>
+            <el-menu-item v-for="child in item.children" :key="child.id" :index="child.id" @click="openPage(child.path)">{{ child.title }}</el-menu-item>
+          </el-sub-menu>
+          <el-menu-item v-else :index="item.id" @click="openPage(item.path)">
+            <el-icon><component :is="item.icon" /></el-icon><span>{{ item.title }}</span>
+          </el-menu-item>
         </template>
-    </el-dialog>
+      </el-menu>
+      <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
+        <el-button link style="color: #fff; padding: 8px;" :aria-label="sidebarCollapsed ? '展开侧栏' : '折叠侧栏'" @click="toggleSidebar">
+          <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+        </el-button>
+      </div>
+    </el-aside>
+
+    <el-container style="flex-direction: column; min-height: 0;">
+      <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
+        <div style="display: flex; align-items: center;">
+          <el-button :icon="ArrowLeftIcon" circle style="margin-right: 15px;" aria-label="返回" @click="goBack"></el-button>
+          <el-breadcrumb separator="/">
+            <el-breadcrumb-item>
+              <el-link :underline="false" @click="goBack">中心运营端</el-link>
+            </el-breadcrumb-item>
+            <el-breadcrumb-item>
+              <el-link :underline="false" @click="goToTaskList">任务管理</el-link>
+            </el-breadcrumb-item>
+            <el-breadcrumb-item>模板配置</el-breadcrumb-item>
+          </el-breadcrumb>
+        </div>
+        <div style="display: flex; align-items: center;">
+          <el-avatar :size="32" style="background: #1989fa; margin-right:8px">{{ currentUser.name ? currentUser.name.slice(0,1) : '运' }}</el-avatar>
+          <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+          <el-button v-if="showPortalInHeader" link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
+        </div>
+      </el-header>
+
+      <el-main style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+        <div class="task-detail-unified" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+          <!-- 顶部：5 阶段进度条 + 任务信息卡片 -->
+          <header class="task-detail-unified__top">
+            <div class="task-detail-unified-top-inner">
+              <!-- 自定义 5 阶段进度条：配置/采集/计算/核查/报告 -->
+              <div class="config-stage-bar">
+                <div
+                  v-for="s in stageSteps"
+                  :key="s.key"
+                  class="stage-item"
+                  :class="{
+                    'is-current': s.key === currentStage,
+                    'is-pending-activate': configIssued && s.key === 'collect'
+                  }"
+                  :style="s.key !== currentStage && s.href ? { cursor: 'pointer' } : {}"
+                  @click="s.key !== currentStage && s.href ? goStage(s) : null"
+                >
+                  {{ s.label }}
+                </div>
+              </div>
+              <!-- 任务信息区：Element Plus 卡片，核心字段加粗高亮 -->
+              <el-card class="config-task-card" shadow="never" body-style="padding: 16px 24px;">
+                <div class="task-info-dashboard__row">
+                  <div class="task-info-dashboard__main task-info-dashboard__info">
+                    <div class="dash-info-col dash-info-col--ids">
+                      <div class="dash-info-item">
+                        <span class="prod-label">任务编号</span>
+                        <span class="prod-id task-field--highlight">{{ taskInfo.taskId }}</span>
+                      </div>
+                      <div class="dash-info-item">
+                        <span class="prod-label">订单</span>
+                        <el-link type="primary" :underline="false">{{ taskInfo.orderNo }}</el-link>
+                      </div>
+                    </div>
+                    <div class="dash-info-col dash-info-col--detail">
+                      <div class="dash-info-item">
+                        <span class="prod-label">供应商</span>
+                        <span class="prod-name task-field--highlight">{{ taskInfo.supplier }}</span>
+                      </div>
+                      <div class="dash-info-item">
+                        <span class="prod-label">产品</span>
+                        <span class="prod-value task-field--highlight">{{ taskInfo.productName }}</span>
+                      </div>
+                      <div class="dash-info-item">
+                        <span class="prod-label">规格</span>
+                        <span class="prod-value task-field--highlight">{{ taskInfo.specs }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="task-info-dashboard__status-bar">
+                    <div class="dash-block dash-block-status">
+                      <div class="dash-content">
+                        <el-tag type="info">{{ statusText }}</el-tag>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </el-card>
+            </div>
+          </header>
+
+          <!-- 主体：中央业务区 | 右侧协作日志 -->
+          <div class="task-detail-unified__body">
+            <main class="task-detail-unified__center">
+              <template v-if="currentRole === 'L3_OPERATOR'">
+                <div class="config-center-card">
+                  <el-form label-position="top">
+                    <el-form-item label="选择核算模板">
+                      <el-select
+                        v-model="selectedTemplateCode"
+                        placeholder="请选择对应产品的核算模板"
+                        style="width: 360px;"
+                        clearable
+                      >
+                        <el-option
+                          v-for="tpl in productTemplates"
+                          :key="tpl.code"
+                          :label="tpl.name"
+                          :value="tpl.code"
+                        >
+                          <span>{{ tpl.name }}</span>
+                          <span style="font-size:12px;color:#909399;margin-left:8px;">({{ tpl.version }})</span>
+                        </el-option>
+                      </el-select>
+                      <div style="font-size: 12px; color: #909399; margin-top: 4px;">选择后将替换当前任务的模板配置。</div>
+                    </el-form-item>
+                    <el-form-item label="核查机构选择">
+                      <el-select v-model="selectedCertifier" placeholder="请选择核查机构" style="width: 280px;" clearable>
+                        <el-option label="中国建材检验认证集团" value="CNBM" />
+                        <el-option label="上海环交所" value="SEEE" />
+                      </el-select>
+                    </el-form-item>
+                    <el-form-item label="核算周期">
+                      <el-input v-model="accountingPeriod" placeholder="如 2026-01至2026-03" style="width: 240px;" />
+                    </el-form-item>
+                    <el-form-item v-if="currentTemplate" label="模板说明">
+                      <div style="font-size:12px;color:#909399;">
+                        标准：{{ currentTemplate.standard }} · 边界：{{ currentTemplate.boundary }}
+                      </div>
+                    </el-form-item>
+                  </el-form>
+                  <div style="font-size: 12px; color:#909399; margin-bottom: 8px;">
+                    下方为即将下发给供应商的模板结构预览（只读）。
+                  </div>
+                  <div class="config-spread-wrap">
+                    <span class="config-spread-badge">只读预览</span>
+                    <div id="ss"></div>
+                  </div>
+                  <div class="config-buttons">
+                    <el-button @click="saveDraft">保存草稿</el-button>
+                    <el-button type="primary" :disabled="!spread" @click="confirmIssue">确认配置并下发</el-button>
+                  </div>
+                </div>
+              </template>
+
+              <template v-else-if="currentRole === 'L2_SUPPLIER'">
+                <el-result
+                  icon="info"
+                  title="等待中心运营完成配置"
+                  sub-title="当前阶段由中心运营选择并下发核算模板，完成后您将收到数据采集任务通知。"
+                ></el-result>
+              </template>
+
+              <template v-else-if="currentRole === 'L4_CERTIFIER'">
+                <el-result
+                  icon="info"
+                  title="配置阶段仅供查看"
+                  sub-title="当前任务处于模板配置阶段，待采集与计算完成后，系统会自动进入核查阶段。"
+                ></el-result>
+              </template>
+            </main>
+
+            <aside class="config-log-panel">
+              <div style="padding: 12px 16px; font-weight: 600; font-size: 14px; border-bottom: 1px solid #ebeef5; background: #fafbfc;">协作日志与澄清</div>
+              <div class="config-log-table-wrap">
+                <table class="config-log-table">
+                  <thead>
+                    <tr>
+                      <th class="col-time">时间</th>
+                      <th class="col-operator">操作人</th>
+                      <th>操作动作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(log, idx) in configLogs" :key="idx">
+                      <td class="col-time">{{ log.time }}</td>
+                      <td class="col-operator">{{ log.operator }}</td>
+                      <td>{{ log.action }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <el-empty v-if="!configLogs.length" description="暂无配置相关记录" :image-size="48"></el-empty>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </el-main>
+    </el-container>
+  </el-container>
 </div>
 
 <script>
-    const { menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader, messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime } = SharedLayout.setup();
+(function () {
+  var layoutApi = typeof SharedLayout !== 'undefined' && SharedLayout.setup ? SharedLayout.setup() : {};
+  var menuConfig = layoutApi.menuConfig || [];
+  var currentUser = layoutApi.currentUser || { name: 'Admin_001', role: '中心运营管理员' };
+  var openPage = layoutApi.openPage || function () {};
+  var sidebarCollapsed = layoutApi.sidebarCollapsed;
+  var toggleSidebar = layoutApi.toggleSidebar || function () {};
+  var activeMenuId = layoutApi.activeMenuId || '';
+  var goPortal = layoutApi.goPortal || function () { window.location.href = '../pcf.html'; };
+  var showPortalInHeader = layoutApi.showPortalInHeader !== undefined ? layoutApi.showPortalInHeader : false;
 
-    runOperatorApp({
-        setup() {
-            // === 状态管理 ===
-            const taskInfo = Vue.reactive(getTaskInfoFromUrl('TSK-2026-889'));
-            const taskRow = Vue.ref(typeof getTaskByTaskId === 'function' ? getTaskByTaskId(getTaskIdFromUrl() || taskInfo.taskId, 0) : null);
-            const currentStage = 'config';
-            const stageSteps = Vue.computed(function () {
-                const tid = taskInfo.taskId || (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : '');
-                const from = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? '&from=order' : '';
-                const q = (tid ? '?taskId=' + encodeURIComponent(tid) : '') + from;
-                return [
-                    { key: 'config', label: '配置', href: 'task_detail_config.html' + q },
-                    { key: 'collect', label: '采集', href: 'task_detail_collect.html' + q },
-                    { key: 'lca', label: '计算', href: 'task_detail_lca.html' + q },
-                    { key: 'verify', label: '核查', href: 'task_detail_verify.html' + q },
-                    { key: 'report', label: '报告', href: 'task_detail_certify.html' + q }
-                ];
-            });
-            const snapshotGenerated = Vue.ref(false);
-            const isLocked = Vue.ref(false);
-            const supplierConfirmed = Vue.ref(false);
+  // Mock 任务：taskId=TSK-2026-892，供应商沙钢集团，产品 HRB400E 螺纹钢，规格 Φ22mm，订单号 ORD-20260205-002
+  var defaultTaskId = 'TSK-2026-892';
+  var taskInfo = typeof getTaskInfoFromUrl === 'function'
+    ? getTaskInfoFromUrl(defaultTaskId)
+    : { taskId: 'TSK-2026-892', orderNo: 'ORD-20260205-002', supplier: '沙钢集团', productName: 'HRB400E螺纹钢', specs: 'Φ22mm' };
+  var taskId = (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : '') || taskInfo.taskId || defaultTaskId;
+  var currentStage = 'config';
+  var currentRole = window.TaskDetailLayout ? window.TaskDetailLayout.getCurrentRole() : 'L3_OPERATOR';
+  var stageSteps = window.TaskDetailLayout ? window.TaskDetailLayout.getStageSteps(taskId, currentStage, { basePath: 'operator' }) : [
+    { key: 'config', label: '配置', href: '#' },
+    { key: 'collect', label: '采集', href: '#' },
+    { key: 'lca', label: '计算', href: '#' },
+    { key: 'verify', label: '核查', href: '#' },
+    { key: 'report', label: '报告', href: '#' }
+  ];
+  var taskRow = typeof getTaskByTaskId === 'function' ? getTaskByTaskId(taskId, 0) : null;
 
-            const wizard = Vue.reactive({ templateId: '' });
-            // 与模板中心一致：含 productCategory、status，仅展示「已启用」模版
-            const templateListForPicker = Vue.ref([
-                { code: 'TPL-2026-001', name: '石墨电极_工序拆解版', version: '2.0', productCategory: '石墨电极/炭素制品', standard: 'ISO 14067:2018', boundary: 'Cradle-to-Gate', status: '已启用' },
-                { code: 'TPL-2026-002', name: '通用_基础原材料_标准版', version: '1.5', productCategory: '基础原材料', standard: 'PAS 2050', boundary: 'Cradle-to-Gate', status: '已启用' }
-            ]);
-            const templateOptions = Vue.computed(function () { return templateListForPicker.value; });
-            const selectedTemplate = Vue.computed(() => templateListForPicker.value.find(function (t) { return t.code === wizard.templateId; }) || null);
+  // 与产品强关联：仅展示 HRB400E 螺纹钢匹配的模板（Mock 仅一条）
+  var PRODUCT_TEMPLATES = [
+    { code: 'TPL-HRB400E-V1', name: 'HRB400E螺纹钢碳核算模板', version: 'V1.0', standard: 'ISO 14067:2018', boundary: 'Cradle-to-Gate' }
+  ];
 
-            // 弹窗：从模板中心选择
-            const templatePickerVisible = Vue.ref(false);
-            const templatePickerQuery = Vue.ref('');
-            const pickedTemplateRow = Vue.ref(null);
-            const templatePickerTableRef = Vue.ref(null);
-            const enabledTemplateList = Vue.computed(function () {
-                return templateListForPicker.value.filter(function (t) { return t.status === '已启用'; });
-            });
-            const filteredTemplateList = Vue.computed(function () {
-                var q = (templatePickerQuery.value || '').trim().toLowerCase();
-                if (!q) return enabledTemplateList.value;
-                return enabledTemplateList.value.filter(function (t) {
-                    return (t.name && t.name.toLowerCase().indexOf(q) >= 0) || (t.code && t.code.toLowerCase().indexOf(q) >= 0);
-                });
-            });
-            function openTemplatePicker() {
-                templatePickerQuery.value = '';
-                pickedTemplateRow.value = null;
-                templatePickerVisible.value = true;
-            }
-            function clearSelectedTemplate() {
-                wizard.templateId = '';
-            }
-            function onTemplatePickerOpen() {
-                pickedTemplateRow.value = null;
-                Vue.nextTick(function () {
-                    var table = templatePickerTableRef.value;
-                    if (table && wizard.templateId) {
-                        var row = enabledTemplateList.value.find(function (t) { return t.code === wizard.templateId; });
-                        if (row) {
-                            table.setCurrentRow(row);
-                            pickedTemplateRow.value = row;
-                        }
-                    }
-                });
-            }
-            function onTemplatePickerClosed() {
-                templatePickerQuery.value = '';
-                pickedTemplateRow.value = null;
-            }
-            function onTemplatePickerCurrentChange(row) {
-                pickedTemplateRow.value = row || null;
-            }
-            function confirmTemplatePick() {
-                if (pickedTemplateRow.value) {
-                    wizard.templateId = pickedTemplateRow.value.code;
-                    templatePickerVisible.value = false;
-                }
-            }
-            const spreadHostRef = Vue.ref(null);
-            const spreadInstance = Vue.ref(null);
-            const spreadReady = Vue.ref(false);
-            const currentSnapshot = Vue.ref(null);
-
-            const evidenceRequirements = Vue.ref([]);
-
-            // === 沟通 Tab：单一日志流（协作日志 + 全部澄清消息合并）===
-            const mainActiveTab = Vue.ref('config');
-            const hasClarifyBadge = Vue.ref(false);
-            const clarifyTaskId = Vue.computed(function () { return taskInfo.taskId || (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : ''); });
-            const clarificationList = Vue.ref([]);
-            const replyContent = Vue.ref('');
-            const formatClarifyTime = typeof window.formatClarifyTime === 'function' ? window.formatClarifyTime : function (t) { return t || ''; };
-            const roleAvatar = typeof window.roleAvatar === 'function' ? window.roleAvatar : function (r) { return '?'; };
-            const rfiUploadFileList = Vue.ref([]);
-            function clarifyIsSelf(role) { return role === 'operator'; }
-            const defaultRfiSessionId = Vue.computed(function () {
-                return typeof getDefaultRfiSessionId === 'function' ? getDefaultRfiSessionId(clarifyTaskId.value) : '';
-            });
-            const configLogEvents = Vue.computed(function () {
-                if (!isLocked.value) return [];
-                return [{ type: 'sys', user: '系统', time: '10:00', content: '配置已下发', createdAt: '2026-03-04T10:00:00' }];
-            });
-            var rfiLogMessages = Vue.computed(function () {
-                var tid = clarifyTaskId.value;
-                var list = [];
-                (configLogEvents.value || []).forEach(function (ev) {
-                    list.push({
-                        _rfiType: 'log',
-                        type: ev.type,
-                        user: ev.user,
-                        content: ev.content,
-                        time: ev.time,
-                        createdAt: ev.createdAt || ev.time || ''
-                    });
-                });
-                (clarificationList.value || []).forEach(function (c) {
-                    var detail = typeof getClarificationDetail === 'function' ? getClarificationDetail(tid, c.id) : null;
-                    if (detail && detail.messages) {
-                        detail.messages.forEach(function (m) {
-                            list.push({
-                                _rfiType: 'msg',
-                                id: m.id,
-                                role: m.role,
-                                authorName: m.authorName,
-                                content: m.content,
-                                createdAt: m.createdAt,
-                                attachments: m.attachments || []
-                            });
-                        });
-                    }
-                });
-                list.sort(function (a, b) {
-                    var ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                    var tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                    return ta - tb;
-                });
-                return list;
-            });
-            function loadClarifications() {
-                var tid = clarifyTaskId.value;
-                if (!tid) return;
-                clarificationList.value = typeof getClarificationsByTaskId === 'function' ? getClarificationsByTaskId(tid, 'operator') : [];
-                hasClarifyBadge.value = clarificationList.value.some(function (c) { return c.status === 'open' && c.initiator === 'verifier'; });
-            }
-            function onRfiFileChange(file) {
-                if (!file || !file.raw) return;
-                rfiUploadFileList.value.push({ name: file.name, url: URL.createObjectURL(file.raw), raw: file.raw });
-            }
-            function removeRfiAttachment(index) {
-                rfiUploadFileList.value.splice(index, 1);
-            }
-            function submitRfiMessage() {
-                var content = (replyContent.value || '').trim();
-                if (!content && (!rfiUploadFileList.value || !rfiUploadFileList.value.length)) {
-                    ElementPlus.ElMessage.warning('请输入内容或添加附件');
-                    return;
-                }
-                var tid = clarifyTaskId.value;
-                var rfiId = defaultRfiSessionId.value;
-                if (!tid || !rfiId) { ElementPlus.ElMessage.warning('无法发送'); return; }
-                var attachments = (rfiUploadFileList.value || []).map(function (f) { return { name: f.name, url: f.url || '#' }; });
-                if (typeof replyClarification === 'function') {
-                    replyClarification(tid, rfiId, { content: content || '(附件)', attachments: attachments }, 'operator', '运营');
-                    loadClarifications();
-                }
-                replyContent.value = '';
-                rfiUploadFileList.value = [];
-                ElementPlus.ElMessage.success('已发送');
-                Vue.nextTick(function () {
-                    var el = document.getElementById('timelineStream');
-                    if (el) el.scrollTop = el.scrollHeight;
-                });
-            }
-            function exportRfiPdf() {
-                window.print();
-            }
-            Vue.watch(function () { return mainActiveTab.value === 'communicate'; }, function (active) { if (active && clarifyTaskId.value) loadClarifications(); });
-            Vue.watch(clarifyTaskId, function (tid) { if (mainActiveTab.value === 'communicate' && tid) loadClarifications(); });
-            Vue.onMounted(function () {
-                var openParam = (function(){ var p = new URLSearchParams(window.location.search); return p.get('open'); })();
-                if (openParam === 'clarify') mainActiveTab.value = 'communicate';
-                if (mainActiveTab.value === 'communicate' && clarifyTaskId.value) loadClarifications();
-            });
-
-            // === Actions ===
-
-            // === Actions ===
-            const generateSnapshot = () => {
-                const loading = ElementPlus.ElLoading.service({ text: '正在实例化模版数据...', background: 'rgba(255,255,255,0.8)' });
-                setTimeout(() => {
-                    loading.close();
-                    const snapshot = typeof getTemplateSnapshot === 'function' ? getTemplateSnapshot(wizard.templateId) : { sheetData: { M配料: [['类别','名称','单位','填报指引','数值','备注'], ['能源','电力消耗','kWh','请提供含峰谷平分项的电费单','','']], M焙烧: [['类别','名称','单位','填报指引','数值','备注'], ['能源','天然气','m³','','','']] }, evidenceRequirements: [] };
-                    currentSnapshot.value = snapshot;
-                    evidenceRequirements.value = (snapshot.evidenceRequirements || []).map(function(r){ return { name: r.name, desc: r.desc || '' }; });
-                    snapshotGenerated.value = true;  // 先置 true，使 v-else 渲染出 spread-host，nextTick 内才能拿到 host
-                    Vue.nextTick(() => {
-                        const host = spreadHostRef.value;
-                        if (host && typeof SpreadUtils !== 'undefined') {
-                            spreadInstance.value = SpreadUtils.createSpreadFromSnapshot(host, snapshot, { editableCols: [1, 3] });
-                            spreadReady.value = true;
-                        }
-                    });
-                }, 600);
-            };
-
-            const issueTask = () => {
-                ElementPlus.ElMessageBox.confirm(
-                    '下发后配置将锁定，供应商将收到填报通知，是否继续？',
-                    '确认下发',
-                    { confirmButtonText: '确认下发', cancelButtonText: '取消', type: 'warning' }
-                ).then(() => {
-                    if (spreadInstance.value && typeof SpreadUtils !== 'undefined') {
-                        const snapshot = SpreadUtils.getSnapshotFromSpread(spreadInstance.value, {
-                            templateId: wizard.templateId,
-                            evidenceRequirements: evidenceRequirements.value.map(function(r, i){ return { id: 'req_' + (i+1), name: r.name, desc: r.desc || '' }; })
-                        });
-                        currentSnapshot.value = snapshot;
-                        if (typeof saveTaskSnapshot === 'function') saveTaskSnapshot(taskInfo.taskId, snapshot);
-                        for (var i = 0; i < spreadInstance.value.getSheetCount(); i++) {
-                            spreadInstance.value.getSheet(i).options.isProtected = true;
-                        }
-                    }
-                    const loading = ElementPlus.ElLoading.service({ text: '正在同步配置到供应商门户...' });
-                    setTimeout(() => {
-                        loading.close();
-                        isLocked.value = true;
-                        ElementPlus.ElMessage.success('任务已成功下发');
-                    }, 800);
-                });
-            };
-
-            const simulateSupplierSubmit = () => {
-                const loading = ElementPlus.ElLoading.service({ text: '模拟供应商填报中...', fullscreen: true });
-                setTimeout(() => {
-                    loading.close();
-                    supplierConfirmed.value = true;
-                    ElementPlus.ElMessage.success('供应商已提交数据');
-                    // 自动滚动到底部查看最新状态
-                    setTimeout(() => {
-                        const el = document.querySelector('.timeline-scroll');
-                        if(el) el.scrollTop = el.scrollHeight;
-                    }, 100);
-                }, 1000);
-            };
-
-            const navigateToCollect = () => {
-                if (!isLocked.value) {
-                    ElementPlus.ElMessage.warning('请先完成配置并下发');
-                    return;
-                }
-                window.location.href = 'task_detail_collect.html?taskId=' + (taskInfo.taskId || getTaskIdFromUrl()) + ((typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? '&from=order' : '');
-            };
-
-            const viewOrder = () => window.location.href='order.html';
-            const viewSupplier = () => window.location.href='supplier_mgt_detail.html';
-
-            // Helpers
-            const addRequirement = () => evidenceRequirements.value.push({ name: '', desc: '' });
-            const removeRequirement = (idx) => evidenceRequirements.value.splice(idx, 1);
-            const resetConfig = () => { snapshotGenerated.value = false; isLocked.value = false; supplierConfirmed.value = false; spreadReady.value = false; spreadInstance.value = null; currentSnapshot.value = null; };
-            const totalItems = Vue.computed(() => {
-                var s = currentSnapshot.value && currentSnapshot.value.sheetData;
-                if (!s) return 0;
-                var count = 0;
-                for (var k in s) count += (s[k].length > 0 ? s[k].length - 1 : 0);
-                return count;
-            });
-            const goBack = () => { window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order') ? 'order.html' : 'self_operated_task_list.html'; };
-            const openPage = (path) => window.location.href = path;
-            const openReportDetail = () => {
-                const tid = taskInfo.taskId || (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : '');
-                if (tid) window.location.href = 'report_detail.html?taskNo=' + encodeURIComponent(tid);
-                else window.location.href = 'report_mgt.html';
-            };
-
-            const getStageStatusText = (t) => (typeof window.getStageStatusText === 'function' ? window.getStageStatusText(t) : '');
-            // 配置状态：优先跟随页面操作（已下发→已配置，已初始化→配置中），否则用列表数据
-            const configStatusText = Vue.computed(() => {
-                if (isLocked.value) return '已配置';
-                if (snapshotGenerated.value) return '配置中';
-                return getStageStatusText(taskRow.value) || '待配置模板';
-            });
-            const configTodoText = Vue.computed(() => {
-                if (isLocked.value) return '可前往数据采集';
-                if (snapshotGenerated.value) return '待办：确认采集结构与凭证要求后下发';
-                return '待办：选择模板并完成实例化（主操作在下方配置卡片）';
-            });
-            return {
-                menuConfig, currentUser, openPage, sidebarCollapsed, toggleSidebar, activeMenuId, goPortal, showPortalInHeader,
-                taskInfo, taskRow, currentStage, stageSteps,
-                getStageStatusText, configStatusText, configTodoText,
-                templateOptions, selectedTemplate,
-                templatePickerVisible, templatePickerQuery, pickedTemplateRow, templatePickerTableRef, filteredTemplateList,
-                openTemplatePicker, clearSelectedTemplate, onTemplatePickerOpen, onTemplatePickerClosed, onTemplatePickerCurrentChange, confirmTemplatePick,
-                snapshotGenerated, isLocked, supplierConfirmed, wizard,
-                mainActiveTab, configLogEvents, hasClarifyBadge, clarifyTaskId,
-                clarificationList, replyContent,
-                formatClarifyTime, roleAvatar, clarifyIsSelf, loadClarifications,
-                rfiLogMessages, defaultRfiSessionId, rfiUploadFileList, onRfiFileChange, removeRfiAttachment, submitRfiMessage, exportRfiPdf,
-                spreadHostRef, spreadReady, evidenceRequirements,
-                generateSnapshot, issueTask, simulateSupplierSubmit, navigateToCollect,
-                addRequirement, removeRequirement, resetConfig,
-                totalItems, goBack, viewOrder, viewSupplier, openReportDetail,
-                messageCenterVisible, messageList, messageUnreadCount, goMessage, formatMessageTime
-            };
+  var app = Vue.createApp({
+    data: function () {
+      return {
+        menuConfig: menuConfig,
+        currentUser: currentUser,
+        taskRow: taskRow,
+        openPage: openPage,
+        sidebarCollapsed: sidebarCollapsed,
+        toggleSidebar: toggleSidebar,
+        activeMenuId: activeMenuId,
+        goPortal: goPortal,
+        showPortalInHeader: showPortalInHeader,
+        taskInfo: taskInfo,
+        currentStage: currentStage,
+        stageSteps: stageSteps,
+        currentRole: currentRole,
+        productTemplates: PRODUCT_TEMPLATES,
+        selectedTemplateCode: '',
+        selectedCertifier: '',
+        accountingPeriod: '2026-01至2026-03',
+        spread: null,
+        // 是否已执行「确认配置并下发」，用于进度条「采集」阶段置为待激活
+        configIssued: false,
+        configLogs: [
+          { time: '09:00', operator: '系统', action: '任务已创建，等待配置模板' },
+          { time: '', operator: '', action: '' }
+        ],
+        ArrowLeftIcon: typeof ElementPlusIconsVue !== 'undefined' ? ElementPlusIconsVue.ArrowLeft : null
+      };
+    },
+    computed: {
+      currentTemplate: function () {
+        var code = this.selectedTemplateCode;
+        return this.productTemplates.find(function (t) { return t.code === code; }) || null;
+      },
+      statusText: function () {
+        if (this.configIssued) return '模板已配置，待供应商填报';
+        var base = (this.taskRow && typeof getStageStatusText === 'function')
+          ? getStageStatusText(this.taskRow) : '';
+        if (base) return base;
+        if (this.currentRole === 'L3_OPERATOR') return '待配置模板';
+        if (this.currentRole === 'L2_SUPPLIER') return '等待中心运营配置';
+        return '等待前序阶段完成';
+      }
+    },
+    methods: {
+      goBack: function () {
+        window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order')
+          ? 'order.html'
+          : 'self_operated_task_list.html';
+      },
+      goToTaskList: function () {
+        window.location.href = 'self_operated_task_list.html' + (taskId ? '?taskId=' + encodeURIComponent(taskId) : '');
+      },
+      goStage: function (step) {
+        if (step && step.href && step.href !== '#') window.location.href = step.href;
+      },
+      // 保存草稿：仅追加协作日志，不触发状态流转
+      saveDraft: function () {
+        var now = new Date();
+        var timeStr = (now.getHours() < 10 ? '0' : '') + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+        var operator = (this.currentUser && this.currentUser.name) ? this.currentUser.name : 'Admin_001';
+        this.configLogs.push({ time: timeStr, operator: operator, action: '保存模板配置草稿' });
+        ElementPlus.ElMessage.success('草稿已保存');
+      },
+      // 确认配置并下发：校验模板 → 更新日志 → 更新状态 → 采集阶段激活
+      confirmIssue: function () {
+        var self = this;
+        if (!this.selectedTemplateCode) {
+          ElementPlus.ElMessage.warning('请先选择与HRB400E螺纹钢匹配的核算模板');
+          return;
         }
-    });
+        if (!this.spread) {
+          ElementPlus.ElMessage.warning('请等待模板预览加载完成');
+          return;
+        }
+        ElementPlus.ElMessageBox.confirm(
+          '确认后，模板配置将锁定，并下发到供应商的采集阶段。是否继续？',
+          '确认配置并下发任务',
+          { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' }
+        ).then(function () {
+          var now = new Date();
+          var timeStr = (now.getHours() < 10 ? '0' : '') + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+          var operator = (self.currentUser && self.currentUser.name) ? self.currentUser.name : 'Admin_001';
+          var supplierName = (self.taskInfo && self.taskInfo.supplier) ? self.taskInfo.supplier : '供应商';
+          self.configLogs.push({
+            time: timeStr,
+            operator: operator,
+            action: '配置模板并下发至' + supplierName + '，任务进入采集阶段'
+          });
+          self.configIssued = true;
+          if (typeof saveTaskSnapshot === 'function') {
+            var json = self.spread.toJSON();
+            saveTaskSnapshot(taskId, { version: '1.0', templateId: self.selectedTemplateCode, sheetData: json });
+          }
+          ElementPlus.ElMessage.success('配置已锁定，任务已流转至采集阶段');
+        }).catch(function () {});
+      },
+      initSpreadForTemplate: function () {
+        var self = this;
+        if (this.currentRole !== 'L3_OPERATOR') return;
+        this.$nextTick(function () {
+          var host = document.getElementById('ss');
+          if (!host || !window.GC || !GC.Spread || !GC.Spread.Sheets) {
+            ElementPlus.ElMessage.error('表格加载失败，请刷新页面或联系管理员');
+            return;
+          }
+          if (self.spread && typeof self.spread.destroy === 'function') {
+            self.spread.destroy();
+            self.spread = null;
+          }
+          while (host.firstChild) host.removeChild(host.firstChild);
+          var spread = new GC.Spread.Sheets.Workbook(host);
+          self.spread = spread;
+          var sheet = spread.getActiveSheet();
+          spread.options.tabStripVisible = false;
+          spread.options.newTabVisible = false;
+          // 只读：整表保护
+          if (sheet.options) sheet.options.isProtected = true;
+          if (typeof sheet.protect === 'function') sheet.protect();
+          // 列头：加粗 + 浅灰背景
+          var headerStyle = new GC.Spread.Sheets.Style();
+          headerStyle.fontWeight = 'bold';
+          headerStyle.backColor = '#f5f7fa';
+          headerStyle.locked = true;
+          var headers = ['类别', '名称', '单位', '数值'];
+          for (var c = 0; c < headers.length; c++) {
+            sheet.setValue(0, c, headers[c]);
+            sheet.setStyle(0, c, headerStyle);
+          }
+          sheet.setValue(1, 0, '能源'); sheet.setValue(1, 1, '电力消耗'); sheet.setValue(1, 2, 'kWh');
+          sheet.setValue(2, 0, '原材料'); sheet.setValue(2, 1, '针状焦投入'); sheet.setValue(2, 2, '吨');
+          sheet.setColumnWidth(0, 90);
+          sheet.setColumnWidth(1, 180);
+          sheet.setColumnWidth(2, 80);
+          sheet.setColumnWidth(3, 120);
+          if (typeof sheet.setRowCount === 'function') sheet.setRowCount(20);
+        });
+      }
+    },
+    watch: {
+      selectedTemplateCode: function () {
+        if (this.currentRole === 'L3_OPERATOR') this.initSpreadForTemplate();
+      }
+    },
+    mounted: function () {
+      if (this.currentRole === 'L3_OPERATOR') this.initSpreadForTemplate();
+    }
+  });
+
+  var localeOpt = typeof ElementPlusLocaleZhCn !== 'undefined' ? { locale: ElementPlusLocaleZhCn } : {};
+  app.use(ElementPlus, localeOpt);
+  if (typeof ElementPlusIconsVue !== 'undefined') {
+    for (var k in ElementPlusIconsVue) {
+      app.component(k, ElementPlusIconsVue[k]);
+    }
+  }
+  app.mount('#app');
+})();
 </script>
 </body>
 </html>

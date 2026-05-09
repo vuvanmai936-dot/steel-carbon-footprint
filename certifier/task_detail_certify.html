@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>任务详情 - 报告阶段（认证机构）</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <link rel="stylesheet" href="../css/common.css">
+  <link rel="stylesheet" href="../css/certifier.css">
+  <link rel="stylesheet" href="../css/task_detail.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+  <script src="../js/taskDetailLayout.js"></script>
+  <script src="../js/certifierLayout.js"></script>
+</head>
+<body>
+<div id="app">
+  <el-container style="height: 100vh;">
+    <el-aside :width="sidebarCollapsed ? '64px' : '220px'" style="background-color: #1e3a5f; display: flex; flex-direction: column;">
+      <div style="height: 60px; line-height: 60px; text-align: center; color: #fff; font-weight: bold; font-size: 16px; border-bottom: 1px solid #2d4a6f; flex-shrink: 0;">第三方核查机构</div>
+      <el-menu :default-active="activeMenuId" :collapse="sidebarCollapsed" background-color="#1e3a5f" text-color="#e2e8f0" active-text-color="#60a5fa" style="border-right: none; flex: 1; overflow-y: auto;">
+        <template v-for="item in menuConfig" :key="item.id">
+          <el-menu-item :index="item.id" @click="openPage(item.path)">
+            <el-icon><component :is="item.icon" /></el-icon>
+            <span>{{ item.title }}</span>
+          </el-menu-item>
+        </template>
+      </el-menu>
+      <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #2d4a6f; text-align: center;">
+        <el-button link style="color: #e2e8f0; padding: 8px;" @click="toggleSidebar">
+          <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
+        </el-button>
+      </div>
+    </el-aside>
+    <el-container style="flex-direction: column; min-height: 0;">
+      <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px;">
+        <el-button icon="ArrowLeft" circle style="margin-right: 15px;" @click="goBack"></el-button>
+        <el-breadcrumb separator="/">
+          <el-breadcrumb-item>认证机构工作台</el-breadcrumb-item>
+          <el-breadcrumb-item><a href="task_list.html" style="color: #606266; text-decoration: none;">待核查任务</a></el-breadcrumb-item>
+          <el-breadcrumb-item>报告阶段</el-breadcrumb-item>
+        </el-breadcrumb>
+        <div style="display: flex; align-items: center;">
+          <el-avatar :size="32" style="background: #1e40af; margin-right:8px">{{ currentUser.name ? currentUser.name.slice(0,1) : '核' }}</el-avatar>
+          <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
+        </div>
+      </el-header>
+      <el-main style="padding: 24px; background: #f5f7fa;">
+        <el-result icon="info" title="报告阶段" sub-title="核查完成后，报告与证书由中心运营下发。您可返回任务列表或前往证书颁发管理查看。">
+          <template #extra>
+            <el-button type="primary" @click="goTaskList">返回任务列表</el-button>
+            <el-button @click="goCertificates">证书颁发管理</el-button>
+          </template>
+        </el-result>
+      </el-main>
+    </el-container>
+  </el-container>
+</div>
+<script>
+(function () {
+  var layoutApi = CertifierLayout.setup();
+  var app = Vue.createApp({
+    data: function () {
+      return {
+        menuConfig: layoutApi.menuConfig,
+        currentUser: layoutApi.currentUser,
+        openPage: layoutApi.openPage,
+        sidebarCollapsed: layoutApi.sidebarCollapsed,
+        toggleSidebar: layoutApi.toggleSidebar,
+        activeMenuId: layoutApi.activeMenuId,
+        goPortal: layoutApi.goPortal,
+        showPortalInHeader: layoutApi.showPortalInHeader
+      };
+    },
+    methods: {
+      goBack: function () { window.location.href = 'task_list.html'; },
+      goTaskList: function () { window.location.href = 'task_list.html'; },
+      goCertificates: function () { window.location.href = 'certificates.html'; }
+    }
+  });
+  var localeOpt = typeof ElementPlusLocaleZhCn !== 'undefined' ? { locale: ElementPlusLocaleZhCn } : {};
+  app.use(ElementPlus, localeOpt);
+  if (typeof ElementPlusIconsVue !== 'undefined') {
+    for (var k in ElementPlusIconsVue) app.component(k, ElementPlusIconsVue[k]);
+  }
+  app.mount('#app');
+})();
+</script>
+</body>
+</html>

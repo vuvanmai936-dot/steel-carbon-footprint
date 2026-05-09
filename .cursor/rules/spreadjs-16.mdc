@@ -1,0 +1,12 @@
+---
+description: SpreadJS 16.x 与模板/填报快照链
+globs: "js/spreadUtils.js,operator/**/*.html,supplier/**/*.html,certifier/**/*.html"
+alwaysApply: false
+---
+
+# SpreadJS 16.x
+
+- 样式与脚本使用 GrapeCity 官方 **16.x** 路径（与现有 `gc.spread.sheets.*.16.0.0` 一致），避免混用主版本号。
+- 模板 / 任务数据链以 `js/mockTasks.js` 为准：`getTemplateSnapshot` / `saveTemplateSnapshot`、`getTaskSnapshot` / `saveTaskSnapshot`、`submitTaskData` 等；改 **Snapshot 数据结构** 时同步 `spreadUtils.js`、三端相关页面及 `docs/02_功能与对接/05_模板引擎解析逻辑.md`。
+- 只读预览：`sheet.options.isProtected` + `sheet.protect()`；可编辑场景与 `SpreadUtils.createSpreadFromSnapshot` 的 `readOnly` / `editableCols` 约定保持一致。
+- 评估版水印在原型中可用页面级 CSS 隐藏；正式环境以授权为准，勿依赖隐藏水印作为合规手段。

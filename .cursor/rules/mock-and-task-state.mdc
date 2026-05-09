@@ -1,0 +1,17 @@
+---
+description: Mock 任务表、URL taskId 与列表/详情阶段一致
+globs: "js/**/*.js"
+alwaysApply: false
+---
+
+# Mock 与任务状态
+
+- `MOCK_TASK_MAP`：按 `taskId` 的任务基础信息（供应商、产品、规格、订单号）；详情页用 `getTaskInfoFromUrl(defaultTaskId)` 时应与当前演示任务一致。
+- `MOCK_TASK_LIST` / `getTaskByTaskId(taskId, pageStageIndex)`：列表与各阶段详情页的 **stageIndex、stageSubStatus、reportSubStatus** 应对齐；改列表演示数据时检查配置/采集/报告等页的 `getStageStatusText` 展示。
+- URL：`?taskId=...` 为权威入口；无参数时使用页面内约定的 `defaultTaskId`，避免写死与 `mockTasks.js` 冲突的 ID。
+- `taskDetailLayout.js` 的 `getStageSteps` 生成各阶段静态链接；新增阶段文件名时需同步 `STAGE_KEYS` 与 `operatorFiles` 映射。
+
+```javascript
+// ✅ 阶段相关优先用全局方法，避免页面内重复造状态文案
+getTaskByTaskId(taskId, 0); // 配置页传 pageStageIndex 0
+```

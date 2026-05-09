@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Deprecated: 供应商端阶段页，待后续迁移至 operator/task_detail_*.html 统一骨架后可下线。 -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -6,6 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="../css/task_detail.css">
     <link rel="stylesheet" href="../css/supplier.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/element-plus"></script>
@@ -40,7 +42,7 @@
                 </template>
             </el-menu>
             <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #002140; text-align: center;">
-                <el-button link style="color: #fff; padding: 8px;" @click="toggleSidebar">
+                <el-button link style="color: #fff; padding: 8px;" :aria-label="sidebarCollapsed ? '展开侧栏' : '折叠侧栏'" @click="toggleSidebar">
                     <el-icon><component :is="sidebarCollapsed ? 'Expand' : 'Fold'" /></el-icon>
                 </el-button>
             </div>
@@ -48,11 +50,14 @@
 
         <el-container style="display: flex; flex-direction: column; overflow: hidden;">
             <el-header style="background: #fff; border-bottom: 1px solid #dcdfe6; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;">
-                <el-breadcrumb separator="/">
-                    <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
-                    <el-breadcrumb-item><a href="task_list.html" style="color: inherit; text-decoration: none;">我的任务</a></el-breadcrumb-item>
-                    <el-breadcrumb-item>配置（配置中）</el-breadcrumb-item>
-                </el-breadcrumb>
+                <div style="display: flex; align-items: center;">
+                    <el-button icon="ArrowLeft" circle style="margin-right: 15px;" aria-label="返回" @click="goBack"></el-button>
+                    <el-breadcrumb separator="/">
+                        <el-breadcrumb-item>供应商工作台</el-breadcrumb-item>
+                        <el-breadcrumb-item><a href="task_list.html" style="color: inherit; text-decoration: none;">我的任务</a></el-breadcrumb-item>
+                        <el-breadcrumb-item>配置（配置中）</el-breadcrumb-item>
+                    </el-breadcrumb>
+                </div>
                 <div style="display: flex; align-items: center;">
                     <el-badge :value="messageUnreadCount" :hidden="messageUnreadCount === 0" class="msg-badge">
                         <el-button link type="primary" @click="messageCenterVisible = true" style="padding: 8px;">
@@ -78,6 +83,20 @@
                 </div>
             </el-drawer>
 
+            <header class="task-detail-unified__top" style="flex-shrink: 0;">
+                <div class="task-detail-unified-top-inner">
+                    <el-steps :active="activeStepIndex" finish-status="success" align-center class="task-stage-steps">
+                        <el-step
+                            v-for="s in stageSteps"
+                            :key="s.key"
+                            :title="s.label"
+                            :class="{ 'is-clickable': s.key !== currentStage }"
+                            @click="goStage(s)"
+                        />
+                    </el-steps>
+                </div>
+            </header>
+
             <el-main style="padding: 20px; overflow: auto; background: #f0f2f5;">
                 <div class="main-flex-wrapper">
                     <div class="stage-card" v-if="taskInfo.taskId">
@@ -98,11 +117,24 @@
         var taskId = (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : '') || '';
         var taskInfo = taskId && typeof getTaskInfoFromUrl === 'function' ? getTaskInfoFromUrl(taskId) : {};
         var layout = SupplierLayout.setup();
+        var q = taskId ? '?taskId=' + encodeURIComponent(taskId) : '';
+        var stageSteps = [
+            { key: 'config', label: '配置', href: 'task_stage_config.html' + q },
+            { key: 'collect', label: '采集', href: 'task_fill.html' + q },
+            { key: 'lca', label: '计算', href: 'task_stage_lca.html' + q },
+            { key: 'verify', label: '核查', href: 'task_stage_verify.html' + q },
+            { key: 'report', label: '报告', href: 'task_stage_report.html' + q }
+        ];
+        var currentStage = 'config';
 
         runSupplierApp({
             setup() {
                 var taskInfoRef = Vue.ref(taskInfo);
+                function goBack() { window.location.href = 'task_list.html'; }
                 function goList() { window.location.href = 'task_list.html'; }
+                function goStage(step) {
+                    if (step && step.key !== currentStage && step.href) window.location.href = step.href;
+                }
                 function refreshState() { window.location.reload(); }
                 function checkRedirectToFill() {
                     if (!taskId) return;
@@ -110,10 +142,19 @@
                         window.location.href = 'task_fill.html?taskId=' + encodeURIComponent(taskId);
                     }
                 }
+                var activeStepIndex = Vue.computed(function () {
+                    var idx = stageSteps.findIndex(function (s) { return s.key === currentStage; });
+                    return idx >= 0 ? idx : 0;
+                });
                 Vue.onMounted(function () { checkRedirectToFill(); });
                 return Object.assign({}, layout, {
                     taskInfo: taskInfoRef,
+                    stageSteps: stageSteps,
+                    currentStage: currentStage,
+                    activeStepIndex: activeStepIndex,
+                    goBack,
                     goList,
+                    goStage,
                     refreshState
                 });
             }

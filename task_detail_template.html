@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<!--
+  任务详情页 - 统一页面外壳模板
+  三端（operator / supplier / certifier）共用此 DOM 结构：顶部（基础信息+5阶段进度条）、左侧（阶段导航）、中央（#stage-content-container）、右侧（协作日志与澄清）。
+  实际阶段页（如 task_detail_collect.html）引入 js/taskDetailLayout.js，根据 getCurrentRole() 在 #stage-content-container 内动态渲染角色视图。
+  本文件为参考骨架，路径按项目根目录；接入到 operator/ 等目录时请改为 ../css/、../js/。
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>任务详情 - 统一骨架（模板）</title>
+  <!-- 公共样式：实际接入时 operator 用 ../css/，supplier/certifier 用各自路径 -->
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/task_detail.css">
+  <link rel="stylesheet" href="css/clarify_panel.css">
+</head>
+<body>
+<div id="app" class="task-detail-page">
+  <!-- 顶部：基础信息 + 5 阶段进度条 -->
+  <header class="task-detail-unified__top">
+    <div class="task-detail-unified-top-inner">
+      <el-steps :active="activeStepIndex" finish-status="success" align-center class="task-stage-steps">
+        <el-step
+          v-for="s in stageSteps"
+          :key="s.key"
+          :title="s.label"
+          :class="{ 'is-clickable': s.key !== currentStage }"
+          @click="goStage(s)"
+        />
+      </el-steps>
+      <div class="task-info-dashboard task-info-dashboard__row">
+        <div class="task-info-dashboard__main task-info-dashboard__info">
+          <div class="dash-info-col dash-info-col--ids">
+            <div class="dash-info-item">
+              <span class="prod-label">任务编号</span>
+              <span class="prod-id">{{ taskId || '—' }}</span>
+            </div>
+            <div class="dash-info-item">
+              <span class="prod-label">订单</span>
+              <span class="prod-value">{{ orderNo || '—' }}</span>
+            </div>
+          </div>
+          <div class="dash-info-col dash-info-col--detail">
+            <div class="dash-info-item">
+              <span class="prod-label">供应商</span>
+              <span class="prod-name">{{ supplierName || '—' }}</span>
+            </div>
+            <div class="dash-info-item">
+              <span class="prod-label">产品</span>
+              <span class="prod-value">{{ productName || '—' }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="task-info-dashboard__status-bar">
+          <div class="dash-block dash-block-status">
+            <div class="dash-content">
+              <el-tag type="info">当前角色: {{ roleLabel }}</el-tag>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主体：中（业务挂载区）| 右（协作日志与澄清），仅保留顶部阶段进度条 -->
+  <div class="task-detail-unified__body">
+    <main class="task-detail-unified__center">
+      <!-- 核心业务挂载区：由各阶段页根据角色动态渲染 -->
+      <div id="stage-content-container">
+        <p class="stage-placeholder">此处由 JS 控制器按角色注入阶段视图（L3 运营 / L2 供应商 / L4 核查）。</p>
+        <p class="stage-placeholder-meta">当前阶段: {{ currentStage }} · 角色: {{ currentRole }}</p>
+      </div>
+    </main>
+
+    <aside class="task-detail-unified__right">
+      <div id="task-detail-right-panel" class="task-detail-right-panel">
+        <div class="task-detail-right-panel-header">协作日志与澄清</div>
+        <div class="task-detail-right-panel-body">
+          <p class="stage-placeholder">右侧面板：由 taskDetailLayout.initRightPanel 或各页初始化澄清/日志内容。</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- 公共脚本：先引入控制器，再引入 Vue 与各端 layout -->
+<script src="js/taskDetailLayout.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/element-plus"></script>
+<script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
+
+<script>
+(function () {
+  var taskId = (function () {
+    var p = new URLSearchParams(window.location.search);
+    return p.get('taskId') || 'TSK-2026-889';
+  })();
+  var currentStage = 'collect';
+  var role = window.TaskDetailLayout.getCurrentRole();
+  var stageSteps = window.TaskDetailLayout.getStageSteps(taskId, currentStage, { basePath: 'operator', fromOrder: false });
+
+  var roleLabels = {
+    L3_OPERATOR: '中心运营 (L3)',
+    L2_SUPPLIER: '供应商 (L2)',
+    L4_CERTIFIER: '核查机构 (L4)'
+  };
+
+  var app = Vue.createApp({
+    data: function () {
+      return {
+        taskId: taskId,
+        orderNo: 'ORD-20260203-001',
+        supplierName: '示例供应商',
+        productName: '示例产品',
+        currentStage: currentStage,
+        stageSteps: stageSteps,
+        currentRole: role,
+        roleLabel: roleLabels[role] || role
+      };
+    },
+    computed: {
+      activeStepIndex: function () {
+        var idx = this.stageSteps.findIndex(function (s) { return s.key === this.currentStage; }.bind(this));
+        return idx >= 0 ? idx : 0;
+      }
+    },
+    methods: {
+      goStage: function (step) {
+        if (step && step.key !== this.currentStage && step.href) {
+          window.location.href = step.href;
+        }
+      }
+    },
+    mounted: function () {
+      window.TaskDetailLayout.initRightPanel('task-detail-right-panel', { taskId: taskId, role: role });
+    }
+  });
+  var localeOpt = typeof ElementPlusLocaleZhCn !== 'undefined' ? { locale: ElementPlusLocaleZhCn } : {};
+  app.use(ElementPlus, localeOpt);
+  app.mount('#app');
+})();
+</script>
+
+<style>
+.stage-placeholder { color: #909399; font-size: 13px; margin: 0 0 8px; }
+.stage-placeholder-meta { color: #c0c4cc; font-size: 12px; margin: 0; }
+.task-detail-right-panel-header {
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid #ebeef5;
+  background: #fafbfc;
+}
+.task-detail-right-panel-body { padding: 16px; flex: 1; overflow-y: auto; font-size: 13px; color: #606266; }
+</style>
+</body>
+</html>

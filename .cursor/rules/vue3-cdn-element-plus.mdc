@@ -1,0 +1,20 @@
+---
+description: Vue3 CDN 全局构建 + Element Plus + 运营端 layout 衔接
+globs: "**/*.html"
+alwaysApply: false
+---
+
+# Vue 3 + Element Plus（CDN）
+
+- 使用 **全局构建**（`vue.global.js`），与现有页一致：`Vue.createApp`、`data` / `methods` / `mounted` 或 `<script setup>` 需与页面其余部分统一风格。
+- Element Plus：CDN `index.css` + `element-plus` 全量脚本；中文可配 `element-plus/dist/locale/zh-cn.js`。
+- 图标：`@element-plus/icons-vue` 全量注册或按需 `app.component`；`el-button` 的 `icon` 需传入 **组件引用** 而非字符串。
+
+```javascript
+// ✅ 图标作为组件引用传入 data 或局部变量
+data: function () {
+  return { ArrowLeftIcon: ElementPlusIconsVue.ArrowLeft };
+}
+```
+
+- **运营端布局**：预加载 `js/layout.js` 时可用 `SharedLayout.setup()` 取菜单、当前用户、`openPage` 等；与 `taskDetailLayout.js` 分工：`TaskDetailLayout` 负责阶段条与角色，`layout.js` 负责侧栏与顶栏。

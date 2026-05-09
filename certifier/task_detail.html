@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Deprecated: 已由 task_detail_verify.html 取代，请使用新的核查详情骨架。计划下线。 -->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -84,7 +85,8 @@
                     <el-empty v-if="!messageList.length" description="暂无消息" :image-size="60"></el-empty>
                 </div>
             </el-drawer>
-            <el-main style="padding: 0; overflow: auto; background: #f8fafc;">
+            <el-main style="padding: 0; overflow: hidden; display: flex; flex-direction: column; background: #f8fafc;">
+                <div style="flex: 1; min-height: 0; overflow-y: auto;">
                 <div class="task-info-dashboard">
                     <div class="task-info-dashboard__row">
                         <div class="task-info-dashboard__main task-info-dashboard__info">
@@ -222,6 +224,7 @@
                             </div>
                         </el-tab-pane>
                     </el-tabs>
+                </div>
                 </div>
             </el-main>
         </el-container>
