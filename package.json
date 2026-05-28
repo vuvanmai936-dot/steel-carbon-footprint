@@ -20,6 +20,7 @@
     "sync-help:operator": "node scripts/sync-help-from-doc.js operator",
     "sync-help:certifier": "node scripts/sync-help-from-doc.js certifier",
     "test:e2e": "playwright test",
+    "test:all": "npm run lint && npm run build && npm run test:e2e",
     "test:e2e:ui": "playwright test --ui",
     "patch:html": "node scripts/sync-vendor-to-public.js && node scripts/patch-html.js && node scripts/cleanup-duplicate-vendor.js",
     "patch:task-detail": "node scripts/patch-task-detail-pages.js",

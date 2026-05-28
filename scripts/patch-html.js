@@ -107,19 +107,30 @@ function patchFile(filePath) {
 
   const needsVue =
     /PCF_VENDOR_HEAD|unpkg\.com\/vue@3|vendor\/vue\.global/.test(html) ||
+    /\bVue\.createApp\b|\bcreateApp\s*\(/.test(html) ||
     (/\.\.\/js\/layout\.js/.test(html) && !html.includes('vendor/vue.global'));
   if (needsVue) {
+    const portalVueOnly = rel === 'pcf.html';
     if (!VENDOR_MARKER_RE.test(html) && !html.includes('vendor/vue.global')) {
-      const snip = vendorSnippet.trim() + '\n\n';
-      if (SPREAD_MARKER_RE.test(html)) {
-        html = html.replace(SPREAD_MARKER_RE, (m) => m + '\n\n' + snip);
-      } else {
+      if (portalVueOnly) {
+        const vueTag =
+          `    <script src="${vendorPrefix(rel)}vendor/vue.global.prod.js"></script>\n`;
         html = html.replace(
-          /(<link rel="stylesheet" href="\.\.\/css\/common\.css">)/,
-          '$1\n\n' + snip
+          /(<link rel="stylesheet" href="css\/common\.css">)/,
+          '$1\n\n' + vueTag
         );
+      } else {
+        const snip = vendorSnippet.trim() + '\n\n';
+        if (SPREAD_MARKER_RE.test(html)) {
+          html = html.replace(SPREAD_MARKER_RE, (m) => m + '\n\n' + snip);
+        } else {
+          html = html.replace(
+            /(<link rel="stylesheet" href="\.\.\/css\/common\.css">)/,
+            '$1\n\n' + snip
+          );
+        }
       }
-    } else {
+    } else if (!portalVueOnly) {
       html = patchVendor(html, vendorSnippet);
     }
   }

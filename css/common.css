@@ -23,13 +23,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 多页面布局基础（运营端/认证端等共用） */
+/* 多页面布局基础：仅 Vue 全屏壳（含 #app）锁定视口；门户/黄金动线等无 #app 页可整页滚动 */
 html,
-body,
-#app {
-  height: 100%;
+body {
   margin: 0;
   padding: 0;
+}
+
+html:has(#app:not(.landing)),
+html:has(#app:not(.landing)) body,
+#app:not(.landing) {
+  height: 100%;
   overflow: hidden;
 }
 [v-cloak] {

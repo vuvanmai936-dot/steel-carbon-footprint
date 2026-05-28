@@ -22,8 +22,14 @@
       --c-system-soft: #f4f4f5;
     }
     * { box-sizing: border-box; }
+    html,
     body {
       margin: 0;
+      min-height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    body {
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
       background: var(--c-bg);
       color: var(--c-text);

@@ -7,7 +7,8 @@
 
     <link rel="stylesheet" href="css/common.css">
 
-
+    <!-- 门户页仅依赖 Vue 驱动点击，不引入 element-plus.css，避免覆盖原页面样式 -->
+    <script src="vendor/vue.global.prod.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -340,7 +341,6 @@
                     const routes = { operator: 'operator/dashboard.html', supplier: 'supplier/dashboard.html', certifier: 'certifier/dashboard.html' };
                     const url = routes[role];
                     if (url) window.location.href = url;
-                    else ElementPlus.ElMessage.info('未知角色入口');
                 };
                 onMounted(() => {
                     const colors = ['#F56C6C', '#E6A23C', '#409EFF', '#67C23A'];
@@ -355,7 +355,7 @@
                 });
                 return { enterSystem };
             }
-        }).use(ElementPlus).mount('#app');
+        }).mount('#app');
     </script>
 </body>
 </html>
