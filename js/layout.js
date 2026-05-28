@@ -1,17 +1,6 @@
-// js/layout.js
+// js/layout.js — 运营端布局（依赖 sharedShell.js）
 const { createApp, ref, reactive, computed, watch } = Vue;
-
-function findActiveMenuId(menuConfig, path) {
-  for (const item of menuConfig) {
-    if (item.path && item.path === path) return item.id;
-    if (item.children) {
-      for (const c of item.children) {
-        if (c.path === path) return c.id;
-      }
-    }
-  }
-  return '';
-}
+const shell = typeof SharedShell !== 'undefined' ? SharedShell : null;
 
 const SharedLayout = {
   setup() {
@@ -42,21 +31,33 @@ const SharedLayout = {
       role: '中心运营管理员',
     });
 
-    const sidebarCollapsed = ref(false);
-    const toggleSidebar = () => {
-      sidebarCollapsed.value = !sidebarCollapsed.value;
-    };
+    const sidebar = shell
+      ? shell.createSidebarState({ ref }, menuConfig)
+      : {
+          path: window.location.pathname.split('/').pop() || '',
+          activeMenuId: ref(''),
+          sidebarCollapsed: ref(false),
+          toggleSidebar: () => {},
+          openPage: () => {},
+        };
 
-    const path =
-      typeof window !== 'undefined' ? window.location.pathname.split('/').pop() || '' : '';
-    const activeMenuId = ref(findActiveMenuId(menuConfig, path));
-
-    const openPage = (pagePath) => {
-      const current = window.location.pathname.split('/').pop();
-      if (current !== pagePath) {
-        window.location.href = pagePath;
-      }
-    };
+    const OPERATOR_PORTAL_PAGES = [
+      'dashboard.html',
+      'order.html',
+      'self_operated_task_list.html',
+      'entrusted_task_list.html',
+      'report_mgt.html',
+      'supplier_mgt.html',
+      'certifier_mgt.html',
+      'templates_mgt.html',
+      'assets_bridge.html',
+      'settlement.html',
+      'system_mgt.html',
+      'help.html',
+    ];
+    const showPortalInHeader = shell
+      ? shell.createPortalVisibility({ computed }, sidebar.path, OPERATOR_PORTAL_PAGES)
+      : computed(() => false);
 
     const handleLogout = () => {
       window.location.href = '../index.html';
@@ -66,47 +67,20 @@ const SharedLayout = {
       window.location.href = '../pcf.html';
     };
 
-    /** 一级入口页（仅这些页顶栏展示「返回门户」） */
-    const OPERATOR_PORTAL_PAGES = [
-      'dashboard.html', 'order.html', 'self_operated_task_list.html', 'entrusted_task_list.html',
-      'report_mgt.html', 'supplier_mgt.html', 'certifier_mgt.html', 'templates_mgt.html',
-      'assets_bridge.html', 'settlement.html', 'system_mgt.html', 'help.html',
-    ];
-    const showPortalInHeader = computed(function () {
-      var base = path && path.endsWith('.html') ? path : (path || '') + '.html';
-      return OPERATOR_PORTAL_PAGES.indexOf(base) !== -1 || OPERATOR_PORTAL_PAGES.indexOf(path) !== -1;
-    });
-
-    // 消息中心（用户级消息，与 docs/15 一致；未加载 mockMessages 时返回空实现）
-    const hasMessageAPI =
-      typeof getMyMessages === 'function' && typeof getUnreadCount === 'function';
-    const messageCenterVisible = ref(false);
-    const messageList = ref([]);
-    const messageUnreadCount = computed(function () {
-      return hasMessageAPI ? getUnreadCount(currentUser.name || 'operator', 'operator') : 0;
-    });
-    const loadMessages = function () {
-      messageList.value = hasMessageAPI
-        ? getMyMessages(currentUser.name || 'operator', {}, 'operator')
-        : [];
-    };
-    const goMessage = function (m) {
-      if (m && m.jumpUrl) window.location.href = m.jumpUrl;
-    };
-    const formatMessageTime = function (iso) {
-      if (!iso) return '';
-      var d = new Date(iso);
-      var now = new Date();
-      var diff = (now - d) / 60000;
-      if (diff < 1) return '刚刚';
-      if (diff < 60) return Math.floor(diff) + '分钟前';
-      if (diff < 1440) return Math.floor(diff / 60) + '小时前';
-      if (diff < 43200) return Math.floor(diff / 1440) + '天前';
-      return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
-    };
-    watch(messageCenterVisible, function (v) {
-      if (v) loadMessages();
-    });
+    const message = shell
+      ? shell.createMessageCenter(
+          { ref, computed, watch },
+          'operator',
+          () => currentUser.name || 'operator'
+        )
+      : {
+          messageCenterVisible: ref(false),
+          messageList: ref([]),
+          messageUnreadCount: computed(() => 0),
+          loadMessages: () => {},
+          goMessage: () => {},
+          formatMessageTime: shell ? shell.formatMessageTime : () => '',
+        };
 
     return {
       menuConfig,
@@ -114,22 +88,22 @@ const SharedLayout = {
       handleLogout,
       goPortal,
       showPortalInHeader,
-      openPage,
-      sidebarCollapsed,
-      toggleSidebar,
-      activeMenuId,
-      messageCenterVisible,
-      messageList,
-      messageUnreadCount,
-      loadMessages,
-      goMessage,
-      formatMessageTime,
+      openPage: sidebar.openPage,
+      sidebarCollapsed: sidebar.sidebarCollapsed,
+      toggleSidebar: sidebar.toggleSidebar,
+      activeMenuId: sidebar.activeMenuId,
+      messageCenterVisible: message.messageCenterVisible,
+      messageList: message.messageList,
+      messageUnreadCount: message.messageUnreadCount,
+      loadMessages: message.loadMessages,
+      goMessage: message.goMessage,
+      formatMessageTime: message.formatMessageTime,
     };
   },
 };
 
-// 注册全局组件逻辑（若页面已加载 ElementPlusLocaleZhCn 则自动使用中文）
 function initApp(app) {
+  if (shell) return shell.initElementPlusApp(app);
   const localeOpt =
     typeof ElementPlusLocaleZhCn !== 'undefined' ? { locale: ElementPlusLocaleZhCn } : {};
   app.use(ElementPlus, localeOpt);
@@ -141,8 +115,12 @@ function initApp(app) {
   return app;
 }
 
-/** 运营端统一启动：创建 Vue 应用、注册 Element Plus 与图标、挂载 #app */
 function runOperatorApp(component) {
   const app = createApp(component);
   initApp(app).mount('#app');
+}
+
+if (typeof window !== 'undefined') {
+  window.SharedLayout = SharedLayout;
+  window.runOperatorApp = runOperatorApp;
 }

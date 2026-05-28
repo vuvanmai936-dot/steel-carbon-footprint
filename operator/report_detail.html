@@ -3,14 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>档案详情 - 报告管理 - 中心运营端</title>
-    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="../css/operator.css">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/element-plus"></script>
-    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
-    <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
-    <script src="../js/mockMessages.js"></script>
+
+
+
+
+    <!-- PCF_VENDOR_HEAD:full -->
+  <link rel="stylesheet" href="../vendor/element-plus.css">
+  <script src="../vendor/vue.global.prod.js"></script>
+  <script src="../vendor/element-plus.full.min.js"></script>
+  <script src="../vendor/element-plus-icons.iife.min.js"></script>
+  <script src="../vendor/element-plus-locale-zh-cn.js"></script>
+  <!-- /PCF_VENDOR_HEAD -->
+
+
+
+<script src="../js/mockMessages.js"></script>
+    <script src="../js/sharedShell.js"></script>
     <script src="../js/layout.js"></script>
     <script src="../js/mockTasks.js"></script>
     <script src="../js/mockOperator.js"></script>
@@ -260,7 +271,13 @@
             const taskNoFromUrl = Vue.ref('');
             try {
                 const params = new URLSearchParams(window.location.search);
-                taskNoFromUrl.value = params.get('taskNo') || '';
+                const taskNo = params.get('taskNo') || '';
+                const reportId = params.get('reportId') || '';
+                if (taskNo) taskNoFromUrl.value = taskNo;
+                else if (reportId && typeof MOCK_REPORTS !== 'undefined') {
+                    const byReport = MOCK_REPORTS.find(function (r) { return r.reportId === reportId; });
+                    taskNoFromUrl.value = byReport ? byReport.taskNo : '';
+                }
             } catch (e) {}
 
             const rawReports = JSON.parse(JSON.stringify(MOCK_REPORTS));

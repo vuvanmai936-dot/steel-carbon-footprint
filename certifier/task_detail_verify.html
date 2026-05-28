@@ -4,19 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>任务详情 - 核查验收</title>
-  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+
   <link rel="stylesheet" href="../css/common.css">
   <link rel="stylesheet" href="../css/certifier.css">
   <link rel="stylesheet" href="../css/task_detail.css">
   <link rel="stylesheet" href="../css/clarify_panel.css">
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <script src="https://unpkg.com/element-plus"></script>
-  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
-  <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
-  <script src="../js/taskDetailLayout.js"></script>
+
+
+
+
+  <!-- PCF_VENDOR_HEAD:full -->
+  <link rel="stylesheet" href="../vendor/element-plus.css">
+  <script src="../vendor/vue.global.prod.js"></script>
+  <script src="../vendor/element-plus.full.min.js"></script>
+  <script src="../vendor/element-plus-icons.iife.min.js"></script>
+  <script src="../vendor/element-plus-locale-zh-cn.js"></script>
+  <!-- /PCF_VENDOR_HEAD -->
+
+
+
+<script src="../js/taskDetailLayout.js"></script>
   <script src="../js/mockTasks.js"></script>
   <script src="../js/clarifyUtils.js"></script>
-  <script src="../js/certifierLayout.js"></script>
+  <script src="../js/sharedShell.js"></script>
+    <script src="../js/certifierLayout.js"></script>
   <style>
     .verify-ledger-table { width: 100%; border-collapse: collapse; border: 1px solid #ebeef5; font-size: 13px; margin-bottom: 16px; }
     .verify-ledger-table th, .verify-ledger-table td { border: 1px solid #ebeef5; padding: 8px 12px; text-align: left; }

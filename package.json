@@ -9,21 +9,32 @@
     "preview": "vite preview",
     "clean": "rimraf dist",
     "sync:public": "node scripts/sync-public-js.js",
-    "predev": "node scripts/sync-public-js.js",
-    "prebuild": "node scripts/sync-public-js.js",
-    "lint": "eslint js public/js",
+    "predev": "node scripts/sync-public-js.js && node scripts/sync-vendor-to-public.js",
+    "prebuild": "node scripts/sync-public-js.js && node scripts/sync-vendor-to-public.js",
+    "sync:vendor": "node scripts/sync-vendor-to-public.js",
+    "lint": "eslint js e2e js/pages",
     "format": "prettier --write \"js/**/*.js\" \"public/js/**/*.js\" \"**/*.css\"",
     "format:check": "prettier --check \"js/**/*.js\" \"public/js/**/*.js\" \"**/*.css\"",
     "sync-help": "node scripts/sync-help-from-doc.js",
     "sync-help:supplier": "node scripts/sync-help-from-doc.js supplier",
     "sync-help:operator": "node scripts/sync-help-from-doc.js operator",
-    "sync-help:certifier": "node scripts/sync-help-from-doc.js certifier"
+    "sync-help:certifier": "node scripts/sync-help-from-doc.js certifier",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "patch:html": "node scripts/sync-vendor-to-public.js && node scripts/patch-html.js && node scripts/cleanup-duplicate-vendor.js",
+    "patch:task-detail": "node scripts/patch-task-detail-pages.js",
+    "install:e2e-browser": "bash scripts/install-playwright-chromium.sh"
   },
   "devDependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "@playwright/test": "^1.52.0",
+    "element-plus": "^2.9.7",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-html": "^8.1.2",
     "prettier": "^3.4.2",
     "rimraf": "^6.1.2",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vue": "^3.5.13"
   }
 }

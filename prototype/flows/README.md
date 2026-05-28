@@ -25,12 +25,13 @@
 | 8 | 供应商 / 4:15 | [`supplier/reports.html`](../../supplier/reports.html) | 预览 → 确认接收 | 报告子状态：待归档 → 已归档 |
 | 9 | 终点 / 4:45 | [`operator/report_detail.html?reportId=RPT-2026-0001`](../../operator/report_detail.html?reportId=RPT-2026-0001) | 看链上凭证（VC）+ TDS 四大支柱小结 | 闭环完成 |
 
-> **预设数据**：动线依赖 [`js/mockTasks.js`](../../js/mockTasks.js) 中的 `TSK-2026-888` 与 [`js/mockOperator.js`](../../js/mockOperator.js) 中对应的 `RPT-2026-0001`。如演示前需重置数据，刷新浏览器即可（Mock 在内存重建）。
+> **预设数据**：动线依赖 [`js/mockTasks.js`](../../js/mockTasks.js) 中的 `TSK-2026-888`（起始 stage 0 / `pending`）与 [`js/mockOperator.js`](../../js/mockOperator.js) 中的 `RPT-2026-0001`。演示推进后：在 [`golden_5min.html`](golden_5min.html) 顶栏点 **「重置演示数据」**，或访问 `?demo=reset`；亦可调用全局 `resetGoldenDemoState()`。
 
 ## 演示前检查清单
 
 - [ ] 浏览器已开启 `localhost:5173`（`npm run dev`），或对外环境为最新 `dist/`。
-- [ ] `TSK-2026-888` 在 `mockTasks.js` 中阶段为 0（若已被前一次演示推进，请刷新或重启 dev server）。
+- [ ] `TSK-2026-888` 在 `mockTasks.js` 中阶段为 0（若已被推进，在黄金动线页点「重置演示数据」或打开 `?demo=reset`）。
+- [ ] 可选：`npm run test:e2e` 冒烟（需已 `npm install` 且 dev server 可用）。
 - [ ] SpreadJS CDN 评估版可正常加载（演示环境默认可用，正式环境需采购授权）。
 - [ ] 顶栏消息中心可见 1–2 条 `任务分配` 类消息，不影响主线。
 - [ ] 没有控制台 JS 报错（`F12` 抽查）。

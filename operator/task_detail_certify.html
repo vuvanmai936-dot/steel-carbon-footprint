@@ -4,19 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>任务详情 - 报告与发证</title>
-  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+
   <link rel="stylesheet" href="../css/common.css">
   <link rel="stylesheet" href="../css/operator.css">
   <link rel="stylesheet" href="../css/task_detail.css">
   <link rel="stylesheet" href="../css/clarify_panel.css">
 
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <script src="https://unpkg.com/element-plus"></script>
-  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
-  <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.js"></script>
-  <script src="../js/taskDetailLayout.js"></script>
+
+
+
+  <!-- PCF_VENDOR_HEAD:full -->
+  <link rel="stylesheet" href="../vendor/element-plus.css">
+  <script src="../vendor/vue.global.prod.js"></script>
+  <script src="../vendor/element-plus.full.min.js"></script>
+  <script src="../vendor/element-plus-icons.iife.min.js"></script>
+  <script src="../vendor/element-plus-locale-zh-cn.js"></script>
+  <!-- /PCF_VENDOR_HEAD -->
+
+
+
+<script src="../js/taskDetailLayout.js"></script>
+  <script src="../js/taskDetailDashboard.js"></script>
   <script src="../js/mockTasks.js"></script>
-  <script src="../js/layout.js"></script>
+  <script src="../js/sharedShell.js"></script>
+    <script src="../js/layout.js"></script>
 
   <style>
     .certify-file-list { margin-top: 20px; padding: 16px; border: 1px solid #ebeef5; border-radius: 8px; background: #fafbfc; }
@@ -61,10 +72,13 @@
           <el-breadcrumb separator="/">
             <el-breadcrumb-item>中心运营端</el-breadcrumb-item>
             <el-breadcrumb-item>任务管理</el-breadcrumb-item>
-            <el-breadcrumb-item>报告与发证</el-breadcrumb-item>
+            <el-breadcrumb-item>报告</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
         <div style="display: flex; align-items: center;">
+                    <el-tooltip content="SLA 剩余时间" placement="bottom">
+            <div class="sla-capsule"><el-icon><Timer /></el-icon> {{ formatSla(slaRemaining) }}</div>
+          </el-tooltip>
           <el-avatar :size="32" style="background: #409EFF; margin-right:8px">{{ currentUser.name ? currentUser.name.slice(0,1) : '运' }}</el-avatar>
           <span style="font-size: 14px; color: #606266;">{{ currentUser.name }}</span>
           <el-button v-if="showPortalInHeader" link type="primary" style="margin-left: 12px;" @click="goPortal">返回门户</el-button>
@@ -107,6 +121,7 @@
               </div>
             </div>
           </header>
+              <div class="task-info-dashboard__tds">可信数据空间：本任务数据仅限授权范围内使用，禁止未授权下载、截图与传播；数据安全与隐私受数字合约保护。</div>
 
           <!-- 主体：中央业务区 | 右侧协作日志（仅保留顶部阶段进度条） -->
           <div class="task-detail-unified__body">
@@ -175,111 +190,6 @@
   </el-container>
 </div>
 
-<script>
-(function () {
-  var layoutApi = SharedLayout.setup();
-  var menuConfig = layoutApi.menuConfig;
-  var currentUser = layoutApi.currentUser;
-  var openPage = layoutApi.openPage;
-  var sidebarCollapsed = layoutApi.sidebarCollapsed;
-  var toggleSidebar = layoutApi.toggleSidebar;
-  var activeMenuId = layoutApi.activeMenuId;
-  var goPortal = layoutApi.goPortal;
-  var showPortalInHeader = layoutApi.showPortalInHeader;
-
-  var taskInfo = typeof getTaskInfoFromUrl === 'function'
-    ? getTaskInfoFromUrl('TSK-2026-889')
-    : { taskId: 'TSK-2026-889', orderNo: 'ORD-20260203-001', supplier: '示例供应商', productName: '热轧卷板', specs: 'Q235B' };
-  var taskId = (typeof getTaskIdFromUrl === 'function' ? getTaskIdFromUrl() : '') || taskInfo.taskId || '';
-  var currentStage = 'report';
-  var currentRole = window.TaskDetailLayout ? window.TaskDetailLayout.getCurrentRole() : 'L3_OPERATOR';
-  var stageSteps = window.TaskDetailLayout ? window.TaskDetailLayout.getStageSteps(taskId, currentStage, { basePath: 'operator' }) : [];
-  var taskRow = typeof getTaskByTaskId === 'function' ? getTaskByTaskId(taskId, 4) : null;
-
-  var app = Vue.createApp({
-    data: function () {
-      return {
-        menuConfig: menuConfig,
-        currentUser: currentUser,
-        openPage: openPage,
-        sidebarCollapsed: sidebarCollapsed,
-        toggleSidebar: toggleSidebar,
-        activeMenuId: activeMenuId,
-        goPortal: goPortal,
-        showPortalInHeader: showPortalInHeader,
-        taskInfo: taskInfo,
-        taskRow: taskRow,
-        currentStage: currentStage,
-        stageSteps: stageSteps,
-        currentRole: currentRole,
-        verifyFiles: [
-          { name: 'SGS 核查报告.pdf', url: '#' },
-          { name: '核查声明与符合性证书.pdf', url: '#' }
-        ],
-        certifyLogs: [
-          { time: '09:00', content: '配置下发，模板已选定' },
-          { time: '10:15', content: '供应商提交填报数据' },
-          { time: '11:30', content: 'LCA 计算完成，进入核查' },
-          { time: '14:00', content: '核查机构完成核查，提交报告与声明' },
-          { time: '14:05', content: '核查已完成，任务处理结束' }
-        ]
-      };
-    },
-    computed: {
-      activeStepIndex: function () {
-        var idx = this.stageSteps.findIndex(function (s) { return s.key === this.currentStage; }.bind(this));
-        return idx >= 0 ? idx : 0;
-      },
-      statusText: function () {
-        var base = (this.taskRow && typeof getStageStatusText === 'function')
-          ? getStageStatusText(this.taskRow) : '';
-        if (base) return base;
-        if (this.currentRole === 'L3_OPERATOR') return '任务已结束';
-        if (this.currentRole === 'L2_SUPPLIER') return '等待报告下发';
-        return '核查已结束';
-      }
-    },
-    methods: {
-      goBack: function () {
-        window.location.href = (typeof getFromParam !== 'undefined' && getFromParam() === 'order')
-          ? 'order.html'
-          : 'self_operated_task_list.html';
-      },
-      goStage: function (step) {
-        if (step && step.key !== this.currentStage && step.href) {
-          window.location.href = step.href;
-        }
-      },
-      viewOrder: function () {
-        ElementPlus.ElMessage('跳转到订单详情');
-      },
-      viewSupplier: function () {
-        ElementPlus.ElMessage('跳转到供应商详情');
-      },
-      goReportMgt: function () {
-        var url = taskId ? 'report_mgt.html?taskId=' + encodeURIComponent(taskId) : 'report_mgt.html';
-        window.location.href = url;
-      },
-      downloadFile: function (f) {
-        ElementPlus.ElMessage.info('下载：' + f.name + '（Mock）');
-      }
-    },
-    mounted: function () {
-      if (window.TaskDetailLayout && typeof window.TaskDetailLayout.initRightPanel === 'function') {
-        window.TaskDetailLayout.initRightPanel('task-detail-right-panel', { taskId: taskId, role: this.currentRole });
-      }
-    }
-  });
-
-  var localeOpt = typeof ElementPlusLocaleZhCn !== 'undefined' ? { locale: ElementPlusLocaleZhCn } : {};
-  app.use(ElementPlus, localeOpt);
-  if (typeof ElementPlusIconsVue !== 'undefined') {
-    for (var k in ElementPlusIconsVue) {
-      app.component(k, ElementPlusIconsVue[k]);
-    }
-  }
-  app.mount('#app');
-})();
-</script>
+<script src="../js/pages/operator_task_detail_certify.js"></script>
 </body>
 </html>

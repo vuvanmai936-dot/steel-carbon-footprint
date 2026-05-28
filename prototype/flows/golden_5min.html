@@ -189,6 +189,7 @@
     <div>
       <a href="../../index.html">系统门户</a>
       <a href="../../pcf.html">PCF 应用门户</a>
+      <button type="button" id="btn-reset-golden" style="cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.6);color:#fff;padding:6px 14px;border-radius:4px;font-size:13px;margin-right:12px;">重置演示数据</button>
       <a href="README.md" target="_blank" rel="noopener">脚本 README</a>
     </div>
   </div>
@@ -196,7 +197,7 @@
   <main>
     <section class="intro">
       <h2>本动线的用法</h2>
-      <p>对外评审/客户演示请只跑本页串起的 8 步；其它 60+ 页留作内部走查。涉及的页面为现有原型，URL 已带好 <code>taskId</code>/<code>reportId</code>，浏览器刷新即可重置 Mock 状态。</p>
+      <p>对外评审/客户演示请只跑本页串起的 8 步；其它 60+ 页留作内部走查。涉及的页面为现有原型，URL 已带好 <code>taskId</code>/<code>reportId</code>，点击顶栏「重置演示数据」或访问 <code>?demo=reset</code> 恢复起始状态。</p>
       <p><strong>对接说明</strong>：本动线只讲业务故事；接口契约请以 <a href="../../docs/02_功能与对接/11_接口与互操作设计（实施期）.md" target="_blank" rel="noopener"><code>docs/.../11 §7 最小 OpenAPI</code></a> 为准；规则 SoT 见 <a href="../../docs/SoT_MAP.md" target="_blank" rel="noopener"><code>docs/SoT_MAP.md</code></a>。</p>
       <div class="stage-track">
         <span><span class="dot"></span>0 配置</span>
@@ -339,5 +340,10 @@
       规则 SoT：<a href="../../docs/SoT_MAP.md">docs/SoT_MAP.md</a> · 接口契约：<a href="../../docs/02_功能与对接/11_接口与互操作设计（实施期）.md">11 §7 最小 OpenAPI</a> · 状态机：<a href="../../docs/01_业务与流程/04_任务调度与状态机.md">04 任务调度与状态机</a>
     </footer>
   </main>
+  <script src="../../js/mockTasks.js"></script>
+  <script src="../../js/mockOperator.js"></script>
+  <script>
+    (function(){try{var p=new URLSearchParams(location.search);if(p.get("demo")==="reset"&&typeof resetGoldenDemoState==="function")resetGoldenDemoState();}catch(e){}var b=document.getElementById("btn-reset-golden");if(b)b.addEventListener("click",function(){if(typeof resetGoldenDemoState==="function")resetGoldenDemoState();alert("已重置 TSK-2026-888 与 RPT-2026-0001");});})();
+  </script>
 </body>
 </html>

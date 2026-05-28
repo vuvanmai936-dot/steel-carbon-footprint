@@ -6,8 +6,8 @@
 
 | 域 | 文件（实际路径） | 提供的全局接口（节选） | 主要消费方 |
 |----|------------------|------------------------|------------|
-| 任务 / 订单 / 模板 Snapshot | [`../mockTasks.js`](../mockTasks.js) | `getMockTask`、`MOCK_TASK_MAP`、`getSupplierTaskList`、`getOperatorTaskList`、模板/采集 Snapshot 持久化 | 三端任务列表与详情页、模板详情、订单页 |
-| 运营端报告 | [`../mockOperator.js`](../mockOperator.js) | `getReportList`、`MOCK_REPORTS`、下发/确认接收/申诉的 Mock 回写 | `operator/report_mgt.html`、`operator/report_detail.html`、`supplier/reports.html` |
+| 任务 / 订单 / 模板 Snapshot | [`../mockTasks.js`](../mockTasks.js) | `getMockTask`、`MOCK_TASK_MAP`、`getStageLabel`、`getStageStatusText`、`resetGoldenDemoTaskState`、`getSupplierTaskList`、`getOperatorTaskList`、模板/采集 Snapshot 持久化 | 三端任务列表与详情页、模板详情、订单页 |
+| 运营端报告 | [`../mockOperator.js`](../mockOperator.js) | `getReportList`、`MOCK_REPORTS`、`resetGoldenDemoState`、下发/确认接收/申诉的 Mock 回写 | `operator/report_mgt.html`、`operator/report_detail.html`、`supplier/reports.html`、`prototype/flows/golden_5min.html` |
 | 用户级消息 | [`../mockMessages.js`](../mockMessages.js) | `getMyMessages`、`markRead`、`markAllRead`、`getUnreadCount`，消息类型枚举 | 顶栏消息中心（`js/layout.js`、`js/supplierLayout.js`、`js/certifierLayout.js`）、各端消息中心抽屉 |
 | 任务澄清 / 驳回 / 异议 | [`../mockClarifications.js`](../mockClarifications.js) | `getClarifications`、`createClarification`、`appendMessage`，会话/参与方/subjectType | 任务详情「沟通」Tab、`supplier/task_clarify.html`、运营/认证侧澄清弹窗 |
 

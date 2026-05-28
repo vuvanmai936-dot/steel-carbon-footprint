@@ -19,3 +19,7 @@ pnpm-lock.yaml
 .venv_quotation/
 .venv_docx/
 
+test-results/
+playwright-report/
+playwright/.cache/
+

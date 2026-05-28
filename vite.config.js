@@ -1,7 +1,16 @@
 const { resolve } = require('path');
-const { readdirSync } = require('fs');
+const { readdirSync, readFileSync } = require('fs');
 const { defineConfig } = require('vite');
 const { syncOnce } = require('./scripts/sync-public-js');
+
+const VENDOR_FULL_SNIPPET = readFileSync(
+  resolve(__dirname, 'snippets/pcf-vendor-full.html'),
+  'utf8'
+).trim();
+const VENDOR_BASIC_SNIPPET = readFileSync(
+  resolve(__dirname, 'snippets/pcf-vendor-basic.html'),
+  'utf8'
+).trim();
 
 // 收集所有 HTML 作为多页面入口（根目录 + operator / supplier / certifier + prototype/flows 黄金动线）
 function collectHtmlInputs() {
@@ -41,11 +50,29 @@ function viteSyncPublicJsPlugin() {
   };
 }
 
+/** 开发/构建时确保 HTML 含 PCF_VENDOR_HEAD 标记块（与 scripts/patch-html.js 一致） */
+function viteVendorHeadPlugin() {
+  return {
+    name: 'vite-vendor-head',
+    transformIndexHtml(html) {
+      if (html.includes('PCF_VENDOR_HEAD')) return html;
+      if (!html.includes('unpkg.com/vue@3')) return html;
+      const snippet = html.includes('@element-plus/icons-vue')
+        ? VENDOR_FULL_SNIPPET
+        : VENDOR_BASIC_SNIPPET;
+      return html.replace(
+        /<link[^>]*unpkg\.com\/element-plus\/dist\/index\.css[^>]*>/i,
+        snippet
+      );
+    },
+  };
+}
+
 module.exports = defineConfig({
   root: '.',
   base: './',
   publicDir: 'public',
-  plugins: [viteSyncPublicJsPlugin()],
+  plugins: [viteSyncPublicJsPlugin(), viteVendorHeadPlugin()],
   build: {
     rollupOptions: {
       input: collectHtmlInputs(),

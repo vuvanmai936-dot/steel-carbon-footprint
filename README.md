@@ -25,8 +25,8 @@
 
 ## 技术栈与工程化
 
-- **前端框架**：Vue 3（全局构建版本，CDN 引入）。主门户 `index.html` 为静态页；Vue 用于 `pcf.html` 及运营/供应商/认证机构工作台等页面。
-- **UI 组件库**：Element Plus（CDN 引入）
+- **前端框架**：Vue 3（全局构建，`public/vendor/` 本地副本，开发/构建前 `sync:vendor`）。主门户 `index.html` 为静态页；Vue 用于 `pcf.html` 及三端工作台。
+- **UI 组件库**：Element Plus（同上，与 icons、zh-cn 语言包一并本地化）
 - **表格引擎**：SpreadJS 16.x（模板与填报表统一方案，见 `docs/02_功能与对接/05_模板引擎解析逻辑.md`）
 - **构建与开发服务器**：Vite
 - **语言**：原型阶段使用原生 JavaScript 与 HTML/CSS
@@ -120,6 +120,22 @@ npm run dev
 npm run build
 npm run preview
 ```
+
+### HTML / 依赖维护
+
+- Vue + Element Plus：本地副本在 `public/vendor/`（`npm run sync:vendor`，`predev`/`prebuild` 自动执行）；HTML 使用 `<!-- PCF_VENDOR_HEAD -->` 标记块（`snippets/pcf-vendor-*.html`）。改乱引用后执行 `npm run patch:html`。
+- 运营端大页内联脚本已外提到 `js/pages/`；`npm run sync:public` 会同步整个 `js/` 到 `public/js/` 以便 `dist/` 构建可用。
+- 三端顶栏消息：`js/sharedShell.js`（在各自 layout 脚本之前加载）。SpreadJS 授权见 `js/spreadWrapper.js` 与 `docs/02_功能与对接/05_模板引擎解析逻辑.md`。
+
+### 黄金动线冒烟测试（可选）
+
+```bash
+npm run install:e2e-browser       # 首次需下载浏览器（建议在本机终端执行，避免 Agent 沙箱锁冲突）
+npm run dev                       # 另开终端，或依赖 test 自动拉起
+npm run test:e2e
+```
+
+- 用例见 `e2e/golden-5min.spec.js`；演示重置见 `prototype/flows/golden_5min.html` 顶栏「重置演示数据」或 `?demo=reset`。
 
 - 产物输出到 `dist/`（多页面 HTML、CSS 及 public 下静态资源）
 - 部署：将 `dist/` 整体上传至静态托管（Nginx、对象存储、GitHub Pages 等）；若部署在子路径，请在 `vite.config.js` 中设置 `base: '/你的子路径/'`
